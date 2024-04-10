@@ -1,0 +1,13 @@
+runs:
+  using: composite
+  steps:
+    - uses: actions/github-script@main
+      with:
+        script: ${{ inputs.foo }}
+
+    # ok
+    - uses: hashicorp/vault-action@v3
+
+
+    # GHSA-4mgv-m5cm-f9h7
+    - uses: hashicorp/vault-action@v2.1.0

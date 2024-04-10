@@ -1,0 +1,66 @@
+name: sample.yml
+on:
+  push:
+  pull_request_target:
+
+
+jobs:
+  build:
+    runs-on: [self-hosted]
+    if: ${{ github.event_name == 'push' }}
+    steps:
+    - id: 0
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.head_ref }}
+        script: js
+
+      # workflow-injection
+    - id: 1
+      run: |
+        ${{ github.head_ref }}
+
+      # TODO: workflow-injection
+    - id: 2
+      run: |
+        ${{ github['head_ref'] }}
+
+      # untrusted-checkout-exec
+    - id: 3
+      run: |
+        npm install
+
+      # ok
+    - id: 4
+      uses: kartverket/github-workflows/.github/workflows/run-terraform.yml@main
+
+      # GHSA-f9qj-7gh3-mhj4
+    - id: 5
+      uses: kartverket/github-workflows/.github/workflows/run-terraform.yml@v2.7.1
+
+      # GHSA-f9qj-7gh3-mhj4
+    - id: 6
+      uses: kartverket/github-workflows/.github/workflows/run-terraform.yml@v2.2
+
+    - id: 7
+      run: |
+        ${{ github.event.workflow_run.head_branch }}
+
+    - id: 8
+      run: |
+        ${{ github.event.client_payload.foo }}
+        ${{ github.event.client_payload.foo }}
+
+      # untrusted-checkout-exec
+    - id: 9
+      uses: bridgecrewio/checkov-action@main
+
+      # TODO FP untrusted-checkout-exec context awareness
+    - id: 10
+      run: |
+        echo "pre-commit run"
+
+    - id: 11
+      run: |
+        # substring of go\ generate should not trigger
+        cargo generate

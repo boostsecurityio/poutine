@@ -1,0 +1,5 @@
+localjob:
+  image:
+    name: debian:vuln
+  script:
+    - echo 123

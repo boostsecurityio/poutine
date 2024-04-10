@@ -1,0 +1,68 @@
+{
+  "repos": [
+    {
+      "repo": "actions/checkout",
+      "risk": 0.5,
+      "attributes": {
+        "verified_org": "The organization is verified by GitHub",
+        "workflow_default_permissions": "The repository has a workflow that uses default permissions",
+        "workflow_injection": "The repository has workflows that have bash or JavaScript injection"
+      }
+    },
+    {
+      "repo": "hashicorp/vault-action",
+      "risk": 0.5,
+      "attributes": {
+        "verified_org": "The organization is verified by GitHub",
+        "workflow_default_permissions": "The repository has a workflow that uses default permissions",
+        "risky_workflows": "The repository has workflows that trigger on pull_request_target"
+      }
+    },
+    {
+      "repo": "chainguard-images/actions",
+      "risk": null,
+      "attributes": {
+        "not_analyzed": "No insights available for this action."
+      }
+    }
+  ],
+  "packages": [
+    {
+      "purl": "pkg:githubactions/actions/checkout@v4",
+      "repo": "actions/checkout",
+      "risk": null,
+      "attributes": {
+        "popular": "Top 1k most used GitHub Action",
+        "action_type": "This GitHub Action uses Node"
+      }
+    },
+    {
+      "purl": "pkg:githubactions/hashicorp/vault-action@v1",
+      "repo": "hashicorp/vault-action",
+      "risk": 1,
+      "attributes": {
+        "popular": "Top 1k most used GitHub Action",
+        "known_vulnerability": "The action has known vulnerabilities",
+        "not_analyzed": "No insights available for this action."
+      }
+    },
+    {
+      "purl": "pkg:githubactions/chainguard-images/actions/apko-build@main",
+      "repo": "chainguard-images/actions",
+      "risk": null,
+      "attributes": {
+        "not_analyzed": "No insights available for this action."
+      }
+    },
+    {
+      "purl": "pkg:githubactions/hashicorp/vault-action@v3",
+      "repo": "hashicorp/vault-action",
+      "risk": null,
+      "attributes": {
+        "popular": "Top 1k most used GitHub Action",
+        "not_analyzed": "No insights available for this action."
+      }
+    }
+  ],
+  "vulnerabilities": {}
+}
