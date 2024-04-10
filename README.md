@@ -1,6 +1,6 @@
 # `poutine`
 
-Created by [BoostSecurity.io](https://boostsecurity.io), `poutine` is a security scanner that detects misconfigurations and vulnerabilities in the build pipelines of a repository. It supports parsing CI workflows from GitHub Actions and Gitlab CI/CD. When given an access token with read-level access, `poutine` can analyze all the repositories of an organization to quickly gain insights about the security posture of the organization's software supply chain.
+Created by [BoostSecurity.io](https://boostsecurity.io), `poutine` is a security scanner that detects misconfigurations and vulnerabilities in the build pipelines of a repository. It supports parsing CI workflows from GitHub Actions and Gitlab CI/CD. When given an access token with read-level access, `poutine` can analyze all the repositories of an organization to quickly gain insights into the security posture of the organization's software supply chain.
 
 <table>
 <td>
@@ -14,7 +14,7 @@ See the [documentation](docs/content/en/rules) for a list of rules currently sup
 
 ## Why `poutine`?
 
-In french, the word "poutine", when not refering to the [dish](https://en.wikipedia.org/wiki/Poutine), can be used to mean "messy". Inspired by the complexity and intertwined dependencies of modern Open Source projects, `poutine` reflects both a nod to our Montreal roots and the often messy, complex nature of securing software supply chains. 
+In French, the word "poutine", when not referring to the [dish](https://en.wikipedia.org/wiki/Poutine), can be used to mean "messy". Inspired by the complexity and intertwined dependencies of modern open-source projects, `poutine` reflects both a nod to our Montreal roots and the often messy, complex nature of securing software supply chains. 
 
 ## Getting Started
 
@@ -87,7 +87,7 @@ make build
 
 ## See Also 
 
-For examples of vulnerabilities in GitHub Actions workflows, you can explore the [Messy poutine GitHub organization](https://github.com/messypoutine). It showcases real-world vulnerabilities from Open Source projects readily exploitable for educational purposes. 
+For examples of vulnerabilities in GitHub Actions workflows, you can explore the [Messy poutine GitHub organization](https://github.com/messypoutine). It showcases real-world vulnerabilities from open-source projects readily exploitable for educational purposes. 
 
 To get started with some hints, try using `poutine` to analyze the `messypoutine` organization:
 ``` bash
