@@ -4,7 +4,6 @@ project_name: poutine
 before:
   hooks:
     - go mod verify
-    - go mod tidy
 
 builds:
   - env:
@@ -12,6 +11,12 @@ builds:
     goos:
       - linux
       - darwin
+    goarch:
+      - amd64
+      - arm64
+      - arm
+    goarm:
+      - '7'
 
 kos:
   - repository: ghcr.io/boostsecurityio/poutine
@@ -24,6 +29,13 @@ kos:
     platforms:
       - linux/amd64
       - linux/arm64
+
+docker_signs:
+  - artifacts: manifests
+    args:
+      - "sign"
+      - "${artifact}"
+      - "--yes" # skip user interaction
 
 signs:
   - cmd: cosign
