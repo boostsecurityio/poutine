@@ -15,7 +15,7 @@ require (
 	github.com/shurcooL/githubv4 v0.0.0-20240120211514-18a1ae0e79dc
 	github.com/stretchr/testify v1.9.0
 	github.com/xanzy/go-gitlab v0.100.0
-	golang.org/x/oauth2 v0.17.0
+	golang.org/x/oauth2 v0.19.0
 	golang.org/x/sync v0.7.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -31,7 +31,6 @@ require (
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
-	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
@@ -62,7 +61,6 @@ require (
 	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/term v0.18.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
-	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
