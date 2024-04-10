@@ -1,0 +1,79 @@
+spec:
+  inputs:
+    gem_name:
+    gem_path_prefix:
+      default: "gems/"
+---
+
+include:
+  - local: '/include.yml'
+    inputs:
+      foo: bar
+
+  # TODO: not part of the inventory due to vars
+  - project: '$CI_PROJECT_PATH'
+    ref: main
+    file: '/templates/.gitlab-ci-template.yml'
+
+  - project: 'my-group/my-project'
+    ref: main
+    file: '/templates/.gitlab-ci-template.yml'
+
+  - template: Auto-DevOps.gitlab-ci.yml
+
+  - remote: https://example.com/.gitlab-ci.yml
+
+  - component: gitlab.example.com/my-org/security-components/secret-detection@1.0
+
+workflow:
+  name: '[$[[inputs.gem_name]] gem] Ruby $RUBY_VERSION pipeline'
+  rules:
+    - when: always
+
+variables:
+  BUNDLE_PATH: "vendor"
+  BUNDLE_FROZEN: "true"
+  RUBY_VERSION: "3.2"
+  CI_DEBUG_SERVICES: 'true'
+
+default:
+  image: "ruby:3.2"
+  services:
+    - name: postgres:15
+  cache:
+    key: "$[[inputs.gem_name]]-3.2"
+    paths:
+      - "$[[inputs.gem_path_prefix]]$[[inputs.gem_name]]/vendor/ruby"
+  before_script:
+    - cd $[[inputs.gem_path_prefix]]$[[inputs.gem_name|expand_vars]]
+    - ruby -v                                   # Print out ruby version for debugging
+    - bundle_version=$(grep -A 1 "BUNDLED WITH" Gemfile.lock | tail -n 1 | sed -e 's/[[:space:]]//')
+    - gem install bundler --version "$bundle_version" --no-document # Bundler is not installed with the image
+    - bundle config                             # Show bundler configuration
+    - bundle install --jobs=$(nproc) --retry=3
+
+.ruby_matrix:
+  image: "ruby:${RUBY_VERSION}" # TODO: inventory
+  parallel:
+    matrix:
+      - RUBY_VERSION: ["3.0", "3.1", "3.2"]
+
+rubocop:
+  extends: .ruby_matrix
+  variables:
+    CI_DEBUG_TRACE: 'TRUE'
+  rules:
+    - exists: ["$[[inputs.gem_path_prefix]]$[[inputs.gem_name]]/.rubocop.yml"]
+  script:
+    - bundle exec rubocop
+
+rspec:
+  extends: .ruby_matrix
+  script:
+    - RAILS_ENV=test bundle exec rspec
+  coverage: '/LOC \((\d+\.\d+%)\) covered.$/'
+  artifacts:
+    expire_in: 31d
+    when: always
+    paths:
+      - coverage/

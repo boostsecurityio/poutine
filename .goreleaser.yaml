@@ -1,0 +1,71 @@
+version: 1
+project_name: poutine
+
+before:
+  hooks:
+    - go mod verify
+    - go mod tidy
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+
+kos:
+  - repository: ghcr.io/boostsecurityio/poutine
+    base_image: 'cgr.dev/chainguard/git:latest@sha256:e7a68ad581bf04f496ddb932f5dc72aadde0e78fcfab28a94d5f2a1b4a5f4d1e'
+    tags:
+      - '{{.Version}}'
+      - latest
+    bare: true
+    preserve_import_paths: false
+    platforms:
+      - linux/amd64
+      - linux/arm64
+
+signs:
+  - cmd: cosign
+    certificate: '${artifact}.pem'
+    args:
+      - "sign-blob"
+      - "--output-certificate=${certificate}"
+      - "--output-signature=${signature}"
+      - "${artifact}"
+      - "--yes" # skip user interaction
+    artifacts: all
+    output: true
+
+archives:
+  - format: tar.gz
+    # this name template makes the OS and Arch compatible with the results of `uname`.
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    # use zip for windows archives
+    format_overrides:
+      - goos: windows
+        format: zip
+
+brews:
+- repository:
+    owner: boostsecurityio
+    name: homebrew-tap
+    branch: main
+    token: "{{ .Env.TAP_GITHUB_TOKEN }}"
+  folder: Formula
+  homepage: https://boostsecurity.io
+  description: poutine - The Build Pipeline risk analyzer.
+  license: Apache 2.0
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"

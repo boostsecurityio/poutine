@@ -1,0 +1,15 @@
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+
+jobs:
+  clone:
+    runs-on: ubuntu-latest
+    container:
+      image: node:latest
+    steps:
+      - uses: actions/checkout@main
+        with:
+          ref: ${{ inputs.ref }}
