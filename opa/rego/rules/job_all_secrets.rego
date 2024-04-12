@@ -17,7 +17,7 @@ rule := poutine.rule(rego.metadata.chain())
 results contains poutine.finding(rule, pkg.purl, {
 	"path": workflow.path,
 	"job": job.id,
-	"line": job.line,
+	"line": job.lines.start,
 }) if {
 	pkg := input.packages[_]
 	workflow := pkg.github_actions_workflows[_]

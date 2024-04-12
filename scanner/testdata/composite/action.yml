@@ -11,3 +11,8 @@ runs:
 
     # GHSA-4mgv-m5cm-f9h7
     - uses: hashicorp/vault-action@v2.1.0
+
+    - id: if-always-true
+      run: ls
+      if: |
+        ${{ github.event == 'not-checked' }}

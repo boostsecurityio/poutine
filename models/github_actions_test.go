@@ -38,6 +38,7 @@ func TestGithubActionsWorkflowJobs(t *testing.T) {
 			Expected: GithubActionsJob{
 				ID:     "build",
 				RunsOn: []string{"ubuntu-latest"},
+				Lines:  map[string]int{"start": 1, "runs_on": 1},
 			},
 		},
 		{
@@ -45,6 +46,7 @@ func TestGithubActionsWorkflowJobs(t *testing.T) {
 			Expected: GithubActionsJob{
 				ID:     "build",
 				RunsOn: []string{"group:runner-group", "label:runner-label"},
+				Lines:  map[string]int{"start": 1, "runs_on": 1},
 			},
 		},
 		{
@@ -52,6 +54,7 @@ func TestGithubActionsWorkflowJobs(t *testing.T) {
 			Expected: GithubActionsJob{
 				ID:     "build",
 				RunsOn: []string{"label:runner-label"},
+				Lines:  map[string]int{"start": 1, "runs_on": 1},
 			},
 		},
 		{
@@ -143,6 +146,9 @@ func TestGithubActionsWorkflowJobs(t *testing.T) {
 		} else {
 			assert.Nil(t, err)
 			c.Expected.Line = 1
+			if c.Expected.Lines == nil {
+				c.Expected.Lines = map[string]int{"start": c.Expected.Line}
+			}
 			assert.Equal(t, c.Expected, jobs[0])
 		}
 	}
@@ -396,7 +402,7 @@ jobs:
 	assert.Equal(t, "Build", workflow.Events[3].Workflows[0])
 
 	assert.Equal(t, "build", workflow.Jobs[0].ID)
-	assert.Equal(t, 33, workflow.Jobs[0].Line)
+	assert.Equal(t, 33, workflow.Jobs[0].Lines["start"])
 	assert.Equal(t, "Build job", workflow.Jobs[0].Name)
 	assert.Equal(t, "ubuntu-latest", workflow.Jobs[0].RunsOn[0])
 	assert.Equal(t, "windows-latest", workflow.Jobs[0].RunsOn[1])
@@ -418,9 +424,11 @@ jobs:
 	assert.Equal(t, "git pull", workflow.Jobs[0].Steps[0].Run)
 	assert.Equal(t, "/tmp", workflow.Jobs[0].Steps[0].WorkingDirectory)
 	assert.Equal(t, "ref", workflow.Jobs[0].Steps[0].With[0].Name)
+	assert.Equal(t, 50, workflow.Jobs[0].Steps[0].Lines["with_ref"])
 	assert.Equal(t, "${{ github.head_ref }}", workflow.Jobs[0].Steps[0].With[0].Value)
 	assert.Equal(t, "${{ github.head_ref }}", workflow.Jobs[0].Steps[0].WithRef)
 	assert.Equal(t, "script", workflow.Jobs[0].Steps[0].With[1].Name)
+	assert.Equal(t, 51, workflow.Jobs[0].Steps[0].Lines["with_script"])
 	assert.Equal(t, "console.log(1)", workflow.Jobs[0].Steps[0].With[1].Value)
 	assert.Equal(t, "console.log(1)", workflow.Jobs[0].Steps[0].WithScript)
 	assert.Equal(t, "GITHUB_TOKEN", workflow.Jobs[0].Steps[0].Env[0].Name)
@@ -479,4 +487,5 @@ runs:
 	assert.Equal(t, "checkout", actionMetadata.Runs.Steps[0].ID)
 	assert.Equal(t, "ref", actionMetadata.Runs.Steps[0].With[0].Name)
 	assert.Equal(t, "koi", actionMetadata.Runs.Steps[0].With[0].Value)
+	assert.Equal(t, 17, actionMetadata.Runs.Steps[0].Lines["uses"])
 }

@@ -1,7 +1,7 @@
 # METADATA
 # title: Pull Request Runs on Self-Hosted GitHub Actions Runner
 # description: |-
-#   This job runs on a self-hosted GitHub Actions runner in a workflow 
+#   This job runs on a self-hosted GitHub Actions runner in a workflow
 #   that is triggered by a pull request event.
 # custom:
 #   level: warning
@@ -16,7 +16,7 @@ rule := poutine.rule(rego.metadata.chain())
 results contains poutine.finding(rule, pkg.purl, {
 	"path": workflow.path,
 	"job": job.id,
-	"line": job.line,
+	"line": job.lines.runs_on,
 	"details": sprintf("runs-on: %s", [concat(", ", job.runs_on)]),
 }) if {
 	pkg := input.packages[_]

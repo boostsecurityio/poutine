@@ -1,8 +1,8 @@
 # METADATA
 # title: If condition always evaluates to true
 # description: |-
-#   GitHub Actions expressions used in if condition of jobs or steps 
-#   must not contain extra characters or spaces. 
+#   GitHub Actions expressions used in if condition of jobs or steps
+#   must not contain extra characters or spaces.
 #   Otherwise, the condition is always true.
 # custom:
 #   level: error
@@ -31,7 +31,7 @@ always_true(cond) if {
 
 if_conditions[pkg.purl] contains {
 	"path": workflow.path,
-	"line": job.line,
+	"line": object.get(job.lines, "if", 0),
 	"job": job.id,
 } if {
 	pkg := input.packages[_]
@@ -44,7 +44,7 @@ if_conditions[pkg.purl] contains {
 
 if_conditions[pkg.purl] contains {
 	"path": workflow.path,
-	"line": step.line,
+	"line": object.get(step.lines, "if", 0),
 	"job": job.id,
 	"step": step_id,
 } if {
@@ -59,7 +59,7 @@ if_conditions[pkg.purl] contains {
 
 if_conditions[pkg.purl] contains {
 	"path": action.path,
-	"line": step.line,
+	"line": object.get(step.lines, "if", 0),
 	"step": step_id,
 } if {
 	pkg := input.packages[_]
