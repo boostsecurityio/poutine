@@ -44,6 +44,7 @@ func printFindingsPerRule(out io.Writer, results map[string][]opa.Finding, rules
 		table.SetHeader([]string{"Repository", "Details", "URL"})
 
 		fmt.Fprintf(out, "Rule: %s\n", rules[ruleId].Title)
+		fmt.Fprintf(out, "Severity: %s\n", rules[ruleId].Level)
 		fmt.Fprintf(out, "Description: %s\n", rules[ruleId].Description)
 		fmt.Fprintf(out, "Documentation: https://github.com/boostsecurityio/poutine/blob/main/docs/content/en/rules/%s.md\n\n", ruleId)
 
