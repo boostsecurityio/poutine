@@ -23,13 +23,13 @@ gh_injections(str) = {expr |
 	expr := regex.find_all_string_submatch_n("\\$\\{\\{\\s*([^}]+?)\\s*\\}\\}", match, 1)[0][1]
 }
 
-gh_step_injections(step) = gh_injections(step.with_script) if {
+gh_step_injections(step) = [gh_injections(step.with_script), step.lines.with_script] if {
 	startswith(step.uses, "actions/github-script@")
-} else = gh_injections(step.run)
+} else = [gh_injections(step.run), step.lines.run]
 
 results contains poutine.finding(rule, pkg.purl, {
 	"path": workflow.path,
-	"line": step.line,
+	"line": line,
 	"job": job.id,
 	"step": i,
 	"details": sprintf("Sources: %s", [concat(" ", exprs)]),
@@ -38,13 +38,13 @@ results contains poutine.finding(rule, pkg.purl, {
 	workflow = pkg.github_actions_workflows[_]
 	job := workflow.jobs[_]
 	step := job.steps[i]
-	exprs := gh_step_injections(step)
+	[exprs, line] := gh_step_injections(step)
 	count(exprs) > 0
 }
 
 results contains poutine.finding(rule, pkg.purl, {
 	"path": action.path,
-	"line": step.line,
+	"line": line,
 	"step": i,
 	"details": sprintf("Sources: %s", [concat(" ", exprs)]),
 }) if {
@@ -52,7 +52,7 @@ results contains poutine.finding(rule, pkg.purl, {
 	action := pkg.github_actions_metadata[_]
 	step := action.runs.steps[i]
 	action.runs.using == "composite"
-	exprs := gh_step_injections(step)
+	[exprs, line] := gh_step_injections(step)
 	count(exprs) > 0
 }
 

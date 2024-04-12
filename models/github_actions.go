@@ -92,6 +92,8 @@ type GithubActionsStep struct {
 	WithScript       string            `json:"with_script" yaml:"-"`
 	Line             int               `json:"line" yaml:"-"`
 	Action           string            `json:"action" yaml:"-"`
+
+	Lines map[string]int `json:"lines" yaml:"-"`
 }
 
 type GithubActionsMetadata struct {
@@ -169,6 +171,8 @@ type GithubActionsJob struct {
 	Steps             GithubActionsSteps           `json:"steps"`
 	ReferencesSecrets []string                     `json:"references_secrets" yaml:"-"`
 	Line              int                          `json:"line" yaml:"-"`
+
+	Lines map[string]int `json:"lines" yaml:"-"`
 }
 
 type GithubActionsWorkflow struct {
@@ -201,11 +205,25 @@ func (o *GithubActionsJobs) UnmarshalYAML(node *yaml.Node) error {
 		job := GithubActionsJob{
 			ID:   name,
 			Line: node.Content[i].Line,
+			Lines: map[string]int{
+				"start": node.Content[i].Line,
+			},
 		}
 		err := value.Decode(&job)
-
 		if err != nil {
 			return err
+		}
+
+		for j := 0; j < len(value.Content); j += 2 {
+			key := value.Content[j].Value
+			value := value.Content[j+1]
+
+			switch key {
+			case "runs-on":
+				job.Lines["runs_on"] = value.Line
+			case "if":
+				job.Lines[key] = value.Line
+			}
 		}
 
 		*o = append(*o, job)
@@ -375,7 +393,8 @@ func (o *GithubActionsEnvs) UnmarshalYAML(node *yaml.Node) error {
 func (o *GithubActionsStep) UnmarshalYAML(node *yaml.Node) error {
 	type Alias GithubActionsStep
 	t := Alias{
-		Line: node.Line,
+		Line:  node.Line,
+		Lines: map[string]int{"start": node.Line},
 	}
 	err := node.Decode(&t)
 	if err != nil {
@@ -384,12 +403,31 @@ func (o *GithubActionsStep) UnmarshalYAML(node *yaml.Node) error {
 
 	*o = GithubActionsStep(t)
 
-	for _, param := range o.With {
-		switch param.Name {
-		case "ref":
-			o.WithRef = param.Value
-		case "script":
-			o.WithScript = param.Value
+	for i := 0; i < len(node.Content); i += 2 {
+		key := node.Content[i].Value
+		value := node.Content[i+1]
+
+		switch key {
+		case "uses", "run", "if":
+			o.Lines[key] = value.Line
+		case "with":
+			if value.Kind != yaml.MappingNode {
+				continue
+			}
+
+			for j := 0; j < len(value.Content); j += 2 {
+				name := value.Content[j].Value
+				arg := value.Content[j+1]
+
+				switch name {
+				case "ref":
+					o.Lines["with_ref"] = arg.Line
+					o.WithRef = arg.Value
+				case "script":
+					o.Lines["with_script"] = arg.Line
+					o.WithScript = arg.Value
+				}
+			}
 		}
 	}
 
