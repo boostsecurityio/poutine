@@ -38,6 +38,8 @@ jobs:
         app-id: ${{ vars.HOMEBREW_TAPPER_BOT_APP_ID }}
         private-key: ${{ secrets.HOMEBREW_TAPPER_BOT_PRIVATE_KEY }}
         repositories: homebrew-tap
+    - name: Install ko and setup OCI registry login
+      uses: ko-build/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa # v0.6
     - name: Run GoReleaser
       uses: goreleaser/goreleaser-action@7ec5c2b0c6cdda6e8bbb49444bc797dd33d74dd8 # v5
       with:
