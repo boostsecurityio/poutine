@@ -3,11 +3,13 @@ package sarif
 import (
 	"context"
 	"fmt"
+	"io"
+	"strings"
+
+	"github.com/boostsecurityio/poutine/docs"
 	"github.com/boostsecurityio/poutine/models"
 	"github.com/boostsecurityio/poutine/opa"
 	"github.com/owenrumney/go-sarif/v2/sarif"
-	"io"
-	"strings"
 )
 
 func NewFormat(out io.Writer) *Format {
@@ -35,6 +37,8 @@ func (f *Format) Format(ctx context.Context, report *opa.FindingsResult, package
 	for _, finding := range report.Findings {
 		findingsByPurl[finding.Purl] = append(findingsByPurl[finding.Purl], finding)
 	}
+
+	docs := docs.GetPagesContent()
 
 	for _, pkg := range packages {
 		run := sarif.NewRunWithInformationURI("poutine", "https://github.com/boostsecurityio/poutine")
@@ -68,12 +72,13 @@ func (f *Format) Format(ctx context.Context, report *opa.FindingsResult, package
 			if line == 0 {
 				line = 1
 			}
+			ruleDoc := docs[ruleId]
 
 			run.AddRule(ruleId).
 				WithName(rule.Title).
 				WithDescription(rule.Title).
 				WithFullDescription(
-					sarif.NewMultiformatMessageString(ruleDescription),
+					sarif.NewMarkdownMultiformatMessageString(ruleDoc),
 				).
 				WithHelpURI(
 					fmt.Sprintf("https://github.com/boostsecurityio/poutine/tree/main/docs/content/en/rules/%s.md", ruleId),
