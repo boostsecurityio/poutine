@@ -38,6 +38,12 @@ jobs:
         app-id: ${{ vars.HOMEBREW_TAPPER_BOT_APP_ID }}
         private-key: ${{ secrets.HOMEBREW_TAPPER_BOT_PRIVATE_KEY }}
         repositories: homebrew-tap
+    - name: Login to GitHub Container Registry to allow cosign signature push
+      uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     - name: Run GoReleaser
       uses: goreleaser/goreleaser-action@7ec5c2b0c6cdda6e8bbb49444bc797dd33d74dd8 # v5
       with:
