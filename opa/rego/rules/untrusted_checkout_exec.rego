@@ -37,7 +37,7 @@ build_commands[cmd] = {
 
 results contains poutine.finding(rule, pkg_purl, {
 	"path": workflow_path,
-	"line": step.line,
+	"line": step.lines.run,
 	"details": sprintf("Detected usage of `%s`", [cmd]),
 }) if {
 	[pkg_purl, workflow_path, step] := _steps_after_untrusted_checkout[_]
@@ -49,7 +49,7 @@ results contains poutine.finding(rule, pkg_purl, {
 
 results contains poutine.finding(rule, pkg_purl, {
 	"path": workflow_path,
-	"line": step.line,
+	"line": step.lines.uses,
 	"details": sprintf("Detected usage the GitHub Action `%s`", [step.action]),
 }) if {
 	[pkg_purl, workflow_path, step] := _steps_after_untrusted_checkout[_]
