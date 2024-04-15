@@ -14,9 +14,7 @@ inputs:
     required: true
 runs:
   using: docker
-  image: docker://ghcr.io/boostsecurityio/poutine:0.9.7@sha256:034326fac021cbedf8df99e90d993ec3553c7649395040bbb8bca05b601de35a
-  entrypoint: /bin/sh
+  image: Dockerfile.action
   args:
-    - -c
     - |
         poutine -format "$INPUT_FORMAT" analyze_local "$GITHUB_WORKSPACE" > "$INPUT_OUTPUT"
