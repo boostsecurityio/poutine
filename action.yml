@@ -1,6 +1,8 @@
 name: poutine - GitHub Actions SAST
 description: |
   BoostSecurity.io’s poutine detects vulnerabilities and misconfigurations in your GitHub Actions workflows.
+icon: align-center
+color: yellow
 inputs:
   format:
     description: 'Report format'
