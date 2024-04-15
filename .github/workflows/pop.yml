@@ -2,10 +2,6 @@ name: POP - poutine on poutine
 
 on:
   push:
-    branches: [ main ]
-    paths:
-      - .github/workflows/**
-      - action.yml
   pull_request:
     branches: [ main ]
     paths:
