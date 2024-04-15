@@ -145,7 +145,7 @@ func TestFindings(t *testing.T) {
 			Purl:   purl,
 			Meta: opa.FindingMeta{
 				Path:    ".github/workflows/valid.yml",
-				Line:    29,
+				Line:    30,
 				Details: "Detected usage of `npm`",
 			},
 		},
@@ -154,7 +154,7 @@ func TestFindings(t *testing.T) {
 			Purl:   purl,
 			Meta: opa.FindingMeta{
 				Path:    ".github/workflows/valid.yml",
-				Line:    55,
+				Line:    56,
 				Details: "Detected usage the GitHub Action `bridgecrewio/checkov-action`",
 			},
 		},
@@ -163,7 +163,7 @@ func TestFindings(t *testing.T) {
 			Purl:   purl,
 			Meta: opa.FindingMeta{
 				Path:    ".github/workflows/valid.yml",
-				Line:    59,
+				Line:    60,
 				Details: "Detected usage of `pre-commit`",
 			},
 		},
