@@ -4,45 +4,19 @@ description: |
   Designed to streamline security analysis, poutine scans your repository’s CI/CD pipelines.
   It offers insights to secure your software supply chain efficiently.
 inputs:
-  path:
-    description: 'Path to the local repository to analyze.'
+  format:
+    description: 'Report format'
+    default: sarif
     required: true
-    default: '.'
+  output:
+    description: 'Report file output'
+    default: results.sarif
+    required: true
 runs:
-  using: composite
-  steps:
-    - name: Download and Setup
-      id: setup
-      shell: bash
-      env:
-        PINNED_VERSION: v0.9.3
-        PINNED_ARCH: poutine_Linux_x86_64.tar.gz
-        PINNED_HASH: 938c36de89eea18d69c8d5605a64ef1573e682cfd02b61d4cc2de3b0663a63bc
-      run: |
-        # Create a temp dir for the tool and its results
-        POUTINE_TOOL_DIR=$(mktemp -d)
-        cd "${POUTINE_TOOL_DIR}"
-        echo "POUTINE_TOOL_DIR=${POUTINE_TOOL_DIR}" >> "${GITHUB_ENV}"
-        
-        # Download tool archive and verify checksum
-        curl -sLO "https://github.com/boostsecurityio/poutine/releases/download/${PINNED_VERSION}/${PINNED_ARCH}"
-        echo "${PINNED_HASH}  ${PINNED_ARCH}" | shasum -a 256 --check
-        
-        # Decompress the tool
-        tar -xzf "${PINNED_ARCH}"
-        
-    - name: Analyze the repository
-      id: analyze
-      shell: bash
-      run: |
-        POUTINE_SARIF_FILE="${POUTINE_TOOL_DIR}/results.sarif"
-        echo "POUTINE_SARIF_FILE=${POUTINE_SARIF_FILE}" >> "${GITHUB_ENV}"
-        "${POUTINE_TOOL_DIR}/poutine" -format sarif analyze_local "${TARGET_PATH}" > "${POUTINE_SARIF_FILE}"
-      env:
-        TARGET_PATH: ${{ inputs.path }}
-
-    - name: Upload SARIF Findings
-      id: upload
-      uses: github/codeql-action/upload-sarif@4355270be187e1b672a7a1c7c7bae5afdc1ab94a # v3.24.10
-      with:
-        sarif_file: ${{ env.POUTINE_SARIF_FILE }}
+  using: docker
+  image: docker://ghcr.io/boostsecurityio/poutine:0.9.7@sha256:034326fac021cbedf8df99e90d993ec3553c7649395040bbb8bca05b601de35a
+  entrypoint: /bin/sh
+  args:
+    - -c
+    - |
+        poutine -format "$INPUT_FORMAT" analyze_local "$GITHUB_WORKSPACE" > "$INPUT_OUTPUT"
