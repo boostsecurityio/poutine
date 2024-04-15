@@ -17,4 +17,5 @@ runs:
   image: Dockerfile.action
   args:
     - |
+        git config --global --add safe.directory /src
         poutine -format "$INPUT_FORMAT" analyze_local "$GITHUB_WORKSPACE" > "$INPUT_OUTPUT"
