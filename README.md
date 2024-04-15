@@ -40,6 +40,27 @@ brew install boostsecurityio/tap/poutine
 docker run -e GH_TOKEN ghcr.io/boostsecurityio/poutine:latest
 ```
 
+#### GitHub Actions
+```yaml
+...
+jobs:
+  poutine:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+#################################################################################################
+    - name: poutine - GitHub Actions SAST
+      uses: boostsecurityio/poutine-action@main # We recommend to use a tagged version and pin it
+#################################################################################################
+    - name: Upload poutine SARIF file
+      uses: github/codeql-action/upload-sarif@4355270be187e1b672a7a1c7c7bae5afdc1ab94a # v3.24.10
+      with:
+        sarif_file: results.sarif
+```
+
 ### Usage
 ``` bash
 poutine [options] [command] [arguments]
