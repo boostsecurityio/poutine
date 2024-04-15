@@ -31,7 +31,7 @@ jobs:
           codeload.github.com:443
           objects.githubusercontent.com:443
     - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-    - uses: boostsecurityio/poutine-action@63ba14852cb46e541bfca609eedda08df9197b76 # v0.9.7
+    - uses: boostsecurityio/poutine-action@main # Dogfood the latest action
       name: "Run poutine on poutine's own codebase"
       id: self-test
     - name: Upload SARIF file
