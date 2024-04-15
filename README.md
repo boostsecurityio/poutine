@@ -44,7 +44,7 @@ docker run -e GH_TOKEN ghcr.io/boostsecurityio/poutine:latest
 ```yaml
 ...
 jobs:
-  pop:
+  poutine:
     runs-on: ubuntu-latest
     permissions:
       security-events: write
