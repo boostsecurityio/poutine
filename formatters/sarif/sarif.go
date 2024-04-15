@@ -73,16 +73,17 @@ func (f *Format) Format(ctx context.Context, report *opa.FindingsResult, package
 				line = 1
 			}
 			ruleDoc := docs[ruleId]
+			ruleUrl := fmt.Sprintf("https://github.com/boostsecurityio/poutine/tree/main/docs/content/en/rules/%s.md", ruleId)
 
 			run.AddRule(ruleId).
 				WithName(rule.Title).
 				WithDescription(rule.Title).
 				WithFullDescription(
-					sarif.NewMarkdownMultiformatMessageString(ruleDoc),
+					sarif.NewMultiformatMessageString(ruleDescription),
 				).
-				WithHelpURI(
-					fmt.Sprintf("https://github.com/boostsecurityio/poutine/tree/main/docs/content/en/rules/%s.md", ruleId),
-				)
+				WithHelpURI(ruleUrl).
+				WithTextHelp(ruleUrl).
+				WithMarkdownHelp(ruleDoc)
 
 			run.AddDistinctArtifact(path)
 
