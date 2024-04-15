@@ -2,6 +2,11 @@ name: POP - poutine on poutine
 
 on:
   push:
+    branches: [ main ]
+    paths:
+      - .github/workflows/**
+      - action.yml
+
   pull_request:
     branches: [ main ]
     paths:
@@ -29,3 +34,6 @@ jobs:
     - uses: ./
       name: "Run poutine on poutine's own codebase"
       id: self-test
+
+    - name: Upload SARIF file
+      uses: github/codeql-action/upload-sarif@v2
