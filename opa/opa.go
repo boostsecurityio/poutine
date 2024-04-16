@@ -63,6 +63,7 @@ func (o *Opa) Eval(ctx context.Context, query string, input map[string]interface
 		rego.Compiler(o.Compiler),
 		rego.PrintHook(o),
 		rego.Input(input),
+		rego.Imports([]string{"data.poutine.utils"}),
 	)
 
 	rs, err := rego.Eval(ctx)
