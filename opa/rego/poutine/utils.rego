@@ -49,7 +49,7 @@ job_uses_self_hosted_runner(job) if {
 		"(?i)^((ubuntu-(([0-9]{2})\\.04|latest)|macos-([0-9]{2}|latest)(-x?large)?|windows-(20[0-9]{2}|latest)|(buildjet|warp)-[a-z0-9-]+))$",
 		run_on,
 	)
-}
+} else := false
 
 empty(xs) if {
 	xs == null
