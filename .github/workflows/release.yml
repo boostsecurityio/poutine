@@ -11,15 +11,16 @@ env:
   GO_VERSION: 1.22
   GO_RELEASER_VERSION: v1.25.1
   
-permissions:
-  contents: write
-  packages: write
-  id-token: write
+permissions: {}
 
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
     environment: homebrew-tap
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
     steps:
     - uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
       with:
