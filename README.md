@@ -1,3 +1,5 @@
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8787/badge)](https://www.bestpractices.dev/projects/8787)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/boostsecurityio/poutine/badge)](https://securityscorecards.dev/viewer/?uri=github.com/boostsecurityio/poutine)
 ![build](https://github.com/boostsecurityio/poutine/actions/workflows/build_test.yml/badge.svg)
 ![CodeQL](https://github.com/boostsecurityio/poutine/actions/workflows/codeql.yml/badge.svg)
 [![Go Reference](https://pkg.go.dev/badge/github.com/boostsecurityio/poutine/v4.svg)](https://pkg.go.dev/github.com/boostsecurityio/poutine)
