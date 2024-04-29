@@ -9,11 +9,11 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog/log"
 
 	"github.com/boostsecurityio/poutine/opa"
-	"github.com/boostsecurityio/poutine/providers/gitops"
 	"github.com/boostsecurityio/poutine/providers/pkgsupply"
 	"github.com/boostsecurityio/poutine/scanner"
 	"github.com/schollz/progressbar/v3"
@@ -43,10 +43,32 @@ type ScmClient interface {
 	ParseRepoAndOrg(string) (string, string, error)
 }
 
-func AnalyzeOrg(ctx context.Context, org string, scmClient ScmClient, numberOfGoroutines *int, formatter Formatter) error {
-	provider := scmClient.GetProviderName()
+type GitClient interface {
+	Clone(ctx context.Context, clonePath string, url string, token string, ref string) error
+	CommitSHA(clonePath string) (string, error)
+	LastCommitDate(ctx context.Context, clonePath string) (time.Time, error)
+	GetRemoteOriginURL(ctx context.Context, repoPath string) (string, error)
+	GetRepoHeadBranchName(ctx context.Context, repoPath string) (string, error)
+}
 
-	providerVersion, err := scmClient.GetProviderVersion(ctx)
+func NewAnalyzer(scmClient ScmClient, gitClient GitClient, formatter Formatter) *Analyzer {
+	return &Analyzer{
+		ScmClient: scmClient,
+		GitClient: gitClient,
+		Formatter: formatter,
+	}
+}
+
+type Analyzer struct {
+	ScmClient ScmClient
+	GitClient GitClient
+	Formatter Formatter
+}
+
+func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutines *int) error {
+	provider := a.ScmClient.GetProviderName()
+
+	providerVersion, err := a.ScmClient.GetProviderVersion(ctx)
 	if err != nil {
 		log.Debug().Err(err).Msgf("Failed to get provider version for %s", provider)
 	}
@@ -54,7 +76,7 @@ func AnalyzeOrg(ctx context.Context, org string, scmClient ScmClient, numberOfGo
 	log.Debug().Msgf("Provider: %s, Version: %s", provider, providerVersion)
 
 	log.Debug().Msgf("Fetching list of repositories for organization: %s on %s", org, provider)
-	orgReposBatches := scmClient.GetOrgRepos(ctx, org)
+	orgReposBatches := a.ScmClient.GetOrgRepos(ctx, org)
 
 	opaClient, _ := opa.NewOpa()
 	pkgsupplyClient := pkgsupply.NewStaticClient()
@@ -96,14 +118,14 @@ func AnalyzeOrg(ctx context.Context, org string, scmClient ScmClient, numberOfGo
 				defer sem.Release(1)
 				defer wg.Done()
 				repoNameWithOwner := repo.GetRepoIdentifier()
-				tempDir, err := cloneRepoToTemp(ctx, repo.BuildGitURL(scmClient.GetProviderBaseURL()), scmClient.GetToken())
+				tempDir, err := a.cloneRepoToTemp(ctx, repo.BuildGitURL(a.ScmClient.GetProviderBaseURL()), a.ScmClient.GetToken())
 				if err != nil {
 					log.Error().Err(err).Str("repo", repoNameWithOwner).Msg("failed to clone repo")
 					return
 				}
 				defer os.RemoveAll(tempDir)
 
-				pkg, err := generatePackageInsights(ctx, tempDir, repo)
+				pkg, err := a.generatePackageInsights(ctx, tempDir, repo)
 				if err != nil {
 					errChan <- err
 					return
@@ -132,21 +154,21 @@ func AnalyzeOrg(ctx context.Context, org string, scmClient ScmClient, numberOfGo
 
 	fmt.Print("\n\n")
 
-	return finalizeAnalysis(ctx, inventory, formatter)
+	return a.finalizeAnalysis(ctx, inventory)
 }
 
-func AnalyzeRepo(ctx context.Context, repoString string, scmClient ScmClient, formatter Formatter) error {
-	org, repoName, err := scmClient.ParseRepoAndOrg(repoString)
+func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string) error {
+	org, repoName, err := a.ScmClient.ParseRepoAndOrg(repoString)
 	if err != nil {
 		return fmt.Errorf("failed to parse repository: %w", err)
 	}
-	repo, err := scmClient.GetRepo(ctx, org, repoName)
+	repo, err := a.ScmClient.GetRepo(ctx, org, repoName)
 	if err != nil {
 		return fmt.Errorf("failed to get repo: %w", err)
 	}
 	provider := repo.GetProviderName()
 
-	providerVersion, err := scmClient.GetProviderVersion(ctx)
+	providerVersion, err := a.ScmClient.GetProviderVersion(ctx)
 	if err != nil {
 		log.Debug().Err(err).Msgf("Failed to get provider version for %s", provider)
 	}
@@ -166,13 +188,13 @@ func AnalyzeRepo(ctx context.Context, repoString string, scmClient ScmClient, fo
 		progressbar.OptionSetWriter(os.Stderr),
 	)
 
-	tempDir, err := cloneRepoToTemp(ctx, repo.BuildGitURL(scmClient.GetProviderBaseURL()), scmClient.GetToken())
+	tempDir, err := a.cloneRepoToTemp(ctx, repo.BuildGitURL(a.ScmClient.GetProviderBaseURL()), a.ScmClient.GetToken())
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(tempDir)
 
-	pkg, err := generatePackageInsights(ctx, tempDir, repo)
+	pkg, err := a.generatePackageInsights(ctx, tempDir, repo)
 	if err != nil {
 		return err
 	}
@@ -184,21 +206,21 @@ func AnalyzeRepo(ctx context.Context, repoString string, scmClient ScmClient, fo
 	_ = bar.Add(1)
 
 	fmt.Print("\n\n")
-	return finalizeAnalysis(ctx, inventory, formatter)
+	return a.finalizeAnalysis(ctx, inventory)
 }
 
-func AnalyzeLocalRepo(ctx context.Context, repoPath string, scmClient ScmClient, formatter Formatter) error {
-	org, repoName, err := scmClient.ParseRepoAndOrg(repoPath)
+func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) error {
+	org, repoName, err := a.ScmClient.ParseRepoAndOrg(repoPath)
 	if err != nil {
 		return fmt.Errorf("failed to parse repository: %w", err)
 	}
-	repo, err := scmClient.GetRepo(ctx, org, repoName)
+	repo, err := a.ScmClient.GetRepo(ctx, org, repoName)
 	if err != nil {
 		return fmt.Errorf("failed to get repo: %w", err)
 	}
 	provider := repo.GetProviderName()
 
-	providerVersion, err := scmClient.GetProviderVersion(ctx)
+	providerVersion, err := a.ScmClient.GetProviderVersion(ctx)
 	if err != nil {
 		log.Debug().Err(err).Msgf("Failed to get provider version for %s", provider)
 	}
@@ -218,7 +240,7 @@ func AnalyzeLocalRepo(ctx context.Context, repoPath string, scmClient ScmClient,
 		progressbar.OptionSetWriter(os.Stderr),
 	)
 
-	pkg, err := generatePackageInsights(ctx, repoPath, repo)
+	pkg, err := a.generatePackageInsights(ctx, repoPath, repo)
 	if err != nil {
 		return err
 	}
@@ -230,20 +252,20 @@ func AnalyzeLocalRepo(ctx context.Context, repoPath string, scmClient ScmClient,
 	_ = bar.Add(1)
 
 	fmt.Print("\n\n")
-	return finalizeAnalysis(ctx, inventory, formatter)
+	return a.finalizeAnalysis(ctx, inventory)
 }
 
 type Formatter interface {
 	Format(ctx context.Context, report *opa.FindingsResult, packages []*models.PackageInsights) error
 }
 
-func finalizeAnalysis(ctx context.Context, inventory *scanner.Inventory, formatter Formatter) error {
+func (a *Analyzer) finalizeAnalysis(ctx context.Context, inventory *scanner.Inventory) error {
 	report, err := inventory.Findings(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = formatter.Format(ctx, report, inventory.Packages)
+	err = a.Formatter.Format(ctx, report, inventory.Packages)
 	if err != nil {
 		return err
 	}
@@ -251,19 +273,18 @@ func finalizeAnalysis(ctx context.Context, inventory *scanner.Inventory, formatt
 	return nil
 }
 
-func generatePackageInsights(ctx context.Context, tempDir string, repo Repository) (*models.PackageInsights, error) {
-	gitClient := gitops.NewGitClient(nil)
-	commitDate, err := gitClient.LastCommitDate(ctx, tempDir)
+func (a *Analyzer) generatePackageInsights(ctx context.Context, tempDir string, repo Repository) (*models.PackageInsights, error) {
+	commitDate, err := a.GitClient.LastCommitDate(ctx, tempDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get last commit date: %w", err)
 	}
 
-	commitSha, err := gitClient.CommitSHA(tempDir)
+	commitSha, err := a.GitClient.CommitSHA(tempDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get commit SHA: %w", err)
 	}
 
-	headBranchName, err := gitClient.GetRepoHeadBranchName(ctx, tempDir)
+	headBranchName, err := a.GitClient.GetRepoHeadBranchName(ctx, tempDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get head branch name: %w", err)
 	}
@@ -284,14 +305,13 @@ func generatePackageInsights(ctx context.Context, tempDir string, repo Repositor
 	return pkg, nil
 }
 
-func cloneRepoToTemp(ctx context.Context, gitURL string, token string) (string, error) {
+func (a *Analyzer) cloneRepoToTemp(ctx context.Context, gitURL string, token string) (string, error) {
 	tempDir, err := os.MkdirTemp("", TEMP_DIR_PREFIX)
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp directory: %w", err)
 	}
 
-	gitClient := gitops.NewGitClient(nil)
-	err = gitClient.Clone(ctx, tempDir, gitURL, token, "HEAD")
+	err = a.GitClient.Clone(ctx, tempDir, gitURL, token, "HEAD")
 	if err != nil {
 		os.RemoveAll(tempDir) // Clean up if cloning fails
 		return "", fmt.Errorf("failed to clone repo: %s", err)

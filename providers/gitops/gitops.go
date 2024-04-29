@@ -3,6 +3,7 @@ package gitops
 import (
 	"bytes"
 	"context"
+	"github.com/rs/zerolog/log"
 	"os"
 	"os/exec"
 	"strconv"
@@ -131,4 +132,46 @@ func (g *GitClient) GetRepoHeadBranchName(ctx context.Context, repoPath string) 
 	}
 
 	return "HEAD", nil
+}
+
+func NewLocalGitClient(command *GitCommand) *LocalGitClient {
+	if command != nil {
+		return &LocalGitClient{GitClient: &GitClient{Command: *command}}
+	}
+	return &LocalGitClient{GitClient: &GitClient{Command: &ExecGitCommand{}}}
+}
+
+type LocalGitClient struct {
+	GitClient *GitClient
+}
+
+func (g *LocalGitClient) GetRemoteOriginURL(ctx context.Context, repoPath string) (string, error) {
+	return g.GitClient.GetRemoteOriginURL(ctx, repoPath)
+}
+
+func (g *LocalGitClient) LastCommitDate(ctx context.Context, clonePath string) (time.Time, error) {
+	return g.GitClient.LastCommitDate(ctx, clonePath)
+}
+
+func (g *LocalGitClient) CommitSHA(clonePath string) (string, error) {
+	return g.GitClient.CommitSHA(clonePath)
+}
+
+func (g *LocalGitClient) Clone(ctx context.Context, clonePath string, url string, token string, ref string) error {
+	log.Debug().Msgf("Local Git Client shouldn't be used to clone repositories")
+	return nil
+}
+
+func (g *LocalGitClient) GetRepoHeadBranchName(ctx context.Context, repoPath string) (string, error) {
+	cmd := "git"
+	args := []string{"branch", "--show-current"}
+
+	output, err := g.GitClient.Command.Run(ctx, cmd, args, repoPath)
+	if err != nil {
+		return "", err
+	}
+
+	headBranch := string(bytes.TrimSpace(output))
+
+	return headBranch, nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/boostsecurityio/poutine/providers/gitops"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -113,11 +114,15 @@ func run(ctx context.Context, args []string) error {
 
 	formatter := getFormatter()
 
+	gitClient := gitops.NewGitClient(nil)
+
+	analyzer := analyze.NewAnalyzer(scmClient, gitClient, formatter)
+
 	switch command {
 	case "analyze_org":
-		return analyzeOrg(ctx, args[1], scmClient, formatter)
+		return analyzeOrg(ctx, args[1], analyzer)
 	case "analyze_repo":
-		return analyzeRepo(ctx, args[1], scmClient, formatter)
+		return analyzeRepo(ctx, args[1], analyzer)
 	case "analyze_local":
 		return analyzeLocal(ctx, args[1], formatter)
 	default:
@@ -125,12 +130,12 @@ func run(ctx context.Context, args []string) error {
 	}
 }
 
-func analyzeOrg(ctx context.Context, org string, scmClient analyze.ScmClient, formatter analyze.Formatter) error {
+func analyzeOrg(ctx context.Context, org string, analyzer *analyze.Analyzer) error {
 	if org == "" {
 		return fmt.Errorf("invalid organization name %q", org)
 	}
 
-	err := analyze.AnalyzeOrg(ctx, org, scmClient, threads, formatter)
+	err := analyzer.AnalyzeOrg(ctx, org, threads)
 	if err != nil {
 		return fmt.Errorf("failed to analyze org %s: %w", org, err)
 	}
@@ -138,8 +143,8 @@ func analyzeOrg(ctx context.Context, org string, scmClient analyze.ScmClient, fo
 	return nil
 }
 
-func analyzeRepo(ctx context.Context, repo string, scmClient analyze.ScmClient, formatter analyze.Formatter) error {
-	err := analyze.AnalyzeRepo(ctx, repo, scmClient, formatter)
+func analyzeRepo(ctx context.Context, repo string, analyzer *analyze.Analyzer) error {
+	err := analyzer.AnalyzeRepo(ctx, repo)
 	if err != nil {
 		return fmt.Errorf("failed to analyze repo %s: %w", repo, err)
 	}
@@ -152,7 +157,12 @@ func analyzeLocal(ctx context.Context, repoPath string, formatter analyze.Format
 	if err != nil {
 		return fmt.Errorf("failed to create local SCM client: %w", err)
 	}
-	err = analyze.AnalyzeLocalRepo(ctx, repoPath, localScmClient, formatter)
+
+	localGitClient := gitops.NewLocalGitClient(nil)
+
+	analyzer := analyze.NewAnalyzer(localScmClient, localGitClient, formatter)
+
+	err = analyzer.AnalyzeLocalRepo(ctx, repoPath)
 	if err != nil {
 		return fmt.Errorf("failed to analyze repoPath %s: %w", repoPath, err)
 	}
