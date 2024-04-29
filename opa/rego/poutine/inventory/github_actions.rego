@@ -1,15 +1,17 @@
 package poutine.inventory
 
-import future.keywords.contains
+import rego.v1
 
-build_dependencies contains dep {
+import data.poutine.utils
+
+build_dependencies contains dep if {
 	pkg := input.packages[_]
 	step := pkg.github_actions_workflows[_].jobs[_].steps[_]
 
 	dep := purl.parse_github_actions(step.uses)
 }
 
-build_dependencies contains dep {
+build_dependencies contains dep if {
 	pkg := input.packages[_]
 	job := pkg.github_actions_workflows[_].jobs[_]
 	image := job.container.image
@@ -17,14 +19,23 @@ build_dependencies contains dep {
 	dep := purl.parse_docker_image(image)
 }
 
-package_dependencies contains dep {
+build_dependencies contains dep if {
+	pkg := input.packages[_]
+	job := pkg.github_actions_workflows[_].jobs[_]
+	uses := job.uses
+	not utils.empty(uses)
+
+	dep := purl.parse_github_actions(uses)
+}
+
+package_dependencies contains dep if {
 	pkg := input.packages[_]
 	step := pkg.github_actions_metadata[_].runs.steps[_]
 
 	dep := purl.parse_github_actions(step.uses)
 }
 
-package_dependencies contains dep {
+package_dependencies contains dep if {
 	pkg := input.packages[_]
 	runs := pkg.github_actions_metadata[_].runs
 

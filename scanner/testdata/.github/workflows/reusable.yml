@@ -13,3 +13,13 @@ jobs:
       - uses: actions/checkout@main
         with:
           ref: ${{ inputs.ref }}
+
+  uses:
+    runs-on: ubuntu-latest
+    uses: org/repo/.github/workflows/Reusable.yml@main
+    with:
+      ref: ${{ inputs.ref }}
+
+  local-uses:
+    runs-on: ubuntu-latest
+    uses: ./.github/workflows/ci.yml

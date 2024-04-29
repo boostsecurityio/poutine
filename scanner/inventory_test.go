@@ -42,10 +42,11 @@ func TestPurls(t *testing.T) {
 		"pkg:githubactions/org/repo@main",
 		"pkg:docker/debian%3Avuln",
 		"pkg:githubactions/bridgecrewio/checkov-action@main",
+		"pkg:githubactions/org/repo@main#.github/workflows/Reusable.yml",
 	}
 	assert.ElementsMatch(t, i.Purls(), purls)
 	assert.Equal(t, 1, len(i.Packages))
-	assert.Equal(t, 15, len(i.Packages[0].BuildDependencies))
+	assert.Equal(t, 16, len(i.Packages[0].BuildDependencies))
 	assert.Equal(t, 4, len(i.Packages[0].PackageDependencies))
 }
 
