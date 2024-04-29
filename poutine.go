@@ -158,7 +158,7 @@ func analyzeLocal(ctx context.Context, repoPath string, formatter analyze.Format
 		return fmt.Errorf("failed to create local SCM client: %w", err)
 	}
 
-	localGitClient := gitops.NewGitClient(nil)
+	localGitClient := gitops.NewLocalGitClient(nil)
 
 	analyzer := analyze.NewAnalyzer(localScmClient, localGitClient, formatter)
 
