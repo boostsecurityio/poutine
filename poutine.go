@@ -38,6 +38,7 @@ Commands:
   analyze_org <org>
   analyze_repo <org>/<repo>
   analyze_local <path>
+  version
 
 Options:
 `)
@@ -53,6 +54,9 @@ var (
 	scmBaseURL  = flag.String("scm-base-url", "", "Base URI of the self-hosted SCM instance (optional)")
 	threads     = flag.Int("threads", 2, "Parallelization factor for scanning organizations")
 	verbose     = flag.Bool("verbose", false, "Enable verbose logging")
+	version     = "development"
+	commit      = "none"
+	date        = "unknown"
 )
 
 func main() {
@@ -62,7 +66,7 @@ func main() {
 
 	// Ensure the command is correct.
 	args := flag.Args()
-	if len(args) != 2 {
+	if len(args) < 1 {
 		usage()
 	}
 
@@ -106,6 +110,13 @@ func main() {
 
 func run(ctx context.Context, args []string) error {
 	command := args[0]
+	if command == "version" {
+		fmt.Printf("Version: %s\nCommit: %s\nBuilt At: %s\n", version, commit, date)
+		return nil
+	}
+	if len(args) != 2 {
+		usage()
+	}
 	scmToken := getToken()
 	scmClient, err := scm.NewScmClient(ctx, *scmProvider, *scmBaseURL, scmToken, command)
 	if err != nil {
