@@ -14,7 +14,7 @@ require (
 	github.com/schollz/progressbar/v3 v3.14.2
 	github.com/shurcooL/githubv4 v0.0.0-20240120211514-18a1ae0e79dc
 	github.com/stretchr/testify v1.9.0
-	github.com/xanzy/go-gitlab v0.100.0
+	github.com/xanzy/go-gitlab v0.103.0
 	golang.org/x/oauth2 v0.19.0
 	golang.org/x/sync v0.7.0
 	gopkg.in/yaml.v3 v3.0.1
