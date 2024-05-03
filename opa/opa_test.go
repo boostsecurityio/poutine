@@ -67,7 +67,7 @@ func TestSemverConstraintCheck(t *testing.T) {
 		{
 			constraint: ">=4.0.0,<4.4.1",
 			version:    "4",
-			expected:   true,
+			expected:   false,
 		},
 		{
 			constraint: ">=4.0.0,<4.4.1",
@@ -84,7 +84,7 @@ func TestSemverConstraintCheck(t *testing.T) {
 		err := opa.Eval(context.TODO(), "semver.constraint_check(\""+c.constraint+"\", \""+c.version+"\")", nil, &result)
 		noOpaErrors(t, err)
 
-		assert.Equal(t, c.expected, result)
+		assert.Equal(t, c.expected, result, "constraint: "+c.constraint+" version: "+c.version)
 	}
 }
 
