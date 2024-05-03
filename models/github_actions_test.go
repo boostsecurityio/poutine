@@ -135,6 +135,33 @@ func TestGithubActionsWorkflowJobs(t *testing.T) {
 				},
 			},
 		},
+		{
+			Input: `build: {environment: public}`,
+			Expected: GithubActionsJob{
+				ID: "build",
+				Environment: []GithubActionsJobEnvironment{
+					{
+						Name: "public",
+					},
+				},
+			},
+		},
+		{
+			Input: `build: {environment: {name: dev, url: example.com}}`,
+			Expected: GithubActionsJob{
+				ID: "build",
+				Environment: []GithubActionsJobEnvironment{
+					{
+						Name: "dev",
+						Url:  "example.com",
+					},
+				},
+			},
+		},
+		{
+			Input: `build: {environment: []}`,
+			Error: true,
+		},
 	}
 
 	for _, c := range cases {

@@ -523,3 +523,23 @@ func (o *GithubActionsJobContainer) UnmarshalYAML(node *yaml.Node) error {
 	*o = GithubActionsJobContainer(c)
 	return nil
 }
+
+func (o *GithubActionsJobEnvironments) UnmarshalYAML(node *yaml.Node) error {
+	if node.Kind == yaml.ScalarNode {
+		*o = GithubActionsJobEnvironments{{Name: node.Value}}
+		return nil
+	}
+
+	if node.Kind != yaml.MappingNode {
+		return fmt.Errorf("invalid yaml node type for environment")
+	}
+
+	var env GithubActionsJobEnvironment
+	err := node.Decode(&env)
+	if err != nil {
+		return err
+	}
+
+	*o = GithubActionsJobEnvironments{env}
+	return nil
+}
