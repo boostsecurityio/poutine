@@ -6,6 +6,7 @@ import (
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/types"
+	"strings"
 )
 
 func registerBuiltinFunctions() {
@@ -63,6 +64,10 @@ func registerBuiltinFunctions() {
 			var versionStr string
 			if err := ast.As(b.Value, &versionStr); err != nil {
 				return nil, err
+			}
+
+			if strings.Count(versionStr, ".") <= 1 {
+				versionStr += ".9223372036854775807"
 			}
 
 			semver, err := version.NewVersion(versionStr)
