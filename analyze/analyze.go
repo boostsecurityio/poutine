@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"gopkg.in/yaml.v3"
 
 	"github.com/boostsecurityio/poutine/opa"
 	"github.com/boostsecurityio/poutine/providers/pkgsupply"
@@ -20,6 +21,7 @@ import (
 )
 
 const TEMP_DIR_PREFIX = "poutine-*"
+const CONFIG_PATH = ".poutine.yml"
 
 type Repository interface {
 	GetProviderName() string
@@ -56,6 +58,7 @@ func NewAnalyzer(scmClient ScmClient, gitClient GitClient, formatter Formatter) 
 		ScmClient: scmClient,
 		GitClient: gitClient,
 		Formatter: formatter,
+		Config:    &models.Config{},
 	}
 }
 
@@ -63,6 +66,7 @@ type Analyzer struct {
 	ScmClient ScmClient
 	GitClient GitClient
 	Formatter Formatter
+	Config    *models.Config
 }
 
 func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutines *int) error {
@@ -78,9 +82,11 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 	log.Debug().Msgf("Fetching list of repositories for organization: %s on %s", org, provider)
 	orgReposBatches := a.ScmClient.GetOrgRepos(ctx, org)
 
-	opaClient, _ := opa.NewOpa()
+	opaClient, err := a.newOpa(ctx)
+	if err != nil {
+		return err
+	}
 	pkgsupplyClient := pkgsupply.NewStaticClient()
-
 	inventory := scanner.NewInventory(opaClient, pkgsupplyClient)
 
 	log.Debug().Msgf("Starting repository analysis for organization: %s on %s", org, provider)
@@ -175,7 +181,10 @@ func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string) error {
 
 	log.Debug().Msgf("Provider: %s, Version: %s", provider, providerVersion)
 
-	opaClient, _ := opa.NewOpa()
+	opaClient, err := a.newOpa(ctx)
+	if err != nil {
+		return err
+	}
 	pkgsupplyClient := pkgsupply.NewStaticClient()
 
 	inventory := scanner.NewInventory(opaClient, pkgsupplyClient)
@@ -227,7 +236,10 @@ func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) error 
 
 	log.Debug().Msgf("Provider: %s, Version: %s", provider, providerVersion)
 
-	opaClient, _ := opa.NewOpa()
+	opaClient, err := a.newOpa(ctx)
+	if err != nil {
+		return err
+	}
 	pkgsupplyClient := pkgsupply.NewStaticClient()
 
 	inventory := scanner.NewInventory(opaClient, pkgsupplyClient)
@@ -253,6 +265,24 @@ func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) error 
 
 	fmt.Print("\n\n")
 	return a.finalizeAnalysis(ctx, inventory)
+}
+
+func (a *Analyzer) LoadConfig(path string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			log.Debug().Msgf("Config file `%s` not found, using default config", path)
+			return nil
+		}
+		return err
+	}
+
+	err = yaml.NewDecoder(f).Decode(a.Config)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type Formatter interface {
@@ -317,4 +347,15 @@ func (a *Analyzer) cloneRepoToTemp(ctx context.Context, gitURL string, token str
 		return "", fmt.Errorf("failed to clone repo: %s", err)
 	}
 	return tempDir, nil
+}
+
+func (a *Analyzer) newOpa(ctx context.Context) (*opa.Opa, error) {
+	opaClient, err := opa.NewOpa()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create OPA client")
+		return nil, err
+	}
+	_ = opaClient.WithConfig(ctx, a.Config)
+
+	return opaClient, nil
 }

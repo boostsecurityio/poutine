@@ -16,6 +16,7 @@ skip(f) if {
 		object.filter(f.meta, {"osv_id", "job", "path"}),
 	)
 
+	count(s) > 0
 	[attr | s[attr]; not o[attr] in s[attr]] == []
 }
 
