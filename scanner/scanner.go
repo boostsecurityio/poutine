@@ -117,6 +117,8 @@ func (s *Scanner) GithubActionsMetadata() ([]models.GithubActionsMetadata, error
 
 			if meta.IsValid() {
 				metadata = append(metadata, meta)
+			} else {
+				log.Debug().Str("file", rel_path).Msg("failed to parse github actions metadata")
 			}
 
 			return nil
@@ -159,11 +161,14 @@ func (s *Scanner) GithubWorkflows() ([]models.GithubActionsWorkflow, error) {
 		workflow := models.GithubActionsWorkflow{Path: rel_path}
 		err = yaml.Unmarshal(data, &workflow)
 		if err != nil {
+			log.Debug().Err(err).Str("file", rel_path).Msg("failed to unmarshal yaml file")
 			continue
 		}
 
 		if workflow.IsValid() {
 			workflows = append(workflows, workflow)
+		} else {
+			log.Debug().Str("file", rel_path).Msg("failed to parse github actions workflow")
 		}
 	}
 
@@ -198,7 +203,7 @@ func (s *Scanner) GitlabciConfigs() ([]models.GitlabciConfig, error) {
 
 		config, err := models.ParseGitlabciConfig(data)
 		if err != nil {
-			// ignore invalid config
+			log.Debug().Err(err).Str("file", repoPath).Msg("failed to parse gitlabci config")
 			continue
 		}
 
