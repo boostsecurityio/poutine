@@ -4,22 +4,18 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/boostsecurityio/poutine/providers/gitops"
-	"os"
-	"os/signal"
-	"path/filepath"
-	"strings"
-	"syscall"
-
 	"github.com/boostsecurityio/poutine/analyze"
+	"github.com/boostsecurityio/poutine/cmd"
 	"github.com/boostsecurityio/poutine/formatters/json"
 	"github.com/boostsecurityio/poutine/formatters/pretty"
 	"github.com/boostsecurityio/poutine/formatters/sarif"
 	"github.com/boostsecurityio/poutine/opa"
+	"github.com/boostsecurityio/poutine/providers/gitops"
 	"github.com/boostsecurityio/poutine/providers/local"
 	"github.com/boostsecurityio/poutine/providers/scm"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"os"
+	"path/filepath"
 )
 
 const (
@@ -61,52 +57,7 @@ var (
 )
 
 func main() {
-	// Parse flags.
-	flag.Usage = usage
-	flag.Parse()
-
-	// Ensure the command is correct.
-	args := flag.Args()
-	if len(args) < 1 {
-		usage()
-	}
-
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	if *verbose {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	}
-	output := zerolog.ConsoleWriter{Out: os.Stderr}
-	output.FormatLevel = func(i interface{}) string {
-		return strings.ToUpper(fmt.Sprintf("| %-6s|", i))
-	}
-	log.Logger = log.Output(output)
-
-	ctx := context.Background()
-	ctx, cancel := context.WithCancel(ctx)
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
-	defer func() {
-		signal.Stop(signalChan)
-		cancel()
-	}()
-
-	go func() {
-		select {
-		case <-signalChan: // first signal, cancel context
-			cancel()
-			cleanup()
-		case <-ctx.Done():
-			return
-		}
-		<-signalChan // second signal, hard exit
-		os.Exit(exitCodeInterrupt)
-	}()
-
-	err := run(ctx, args)
-	if err != nil {
-		log.Error().Err(err).Msg("")
-		os.Exit(exitCodeErr)
-	}
+	cmd.Execute()
 }
 
 func run(ctx context.Context, args []string) error {
