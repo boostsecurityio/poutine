@@ -2,9 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/boostsecurityio/poutine/analyze"
-	"github.com/boostsecurityio/poutine/providers/gitops"
-	"github.com/boostsecurityio/poutine/providers/scm"
 	"github.com/rs/zerolog/log"
 
 	"github.com/spf13/cobra"
@@ -26,16 +23,10 @@ to quickly create a Cobra application.`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
-		scmClient, err := scm.NewScmClient(ctx, ScmProvider, ScmBaseURL, token, "analyze_org")
+		analyzer, err := GetAnalyzer(ctx)
 		if err != nil {
-			return fmt.Errorf("failed to create SCM client: %w", err)
+			return err
 		}
-
-		formatter := GetFormatter()
-
-		gitClient := gitops.NewGitClient(nil)
-
-		analyzer := analyze.NewAnalyzer(scmClient, gitClient, formatter)
 
 		org := args[0]
 

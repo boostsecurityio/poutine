@@ -8,6 +8,8 @@ import (
 	"github.com/boostsecurityio/poutine/formatters/pretty"
 	"github.com/boostsecurityio/poutine/formatters/sarif"
 	"github.com/boostsecurityio/poutine/opa"
+	"github.com/boostsecurityio/poutine/providers/gitops"
+	"github.com/boostsecurityio/poutine/providers/scm"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"os"
@@ -128,4 +130,18 @@ func GetFormatter() analyze.Formatter {
 		return sarif.NewFormat(os.Stdout)
 	}
 	return &pretty.Format{}
+}
+
+func GetAnalyzer(ctx context.Context) (*analyze.Analyzer, error) {
+	scmClient, err := scm.NewScmClient(ctx, ScmProvider, ScmBaseURL, token, "analyze_org")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create SCM client: %w", err)
+	}
+
+	formatter := GetFormatter()
+
+	gitClient := gitops.NewGitClient(nil)
+
+	analyzer := analyze.NewAnalyzer(scmClient, gitClient, formatter)
+	return analyzer, nil
 }
