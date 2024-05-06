@@ -11,7 +11,7 @@ import (
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/storage/inmem"
 	"github.com/open-policy-agent/opa/topdown/print"
-
+	"github.com/rs/zerolog/log"
 	"io/fs"
 )
 
@@ -62,7 +62,7 @@ func NewOpa() (*Opa, error) {
 }
 
 func (o *Opa) Print(ctx print.Context, s string) error {
-	fmt.Println(s)
+	log.Debug().Ctx(ctx.Context).Str("location", ctx.Location.String()).Msg(s)
 	return nil
 }
 

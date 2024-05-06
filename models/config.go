@@ -1,11 +1,12 @@
 package models
 
 type ConfigSkip struct {
-	Purl  string `json:"purl,omitempty"`
-	Path  string `json:"path,omitempty"`
-	Rule  string `json:"rule,omitempty"`
-	OsvId string `json:"osv_id,omitempty"`
-	Job   string `json:"job,omitempty"`
+	Purl  StringList `json:"purl,omitempty"`
+	Path  StringList `json:"path,omitempty"`
+	Rule  StringList `json:"rule,omitempty"`
+	OsvId StringList `json:"osv_id,omitempty"`
+	Job   StringList `json:"job,omitempty"`
+	Level StringList `json:"level,omitempty"`
 }
 
 type Config struct {

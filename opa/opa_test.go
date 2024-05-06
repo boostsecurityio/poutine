@@ -142,14 +142,14 @@ func TestWithConfig(t *testing.T) {
 	err = o.WithConfig(ctx, &models.Config{
 		Skip: []models.ConfigSkip{
 			{
-				Path: "action.yaml",
+				Path: []string{"action.yaml"},
 			},
 		},
 	})
 	assert.NoError(t, err)
 
 	var result string
-	err = o.Eval(ctx, "data.config.skip[_].path", nil, &result)
+	err = o.Eval(ctx, "data.config.skip[_].path[_]", nil, &result)
 
 	noOpaErrors(t, err)
 	assert.Equal(t, "action.yaml", result)
