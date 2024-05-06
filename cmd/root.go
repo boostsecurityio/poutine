@@ -26,9 +26,9 @@ var Verbose bool
 var ScmProvider string
 var ScmBaseURL string
 var (
-	Version = "development"
-	Commit  = "none"
-	Date    = "unknown"
+	Version string
+	Commit  string
+	Date    string
 )
 
 const (
