@@ -2,6 +2,7 @@ package opa
 
 import (
 	"context"
+	"github.com/boostsecurityio/poutine/models"
 	"github.com/open-policy-agent/opa/ast"
 
 	"github.com/stretchr/testify/assert"
@@ -16,7 +17,6 @@ func noOpaErrors(t *testing.T, err error) {
 	if regoErrors, ok := err.(*ast.Errors); ok {
 		for _, e := range *regoErrors {
 			t.Errorf("ast error: %v", e)
-
 		}
 	}
 
@@ -132,4 +132,25 @@ func TestJobUsesSelfHostedRunner(t *testing.T) {
 		noOpaErrors(t, err)
 		assert.Equal(t, expected, result, "runner: "+runner)
 	}
+}
+
+func TestWithConfig(t *testing.T) {
+	o, err := NewOpa()
+	noOpaErrors(t, err)
+	ctx := context.TODO()
+
+	err = o.WithConfig(ctx, &models.Config{
+		Skip: []models.ConfigSkip{
+			{
+				Path: []string{"action.yaml"},
+			},
+		},
+	})
+	assert.NoError(t, err)
+
+	var result string
+	err = o.Eval(ctx, "data.config.skip[_].path[_]", nil, &result)
+
+	noOpaErrors(t, err)
+	assert.Equal(t, "action.yaml", result)
 }

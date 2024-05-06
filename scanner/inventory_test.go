@@ -266,3 +266,47 @@ func TestFindings(t *testing.T) {
 	assert.Equal(t, len(findings), len(results.Findings))
 	assert.ElementsMatch(t, findings, results.Findings)
 }
+
+func TestSkipRule(t *testing.T) {
+	o, _ := opa.NewOpa()
+	i := NewInventory(o, nil)
+	ctx := context.TODO()
+	purl := "pkg:github/org/owner"
+	rule_id := "known_vulnerability"
+	pkg := &models.PackageInsights{
+		Purl: purl,
+	}
+	_ = pkg.NormalizePurl()
+
+	err := i.AddPackage(ctx, pkg, "testdata")
+	assert.Nil(t, err)
+
+	results, err := i.Findings(context.Background())
+	assert.Nil(t, err)
+
+	rule_ids := []string{}
+	for _, r := range results.Findings {
+		rule_ids = append(rule_ids, r.RuleId)
+	}
+
+	assert.Contains(t, rule_ids, rule_id)
+
+	err = o.WithConfig(ctx, &models.Config{
+		Skip: []models.ConfigSkip{
+			{
+				Rule: []string{rule_id},
+			},
+		},
+	})
+	assert.NoError(t, err)
+
+	results, err = i.Findings(context.Background())
+	assert.Nil(t, err)
+
+	rule_ids = []string{}
+	for _, r := range results.Findings {
+		rule_ids = append(rule_ids, r.RuleId)
+	}
+
+	assert.NotContains(t, rule_ids, rule_id)
+}
