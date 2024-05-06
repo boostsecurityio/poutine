@@ -5,9 +5,13 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"github.com/boostsecurityio/poutine/models"
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
+	"github.com/open-policy-agent/opa/storage"
+	"github.com/open-policy-agent/opa/storage/inmem"
 	"github.com/open-policy-agent/opa/topdown/print"
+
 	"io/fs"
 )
 
@@ -16,6 +20,7 @@ var regoFs embed.FS
 
 type Opa struct {
 	Compiler *ast.Compiler
+	Store    storage.Store
 }
 
 func NewOpa() (*Opa, error) {
@@ -49,12 +54,25 @@ func NewOpa() (*Opa, error) {
 
 	return &Opa{
 		Compiler: compiler,
+		Store: inmem.NewFromObject(map[string]interface {
+		}{
+			"config": models.DefaultConfig(),
+		}),
 	}, nil
 }
 
 func (o *Opa) Print(ctx print.Context, s string) error {
 	fmt.Println(s)
 	return nil
+}
+
+func (o *Opa) WithConfig(ctx context.Context, config *models.Config) error {
+	return storage.WriteOne(ctx,
+		o.Store,
+		storage.ReplaceOp,
+		storage.MustParsePath("/config"),
+		config,
+	)
 }
 
 func (o *Opa) Eval(ctx context.Context, query string, input map[string]interface{}, result interface{}) error {
@@ -64,6 +82,7 @@ func (o *Opa) Eval(ctx context.Context, query string, input map[string]interface
 		rego.PrintHook(o),
 		rego.Input(input),
 		rego.Imports([]string{"data.poutine.utils"}),
+		rego.Store(o.Store),
 	)
 
 	rs, err := rego.Eval(ctx)
