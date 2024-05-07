@@ -7,6 +7,7 @@ import (
 	"github.com/boostsecurityio/poutine/formatters/json"
 	"github.com/boostsecurityio/poutine/formatters/pretty"
 	"github.com/boostsecurityio/poutine/formatters/sarif"
+	"github.com/boostsecurityio/poutine/models"
 	"github.com/boostsecurityio/poutine/opa"
 	"github.com/boostsecurityio/poutine/providers/gitops"
 	"github.com/boostsecurityio/poutine/providers/scm"
@@ -32,6 +33,8 @@ var (
 	Date    string
 )
 var token string
+var cfgFile string
+var config *models.Config
 
 const (
 	exitCodeErr       = 1
@@ -96,7 +99,7 @@ func init() {
 	// will be global for your application.
 	cobra.OnInitialize(initConfig)
 
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.poutine.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .poutine.yml in the current directory)")
 	rootCmd.PersistentFlags().StringVarP(&Format, "format", "f", "pretty", "Output format (pretty, json, sarif)")
 	rootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "Enable verbose logging")
 	rootCmd.PersistentFlags().StringVarP(&ScmProvider, "scm", "s", "github", "SCM platform (github, gitlab)")
@@ -109,6 +112,26 @@ func init() {
 
 func initConfig() {
 	viper.AutomaticEnv()
+	if cfgFile != "" {
+		viper.SetConfigFile(cfgFile)
+	} else {
+		viper.AddConfigPath(".")
+		viper.SetConfigFile(".poutine.yml")
+	}
+
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			return
+		} else {
+			log.Error().Err(err).Msg("Can't read config")
+			os.Exit(1)
+		}
+	}
+
+	if err := viper.Unmarshal(&config); err != nil {
+		log.Error().Err(err).Msg("Unable to unmarshal config")
+		os.Exit(1)
+	}
 }
 
 func cleanup() {
@@ -149,6 +172,6 @@ func GetAnalyzer(ctx context.Context, command string) (*analyze.Analyzer, error)
 
 	gitClient := gitops.NewGitClient(nil)
 
-	analyzer := analyze.NewAnalyzer(scmClient, gitClient, formatter)
+	analyzer := analyze.NewAnalyzer(scmClient, gitClient, formatter, config)
 	return analyzer, nil
 }

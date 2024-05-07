@@ -33,7 +33,7 @@ to quickly create a Cobra application.`,
 
 		localGitClient := gitops.NewLocalGitClient(nil)
 
-		analyzer := analyze.NewAnalyzer(localScmClient, localGitClient, formatter)
+		analyzer := analyze.NewAnalyzer(localScmClient, localGitClient, formatter, config)
 
 		err = analyzer.AnalyzeLocalRepo(ctx, repoPath)
 		if err != nil {
