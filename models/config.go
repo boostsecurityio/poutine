@@ -9,8 +9,13 @@ type ConfigSkip struct {
 	Level StringList `json:"level,omitempty"`
 }
 
+type ConfigInclude struct {
+	Path string `json:"path,omitempty"`
+}
+
 type Config struct {
-	Skip []ConfigSkip `json:"skip"`
+	Skip    []ConfigSkip    `json:"skip"`
+	Include []ConfigInclude `json:"include"`
 }
 
 func DefaultConfig() *Config {
