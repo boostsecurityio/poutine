@@ -9,6 +9,7 @@ import (
 const (
 	ScopeMetadata           = "metadata"
 	ScopeActions            = "actions"
+	ScopeAttestations       = "attestations"
 	ScopeChecks             = "checks"
 	ScopeContents           = "contents"
 	ScopeDeployments        = "deployments"
@@ -30,6 +31,7 @@ const (
 var AllScopes = []string{
 	ScopeMetadata,
 	ScopeActions,
+	ScopeAttestations,
 	ScopeChecks,
 	ScopeContents,
 	ScopeDeployments,
