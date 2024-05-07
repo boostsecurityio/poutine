@@ -54,6 +54,7 @@ var (
 	scmBaseURL  = flag.String("scm-base-url", "", "Base URI of the self-hosted SCM instance (optional)")
 	threads     = flag.Int("threads", 2, "Parallelization factor for scanning organizations")
 	verbose     = flag.Bool("verbose", false, "Enable verbose logging")
+	config      = flag.String("config", analyze.CONFIG_PATH, "Path to the configuration file")
 	version     = "development"
 	commit      = "none"
 	date        = "unknown"
@@ -128,6 +129,10 @@ func run(ctx context.Context, args []string) error {
 	gitClient := gitops.NewGitClient(nil)
 
 	analyzer := analyze.NewAnalyzer(scmClient, gitClient, formatter)
+	err = analyzer.LoadConfig(*config)
+	if err != nil {
+		return err
+	}
 
 	switch command {
 	case "analyze_org":
@@ -135,7 +140,7 @@ func run(ctx context.Context, args []string) error {
 	case "analyze_repo":
 		return analyzeRepo(ctx, args[1], analyzer)
 	case "analyze_local":
-		return analyzeLocal(ctx, args[1], formatter)
+		return analyzeLocal(ctx, args[1], analyzer, formatter)
 	default:
 		return fmt.Errorf("unknown command %q", command)
 	}
@@ -163,17 +168,17 @@ func analyzeRepo(ctx context.Context, repo string, analyzer *analyze.Analyzer) e
 	return nil
 }
 
-func analyzeLocal(ctx context.Context, repoPath string, formatter analyze.Formatter) error {
+func analyzeLocal(ctx context.Context, repoPath string, analyzer *analyze.Analyzer, formatter analyze.Formatter) error {
 	localScmClient, err := local.NewGitSCMClient(ctx, repoPath, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create local SCM client: %w", err)
 	}
 
 	localGitClient := gitops.NewLocalGitClient(nil)
+	local := analyze.NewAnalyzer(localScmClient, localGitClient, formatter)
+	local.Config = analyzer.Config
 
-	analyzer := analyze.NewAnalyzer(localScmClient, localGitClient, formatter)
-
-	err = analyzer.AnalyzeLocalRepo(ctx, repoPath)
+	err = local.AnalyzeLocalRepo(ctx, repoPath)
 	if err != nil {
 		return fmt.Errorf("failed to analyze repoPath %s: %w", repoPath, err)
 	}

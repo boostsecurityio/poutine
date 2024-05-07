@@ -1,0 +1,4 @@
+skip:
+- path:
+  - scanner/testdata/action.yml
+  - scanner/testdata/composite/action.yml
