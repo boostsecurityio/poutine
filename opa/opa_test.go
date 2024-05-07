@@ -147,14 +147,14 @@ func TestWithConfig(t *testing.T) {
 		},
 		Include: []models.ConfigInclude{
 			{
-				Path: "testdata/config",
+				Path: []string{"testdata/config"},
 			},
 		},
 	})
 	assert.NoError(t, err)
 
 	var result []string
-	err = o.Eval(ctx, "[data.config.skip[_].path[_], data.config.include[_].path]", nil, &result)
+	err = o.Eval(ctx, "[data.config.skip[_].path[_], data.config.include[_].path[_]]", nil, &result)
 
 	noOpaErrors(t, err)
 	assert.Equal(t, "action.yaml", result[0])

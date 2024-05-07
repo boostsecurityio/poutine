@@ -49,10 +49,12 @@ func (o *Opa) Print(ctx print.Context, s string) error {
 func (o *Opa) WithConfig(ctx context.Context, config *models.Config) error {
 	o.LoadPaths = make([]string, 0)
 	for _, include := range config.Include {
-		if include.Path == "" {
-			continue
+		for _, path := range include.Path {
+			if path == "" {
+				continue
+			}
+			o.LoadPaths = append(o.LoadPaths, path)
 		}
-		o.LoadPaths = append(o.LoadPaths, include.Path)
 	}
 
 	return storage.WriteOne(ctx,

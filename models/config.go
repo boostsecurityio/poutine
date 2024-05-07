@@ -10,7 +10,7 @@ type ConfigSkip struct {
 }
 
 type ConfigInclude struct {
-	Path string `json:"path,omitempty"`
+	Path StringList `json:"path,omitempty"`
 }
 
 type Config struct {
