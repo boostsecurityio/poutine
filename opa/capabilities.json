@@ -1494,37 +1494,6 @@
       }
     },
     {
-      "name": "http.send",
-      "decl": {
-        "args": [
-          {
-            "dynamic": {
-              "key": {
-                "type": "string"
-              },
-              "value": {
-                "type": "any"
-              }
-            },
-            "type": "object"
-          }
-        ],
-        "result": {
-          "dynamic": {
-            "key": {
-              "type": "any"
-            },
-            "value": {
-              "type": "any"
-            }
-          },
-          "type": "object"
-        },
-        "type": "function"
-      },
-      "nondeterministic": true
-    },
-    {
       "name": "indexof",
       "decl": {
         "args": [
@@ -2902,24 +2871,6 @@
       }
     },
     {
-      "name": "net.lookup_ip_addr",
-      "decl": {
-        "args": [
-          {
-            "type": "string"
-          }
-        ],
-        "result": {
-          "of": {
-            "type": "string"
-          },
-          "type": "set"
-        },
-        "type": "function"
-      },
-      "nondeterministic": true
-    },
-    {
       "name": "numbers.range",
       "decl": {
         "args": [
@@ -3239,24 +3190,6 @@
         },
         "type": "function"
       }
-    },
-    {
-      "name": "opa.runtime",
-      "decl": {
-        "result": {
-          "dynamic": {
-            "key": {
-              "type": "string"
-            },
-            "value": {
-              "type": "any"
-            }
-          },
-          "type": "object"
-        },
-        "type": "function"
-      },
-      "nondeterministic": true
     },
     {
       "name": "or",
@@ -3596,31 +3529,6 @@
       "decl": {
         "result": {
           "type": "any"
-        },
-        "type": "function"
-      }
-    },
-    {
-      "name": "rego.parse_module",
-      "decl": {
-        "args": [
-          {
-            "type": "string"
-          },
-          {
-            "type": "string"
-          }
-        ],
-        "result": {
-          "dynamic": {
-            "key": {
-              "type": "string"
-            },
-            "value": {
-              "type": "any"
-            }
-          },
-          "type": "object"
         },
         "type": "function"
       }
@@ -4363,20 +4271,6 @@
         ],
         "result": {
           "type": "number"
-        },
-        "type": "function"
-      }
-    },
-    {
-      "name": "trace",
-      "decl": {
-        "args": [
-          {
-            "type": "string"
-          }
-        ],
-        "result": {
-          "type": "boolean"
         },
         "type": "function"
       }
