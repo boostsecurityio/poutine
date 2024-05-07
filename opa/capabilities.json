@@ -1,4 +1,5 @@
 {
+  "allow_net": [],
   "builtins": [
     {
       "name": "abs",
