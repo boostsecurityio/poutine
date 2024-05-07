@@ -11,13 +11,15 @@ var threads int
 // analyzeOrgCmd represents the analyzeOrg command
 var analyzeOrgCmd = &cobra.Command{
 	Use:   "analyze_org",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "Analyzes an organization's repositories for supply chain vulnerabilities",
+	Long: `Analyzes an organization's repositories for supply chain vulnerabilities
+Example: poutine analyze_org org --token "$GH_TOKEN"
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Analyze All Projects in a Self-Hosted Gitlab Organization: 
+poutine analyze_org my-org/project --token "$GL_TOKEN" --scm gitlab --scm-base-uri https://gitlab.example.com
+		
+Note: This command will scan all repositories in the organization except those that are Archived.
+`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		token = viper.GetString("token")
