@@ -145,12 +145,36 @@ func TestWithConfig(t *testing.T) {
 				Path: []string{"action.yaml"},
 			},
 		},
+		Include: []models.ConfigInclude{
+			{
+				Path: "testdata/config",
+			},
+		},
 	})
 	assert.NoError(t, err)
 
-	var result string
-	err = o.Eval(ctx, "data.config.skip[_].path[_]", nil, &result)
+	var result []string
+	err = o.Eval(ctx, "[data.config.skip[_].path[_], data.config.include[_].path]", nil, &result)
 
 	noOpaErrors(t, err)
-	assert.Equal(t, "action.yaml", result)
+	assert.Equal(t, "action.yaml", result[0])
+	assert.Equal(t, "testdata/config", result[1])
+	assert.Equal(t, "testdata/config", o.LoadPaths[0])
+}
+
+func TestCapabilities(t *testing.T) {
+	capabilities, err := Capabilities()
+	assert.NoError(t, err)
+	assert.NotNil(t, capabilities)
+
+	for _, b := range capabilities.Builtins {
+		switch b.Name {
+		case "http.send",
+			"opa.runtime",
+			"net.lookup_ip_addr",
+			"rego.parse_module",
+			"trace":
+			t.Errorf("unexpected opa capabilities builtin: %v", b.Name)
+		}
+	}
 }

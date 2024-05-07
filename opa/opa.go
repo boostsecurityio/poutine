@@ -75,7 +75,7 @@ func (o *Opa) Compile(ctx context.Context) error {
 			return err
 		}
 
-		modules["poutine/opa"+path] = string(content)
+		modules["poutine/opa/"+path] = string(content)
 		return nil
 	})
 	if err != nil {
