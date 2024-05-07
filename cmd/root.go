@@ -12,6 +12,7 @@ import (
 	"github.com/boostsecurityio/poutine/providers/scm"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/viper"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -30,6 +31,7 @@ var (
 	Commit  string
 	Date    string
 )
+var token string
 
 const (
 	exitCodeErr       = 1
@@ -92,6 +94,7 @@ func init() {
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
+	cobra.OnInitialize(initConfig)
 
 	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.poutine.yaml)")
 	rootCmd.PersistentFlags().StringVarP(&Format, "format", "f", "pretty", "Output format (pretty, json, sarif)")
@@ -102,6 +105,10 @@ func init() {
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+}
+
+func initConfig() {
+	viper.AutomaticEnv()
 }
 
 func cleanup() {
@@ -132,8 +139,8 @@ func GetFormatter() analyze.Formatter {
 	return &pretty.Format{}
 }
 
-func GetAnalyzer(ctx context.Context) (*analyze.Analyzer, error) {
-	scmClient, err := scm.NewScmClient(ctx, ScmProvider, ScmBaseURL, token, "analyze_org")
+func GetAnalyzer(ctx context.Context, command string) (*analyze.Analyzer, error) {
+	scmClient, err := scm.NewScmClient(ctx, ScmProvider, ScmBaseURL, token, command)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create SCM client: %w", err)
 	}

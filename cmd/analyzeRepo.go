@@ -2,9 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/rs/zerolog/log"
-
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // analyzeRepoCmd represents the analyzeRepo command
@@ -19,8 +18,9 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		token = viper.GetString("token")
 		ctx := cmd.Context()
-		analyzer, err := GetAnalyzer(ctx)
+		analyzer, err := GetAnalyzer(ctx, "analyze_repo")
 		if err != nil {
 			return err
 		}
@@ -41,11 +41,8 @@ func init() {
 
 	analyzeRepoCmd.Flags().StringVarP(&token, "token", "t", "", "SCM access token (env: GH_TOKEN)")
 
-	err := analyzeRepoCmd.MarkFlagRequired("token")
-	if err != nil {
-		log.Err(err).Msg("token flag is required")
-		return
-	}
+	viper.BindPFlag("token", analyzeOrgCmd.Flags().Lookup("token"))
+	viper.BindEnv("token", "GH_TOKEN")
 
 	// Here you will define your flags and configuration settings.
 
