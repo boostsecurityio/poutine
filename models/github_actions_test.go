@@ -439,6 +439,7 @@ jobs:
 	// write-all is normalized to all scopes
 	assert.Contains(t, workflow.Permissions, GithubActionsPermission{Scope: "metadata", Permission: "write"})
 	assert.Contains(t, workflow.Permissions, GithubActionsPermission{Scope: "contents", Permission: "write"})
+	assert.Contains(t, workflow.Permissions, GithubActionsPermission{Scope: "attestations", Permission: "write"})
 
 	assert.Equal(t, "build", workflow.Jobs[0].Outputs[0].Name)
 	assert.Equal(t, "${{ steps.checkout.outputs.build }}", workflow.Jobs[0].Outputs[0].Value)
