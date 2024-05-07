@@ -21,6 +21,9 @@ import (
 //go:embed rego
 var regoFs embed.FS
 
+//go:embed capabilities.json
+var capabilitiesJson []byte
+
 type Opa struct {
 	Compiler  *ast.Compiler
 	Store     storage.Store
@@ -91,8 +94,16 @@ func (o *Opa) Compile(ctx context.Context) error {
 		modules["include/"+name] = string(mod.Raw)
 	}
 
+	capabilities, err := Capabilities()
+	if err != nil {
+		return err
+	}
+
 	compiler, err := ast.CompileModulesWithOpt(modules, ast.CompileOpts{
 		EnablePrintStatements: true,
+		ParserOptions: ast.ParserOptions{
+			Capabilities: capabilities,
+		},
 	})
 
 	if err != nil {
@@ -136,6 +147,18 @@ func (o *Opa) Eval(ctx context.Context, query string, input map[string]interface
 	}
 
 	return json.Unmarshal(data, result)
+}
+
+func Capabilities() (*ast.Capabilities, error) {
+	capabilites := &ast.Capabilities{}
+	err := json.Unmarshal(capabilitiesJson, capabilites)
+	if err != nil {
+		return nil, err
+	}
+	if len(capabilites.AllowNet) != 0 {
+		return nil, fmt.Errorf("capabilities allow_net not empty")
+	}
+	return capabilites, nil
 }
 
 func fileLoaderFilter(abspath string, info os.FileInfo, depth int) bool {
