@@ -20,6 +20,13 @@ skip(f) if {
 	[attr | s[attr]; not o[attr] in s[attr]] == []
 }
 
+skip(f) if {
+	data.poutine.config.skip with input as {
+		"finding": f,
+		"packages": input.packages,
+	}
+}
+
 findings contains finding if {
 	finding := rules[rule_id].results[_]
 
