@@ -36,6 +36,8 @@ var token string
 var cfgFile string
 var config *models.Config
 
+var legacyFlags = []string{"-token", "-format", "-verbose", "-scm", "-scm-base-uri", "-threads"}
+
 const (
 	exitCodeErr       = 1
 	exitCodeInterrupt = 2
@@ -94,9 +96,11 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	for _, arg := range os.Args {
-		if strings.HasPrefix(arg, "-") && !strings.HasPrefix(arg, "--") {
-			fmt.Println("Error: Flags now come after the command and require '--' instead of a single '-', use poutine --help for more information.")
-			os.Exit(exitCodeErr)
+		for _, legacyFlag := range legacyFlags {
+			if strings.Contains(arg, legacyFlag) {
+				fmt.Println("Error: Flags now come after the command and require '--' instead of a single '-', use poutine --help for more information.")
+				os.Exit(exitCodeErr)
+			}
 		}
 	}
 
