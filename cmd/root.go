@@ -97,7 +97,7 @@ func init() {
 
 	for _, arg := range os.Args {
 		for _, legacyFlag := range legacyFlags {
-			if strings.Contains(arg, legacyFlag) {
+			if arg == legacyFlag {
 				fmt.Println("Error: Flags now come after the command and require '--' instead of a single '-', use poutine --help for more information.")
 				os.Exit(exitCodeErr)
 			}
