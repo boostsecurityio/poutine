@@ -11,17 +11,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rs/zerolog/log"
-	"gopkg.in/yaml.v3"
-
 	"github.com/boostsecurityio/poutine/opa"
 	"github.com/boostsecurityio/poutine/providers/pkgsupply"
 	"github.com/boostsecurityio/poutine/scanner"
+	"github.com/rs/zerolog/log"
 	"github.com/schollz/progressbar/v3"
 )
 
 const TEMP_DIR_PREFIX = "poutine-*"
-const CONFIG_PATH = ".poutine.yml"
 
 type Repository interface {
 	GetProviderName() string
@@ -53,12 +50,15 @@ type GitClient interface {
 	GetRepoHeadBranchName(ctx context.Context, repoPath string) (string, error)
 }
 
-func NewAnalyzer(scmClient ScmClient, gitClient GitClient, formatter Formatter) *Analyzer {
+func NewAnalyzer(scmClient ScmClient, gitClient GitClient, formatter Formatter, config *models.Config) *Analyzer {
+	if config == nil {
+		config = &models.Config{}
+	}
 	return &Analyzer{
 		ScmClient: scmClient,
 		GitClient: gitClient,
 		Formatter: formatter,
-		Config:    &models.Config{},
+		Config:    config,
 	}
 }
 
@@ -265,24 +265,6 @@ func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) error 
 
 	fmt.Print("\n\n")
 	return a.finalizeAnalysis(ctx, inventory)
-}
-
-func (a *Analyzer) LoadConfig(path string) error {
-	f, err := os.Open(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			log.Debug().Msgf("Config file `%s` not found, using default config", path)
-			return nil
-		}
-		return err
-	}
-
-	err = yaml.NewDecoder(f).Decode(a.Config)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 type Formatter interface {

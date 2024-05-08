@@ -65,7 +65,7 @@ jobs:
 
 ### Usage
 ``` bash
-poutine [options] [command] [arguments]
+poutine [command] [arguments] [options]
 ```
 
 #### Analyze a local repository
@@ -77,31 +77,31 @@ poutine analyze_local .
 #### Analyze a remote GitHub repository
 
 ```bash
-poutine -token "$GH_TOKEN" analyze_repo org/repo
+poutine analyze_repo org/repo --token "$GH_TOKEN"
 ```
 
 #### Analyze all repositories in a GitHub organization
 
 ```bash
-poutine -token "$GH_TOKEN" analyze_org org
+poutine analyze_org org --token "$GH_TOKEN"
 ```
 
 
 #### Analyze all projects in a self-hosted Gitlab instance
 
 ``` bash
-poutine -token "$GL_TOKEN" -scm gitlab -scm-base-uri https://gitlab.example.com analyze_org my-org/project
+poutine analyze_org my-org/project --token "$GL_TOKEN" --scm gitlab --scm-base-uri https://gitlab.example.com
 ```
 
 ### Configuration Options
 
 ``` 
--token          SCM access token (required for the commands analyze_repo, analyze_org) (env: GH_TOKEN)
--format         Output format (default: pretty, json, sarif)
--scm            SCM platform (default: github, gitlab)
--scm-base-uri   Base URI of the self-hosted SCM instance
--threads        Number of threads to use (default: 2)
--verbose        Enable debug logging
+--token          SCM access token (required for the commands analyze_repo, analyze_org) (env: GH_TOKEN)
+--format         Output format (default: pretty, json, sarif)
+--scm            SCM platform (default: github, gitlab)
+--scm-base-uri   Base URI of the self-hosted SCM instance
+--threads        Number of threads to use (default: 2)
+--verbose        Enable debug logging
 ```
 
 ## Building from source
@@ -120,7 +120,7 @@ For examples of vulnerabilities in GitHub Actions workflows, you can explore the
 
 To get started with some hints, try using `poutine` to analyze the `messypoutine` organization:
 ``` bash
-poutine -token `gh auth token` analyze_org messypoutine 
+poutine analyze_org messypoutine --token `gh auth token`
 ```
 
 You may submit the flags you find in a [private vulnerability disclosure](https://github.com/messypoutine/.github/security/advisories/new).
