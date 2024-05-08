@@ -93,6 +93,13 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
+	for _, arg := range os.Args {
+		if strings.HasPrefix(arg, "-") && !strings.HasPrefix(arg, "--") {
+			fmt.Println("Error: Flags now come after the command and require '--' instead of a single '-', use poutine --help for more information.")
+			os.Exit(exitCodeErr)
+		}
+	}
+
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .poutine.yml in the current directory)")
 	rootCmd.PersistentFlags().StringVarP(&Format, "format", "f", "pretty", "Output format (pretty, json, sarif)")
 	rootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "Enable verbose logging")
