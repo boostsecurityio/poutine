@@ -119,7 +119,7 @@ func initConfig() {
 		viper.SetConfigFile(cfgFile)
 	} else {
 		viper.AddConfigPath(".")
-		viper.SetConfigFile(".poutine.yml")
+		viper.SetConfigName(".poutine")
 	}
 
 	if err := viper.ReadInConfig(); err != nil {
