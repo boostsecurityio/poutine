@@ -1,6 +1,6 @@
 on:
   workflow_run:
-    workflows: [valid.yml]
+    workflows: ["v[a-z]l[i]*.yml"]
 
 jobs:
   pr:

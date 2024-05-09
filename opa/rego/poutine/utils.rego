@@ -65,6 +65,6 @@ workflow_run_parents(pkg, workflow) = parents if {
 	}
 	parents := {parent |
 		parent := pkg.github_actions_workflows[_]
-		parent.name in parent_names
+		glob.match(parent_names[_], ["/"], parent.name)
 	}
 }
