@@ -1,0 +1,13 @@
+on:
+  workflow_run:
+    workflows: [reusable.yml]
+
+jobs:
+  pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - run: npm install

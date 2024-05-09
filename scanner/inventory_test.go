@@ -169,6 +169,15 @@ func TestFindings(t *testing.T) {
 			},
 		},
 		{
+			RuleId: "untrusted_checkout_exec",
+			Purl:   purl,
+			Meta: opa.FindingMeta{
+				Path:    ".github/workflows/workflow_run_valid.yml",
+				Line:    13,
+				Details: "Detected usage of `npm`",
+			},
+		},
+		{
 			RuleId: "default_permissions_on_risky_events",
 			Purl:   purl,
 			Meta: opa.FindingMeta{
