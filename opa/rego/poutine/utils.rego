@@ -56,3 +56,15 @@ empty(xs) if {
 } else if {
 	count(xs) == 0
 }
+
+workflow_run_parents(pkg, workflow) = parents if {
+	parent_names = {name |
+		event := workflow.events[_]
+		event.name == "workflow_run"
+		name := event.workflows[_]
+	}
+	parents := {parent |
+		parent := pkg.github_actions_workflows[_]
+		glob.match(parent_names[_], ["/"], parent.name)
+	}
+}

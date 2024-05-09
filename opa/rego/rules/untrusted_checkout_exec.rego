@@ -1,7 +1,7 @@
 # METADATA
 # title: Arbitrary Code Execution from Untrusted Code Changes
 # description: |-
-#   The workflow appears to checkout untrusted code from a fork 
+#   The workflow appears to checkout untrusted code from a fork
 #   and uses a command that is known to allow code execution.
 # custom:
 #   level: error
@@ -12,6 +12,17 @@ import data.poutine.utils
 import rego.v1
 
 rule := poutine.rule(rego.metadata.chain())
+
+github.events contains event if some event in {
+	"pull_request_target",
+	"issue_comment",
+	"workflow_call",
+}
+
+github.workflow_run.parent.events contains event if some event in {
+	"pull_request_target",
+	"pull_request",
+}
 
 build_github_actions[action] = {
 	"pre-commit/action": "pre-commit",
@@ -60,12 +71,23 @@ _steps_after_untrusted_checkout contains [pkg.purl, workflow.path, s.step] if {
 	pkg := input.packages[_]
 	workflow := pkg.github_actions_workflows[_]
 
-	utils.filter_workflow_events(workflow, {
-		"pull_request_target",
-		"issue_comment",
-		"workflow_call",
-	})
+	utils.filter_workflow_events(workflow, github.events)
 
 	pr_checkout := utils.find_pr_checkouts(workflow)[_]
 	s := utils.workflow_steps_after(pr_checkout)[_]
+}
+
+_steps_after_untrusted_checkout contains [pkg_purl, workflow.path, s.step] if {
+	[pkg_purl, workflow] := _workflows_runs_from_pr[_]
+
+	pr_checkout := utils.find_pr_checkouts(workflow)[_]
+	s := utils.workflow_steps_after(pr_checkout)[_]
+}
+
+_workflows_runs_from_pr contains [pkg.purl, workflow] if {
+	pkg := input.packages[_]
+	workflow := pkg.github_actions_workflows[_]
+	parent := utils.workflow_run_parents(pkg, workflow)[_]
+
+	utils.filter_workflow_events(parent, github.workflow_run.parent.events)
 }
