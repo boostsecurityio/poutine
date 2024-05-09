@@ -49,21 +49,23 @@ var rootCmd = &cobra.Command{
 	Short: "A Supply Chain Vulnerability Scanner for Build Pipelines",
 	Long: `A Supply Chain Vulnerability Scanner for Build Pipelines
 By BoostSecurity.io - https://github.com/boostsecurityio/poutine `,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+		if Verbose {
+			zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		}
+		output := zerolog.ConsoleWriter{Out: os.Stderr}
+		output.FormatLevel = func(i interface{}) string {
+			return strings.ToUpper(fmt.Sprintf("| %-6s|", i))
+		}
+		log.Logger = log.Output(output)
+
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	if Verbose {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	}
-	output := zerolog.ConsoleWriter{Out: os.Stderr}
-	output.FormatLevel = func(i interface{}) string {
-		return strings.ToUpper(fmt.Sprintf("| %-6s|", i))
-	}
-	log.Logger = log.Output(output)
-
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	signalChan := make(chan os.Signal, 1)
