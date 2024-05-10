@@ -23,6 +23,7 @@ const TEMP_DIR_PREFIX = "poutine-*"
 type Repository interface {
 	GetProviderName() string
 	GetRepoIdentifier() string
+	GetIsFork() bool
 	BuildGitURL(baseURL string) string
 }
 
@@ -114,6 +115,10 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 		}
 
 		for _, repo := range repoBatch.Repositories {
+			if a.Config.IgnoreForks && repo.GetIsFork() {
+				bar.ChangeMax(repoBatch.TotalCount - 1)
+				break
+			}
 			if err := sem.Acquire(ctx, 1); err != nil {
 				close(errChan)
 				return fmt.Errorf("failed to acquire semaphore: %w", err)

@@ -98,6 +98,10 @@ func (gl GitLabRepo) GetRepoIdentifier() string {
 	return gl.NameWithNamespace
 }
 
+func (gl GitLabRepo) GetIsFork() bool {
+	return false // TODO parse forked status
+}
+
 func (gl GitLabRepo) BuildGitURL(baseURL string) string {
 	return fmt.Sprintf("https://token@%s/%s", baseURL, gl.NameWithNamespace)
 }

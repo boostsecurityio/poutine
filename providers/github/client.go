@@ -121,6 +121,10 @@ func (gh GithubRepository) BuildGitURL(baseURL string) string {
 	return fmt.Sprintf("https://token@%s/%s", baseURL, gh.NameWithOwner)
 }
 
+func (gh GithubRepository) GetIsFork() bool {
+	return gh.IsFork
+}
+
 type Client struct {
 	restClient    *github.Client
 	graphQLClient *githubv4.Client
