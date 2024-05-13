@@ -5,14 +5,14 @@ import (
 )
 
 var (
-	Version = "development"
-	Commit  = "none"
-	Date    = "unknown"
+	version = "development"
+	commit  = "none"
+	date    = "unknown"
 )
 
 func main() {
-	cmd.Commit = Commit
-	cmd.Version = Version
-	cmd.Date = Date
+	cmd.Commit = commit
+	cmd.Version = version
+	cmd.Date = date
 	cmd.Execute()
 }
