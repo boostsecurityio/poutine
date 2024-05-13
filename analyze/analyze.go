@@ -282,11 +282,6 @@ func (a *Analyzer) finalizeAnalysis(ctx context.Context, inventory *scanner.Inve
 		return err
 	}
 
-	if len(report.Findings) == 0 {
-		log.Info().Msg("No results returned by analysis")
-		return nil
-	}
-
 	err = a.Formatter.Format(ctx, report, inventory.Packages)
 	if err != nil {
 		return err
