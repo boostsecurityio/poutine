@@ -74,6 +74,7 @@ func (s *ScmClient) ParseRepoAndOrg(repoString string) (string, string, error) {
 type GitLabRepo struct {
 	analyze.Repository
 	NameWithNamespace string
+	IsFork            bool
 	IsPrivate         bool
 	IsMirror          bool
 	IsArchived        bool
@@ -96,6 +97,10 @@ func (s *ScmClient) GetProviderVersion(ctx context.Context) (string, error) {
 
 func (gl GitLabRepo) GetRepoIdentifier() string {
 	return gl.NameWithNamespace
+}
+
+func (gl GitLabRepo) GetIsFork() bool {
+	return gl.IsFork
 }
 
 func (gl GitLabRepo) BuildGitURL(baseURL string) string {
@@ -172,6 +177,10 @@ func projectToRepo(project *gitlab.Project) *GitLabRepo {
 	if project.EmptyRepo {
 		return nil
 	}
+	isFork := false
+	if project.ForkedFromProject != nil {
+		isFork = true
+	}
 	return &GitLabRepo{
 		NameWithNamespace: project.PathWithNamespace,
 		IsPrivate:         !project.Public,
@@ -179,6 +188,7 @@ func projectToRepo(project *gitlab.Project) *GitLabRepo {
 		IsArchived:        project.Archived,
 		StarCount:         project.StarCount,
 		ForksCount:        project.ForksCount,
+		IsFork:            isFork,
 	}
 }
 

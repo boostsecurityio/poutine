@@ -125,6 +125,10 @@ func (gl Repo) BuildGitURL(baseURL string) string {
 	return ""
 }
 
+func (gl Repo) GetIsFork() bool {
+	return false
+}
+
 func extractHostnameFromSSHURL(sshURL string) string {
 	parts := strings.Split(sshURL, "@")
 	if len(parts) != 2 {

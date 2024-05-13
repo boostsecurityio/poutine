@@ -14,8 +14,9 @@ type ConfigInclude struct {
 }
 
 type Config struct {
-	Skip    []ConfigSkip    `json:"skip"`
-	Include []ConfigInclude `json:"include"`
+	Skip        []ConfigSkip    `json:"skip"`
+	Include     []ConfigInclude `json:"include"`
+	IgnoreForks bool            `json:"ignore_forks,omitempty"`
 }
 
 func DefaultConfig() *Config {
