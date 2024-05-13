@@ -102,8 +102,11 @@ poutine analyze_org my-org/project --token "$GL_TOKEN" --scm gitlab --scm-base-u
 --scm            SCM platform (default: github, gitlab)
 --scm-base-uri   Base URI of the self-hosted SCM instance
 --threads        Number of threads to use (default: 2)
+--config         Path to the configuration file (default: .poutine.yml)
 --verbose        Enable debug logging
 ```
+
+See [.poutine.sample.yml](.poutine.sample.yml) for an example configuration file.
 
 ## Building from source
 
