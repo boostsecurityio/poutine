@@ -1,2 +1,3 @@
 include:
 - path: .poutine
+ignoreForks: true

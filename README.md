@@ -98,6 +98,7 @@ poutine analyze_org my-org/project --token "$GL_TOKEN" --scm gitlab --scm-base-u
 ``` 
 --token          SCM access token (required for the commands analyze_repo, analyze_org) (env: GH_TOKEN)
 --format         Output format (default: pretty, json, sarif)
+--ignore-forks   Ignore forked repositories in the organization(analyze_org)
 --scm            SCM platform (default: github, gitlab)
 --scm-base-uri   Base URI of the self-hosted SCM instance
 --threads        Number of threads to use (default: 2)
