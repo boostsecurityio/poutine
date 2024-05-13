@@ -271,6 +271,12 @@ func (c *Client) GetOrgRepos(ctx context.Context, org string) <-chan analyze.Rep
 				return
 			}
 
+			if query.RepositoryOwner.Repositories.TotalCount == 0 {
+				log.Error().Msgf("No repositories found for org %s", org)
+				batchChan <- analyze.RepoBatch{Err: fmt.Errorf("no repositories found for org %s", org)}
+				return
+			}
+
 			totalCount := 0
 			if !totalCountSent {
 				totalCount = query.RepositoryOwner.Repositories.TotalCount
