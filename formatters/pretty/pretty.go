@@ -3,6 +3,7 @@ package pretty
 import (
 	"context"
 	"fmt"
+	"github.com/rs/zerolog/log"
 	"io"
 	"os"
 	"sort"
@@ -18,6 +19,11 @@ type Format struct {
 func (f *Format) Format(ctx context.Context, report *opa.FindingsResult, packages []*models.PackageInsights) error {
 	failures := map[string]int{}
 	findings := map[string][]opa.Finding{}
+
+	if len(report.Findings) == 0 {
+		log.Info().Msg("No results returned by analysis")
+		return nil
+	}
 
 	for _, finding := range report.Findings {
 		failures[finding.RuleId]++
