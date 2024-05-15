@@ -117,7 +117,7 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 		for _, repo := range repoBatch.Repositories {
 			if a.Config.IgnoreForks && repo.GetIsFork() {
 				bar.ChangeMax(repoBatch.TotalCount - 1)
-				break
+				continue
 			}
 			if err := sem.Acquire(ctx, 1); err != nil {
 				close(errChan)
