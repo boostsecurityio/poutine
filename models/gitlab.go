@@ -324,7 +324,7 @@ func (o *GitlabciIncludeItems) UnmarshalYAML(node *yaml.Node) error {
 		if err := node.Decode(&includes); err != nil {
 			return err
 		}
-	case yaml.MappingNode:
+	case yaml.MappingNode, yaml.ScalarNode:
 		var include GitlabciIncludeItem
 		if err := node.Decode(&include); err != nil {
 			return err
