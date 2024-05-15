@@ -139,3 +139,73 @@ deploy:
 	assert.Equal(t, "main", config.Include[3].Ref)
 	assert.Equal(t, "/templates/.gitlab-ci-template.yml", config.Include[3].File[0])
 }
+
+func TestGitlabIncludes(t *testing.T) {
+	subjects := []struct {
+		config   string
+		expected GitlabciIncludeItems
+	}{
+		{
+			config: `include: https://example.com`,
+			expected: []GitlabciIncludeItem{
+				{Remote: "https://example.com"},
+			},
+		},
+		{
+			config: `include: local.yml`,
+			expected: []GitlabciIncludeItem{
+				{Local: "local.yml"},
+			},
+		},
+		{
+			config: `include: [https://example.com]`,
+			expected: []GitlabciIncludeItem{
+				{Remote: "https://example.com"},
+			},
+		},
+		{
+			config: `include: [local.yml]`,
+			expected: []GitlabciIncludeItem{
+				{Local: "local.yml"},
+			},
+		},
+		{
+			config: `include: [{local: local.yml}]`,
+			expected: []GitlabciIncludeItem{
+				{Local: "local.yml"},
+			},
+		},
+		{
+			config: `include: [{remote: http://example.com}]`,
+			expected: []GitlabciIncludeItem{
+				{Remote: "http://example.com"},
+			},
+		},
+		{
+			config: `include: [{template: Auto-DevOps.gitlab-ci.yml}]`,
+			expected: []GitlabciIncludeItem{
+				{Template: "Auto-DevOps.gitlab-ci.yml"},
+			},
+		},
+		{
+			config: `include: [{project: my-group/my-project, ref: main, file: /templates/.gitlab-ci-template.yml}]`,
+			expected: []GitlabciIncludeItem{
+				{
+					Project: "my-group/my-project",
+					Ref:     "main",
+					File:    []string{"/templates/.gitlab-ci-template.yml"},
+				},
+			},
+		},
+		{
+			config:   `{}`,
+			expected: nil,
+		},
+	}
+
+	for _, subject := range subjects {
+		config, err := ParseGitlabciConfig([]byte(subject.config))
+		assert.Nil(t, err)
+		assert.Equal(t, subject.expected, config.Include)
+	}
+}
