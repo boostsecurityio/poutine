@@ -183,7 +183,7 @@ func projectToRepo(project *gitlab.Project) *GitLabRepo {
 	}
 	return &GitLabRepo{
 		NameWithNamespace: project.PathWithNamespace,
-		IsPrivate:         !project.Public,
+		IsPrivate:         !(project.Visibility == gitlab.PublicVisibility),
 		IsMirror:          project.Mirror,
 		IsArchived:        project.Archived,
 		StarCount:         project.StarCount,
