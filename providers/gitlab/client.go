@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
 	"strings"
 
 	"github.com/boostsecurityio/poutine/analyze"
@@ -41,8 +40,7 @@ func (s *ScmClient) GetOrgRepos(ctx context.Context, org string) <-chan analyze.
 }
 func (s *ScmClient) GetRepo(ctx context.Context, org string, name string) (analyze.Repository, error) {
 	combined := org + "/" + name
-	project := url.QueryEscape(combined)
-	return s.client.GetProject(ctx, project)
+	return s.client.GetProject(ctx, combined)
 }
 func (s *ScmClient) GetToken() string {
 	return s.client.Token
@@ -62,7 +60,7 @@ func (s *ScmClient) ParseRepoAndOrg(repoString string) (string, string, error) {
 
 	org := repoString[:index]
 
-	repo := url.QueryEscape(repoString[index+1:])
+	repo := repoString[index+1:]
 
 	if org == "" || repo == "" {
 		return "", "", errors.New("invalid gitlab repo format")
