@@ -13,17 +13,21 @@ type ReputationClient interface {
 }
 
 type Inventory struct {
-	Packages []*models.PackageInsights
+	Packages        []*models.PackageInsights
+	providerVersion string
+	provider        string
 
 	opa             *opa.Opa
 	pkgsupplyClient ReputationClient
 }
 
-func NewInventory(opa *opa.Opa, pkgsupplyClient ReputationClient) *Inventory {
+func NewInventory(opa *opa.Opa, pkgsupplyClient ReputationClient, provider string, providerVersion string) *Inventory {
 	return &Inventory{
 		Packages:        make([]*models.PackageInsights, 0),
 		opa:             opa,
 		pkgsupplyClient: pkgsupplyClient,
+		provider:        provider,
+		providerVersion: providerVersion,
 	}
 }
 
@@ -71,6 +75,8 @@ func (i *Inventory) Findings(ctx context.Context) (*opa.FindingsResult, error) {
 		map[string]interface{}{
 			"packages":   i.Packages,
 			"reputation": reputation,
+			"provider":   i.provider,
+			"version":    i.providerVersion,
 		},
 		results,
 	)

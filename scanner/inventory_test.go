@@ -11,7 +11,7 @@ import (
 
 func TestPurls(t *testing.T) {
 	o, _ := opa.NewOpa()
-	i := NewInventory(o, nil)
+	i := NewInventory(o, nil, "", "")
 	pkg := &models.PackageInsights{
 		Purl: "pkg:github/org/owner",
 	}
@@ -52,7 +52,7 @@ func TestPurls(t *testing.T) {
 
 func TestFindings(t *testing.T) {
 	o, _ := opa.NewOpa()
-	i := NewInventory(o, nil)
+	i := NewInventory(o, nil, "", "")
 	purl := "pkg:github/org/owner"
 	pkg := &models.PackageInsights{
 		Purl: purl,
@@ -278,7 +278,7 @@ func TestFindings(t *testing.T) {
 
 func TestSkipRule(t *testing.T) {
 	o, _ := opa.NewOpa()
-	i := NewInventory(o, nil)
+	i := NewInventory(o, nil, "", "")
 	ctx := context.TODO()
 	purl := "pkg:github/org/owner"
 	rule_id := "known_vulnerability"

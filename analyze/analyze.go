@@ -88,7 +88,7 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 		return err
 	}
 	pkgsupplyClient := pkgsupply.NewStaticClient()
-	inventory := scanner.NewInventory(opaClient, pkgsupplyClient)
+	inventory := scanner.NewInventory(opaClient, pkgsupplyClient, provider, providerVersion)
 
 	log.Debug().Msgf("Starting repository analysis for organization: %s on %s", org, provider)
 	bar := progressbar.NewOptions(
@@ -192,7 +192,7 @@ func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string) error {
 	}
 	pkgsupplyClient := pkgsupply.NewStaticClient()
 
-	inventory := scanner.NewInventory(opaClient, pkgsupplyClient)
+	inventory := scanner.NewInventory(opaClient, pkgsupplyClient, provider, providerVersion)
 
 	log.Debug().Msgf("Starting repository analysis for: %s/%s on %s", org, repoName, provider)
 	bar := progressbar.NewOptions(
@@ -247,7 +247,7 @@ func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) error 
 	}
 	pkgsupplyClient := pkgsupply.NewStaticClient()
 
-	inventory := scanner.NewInventory(opaClient, pkgsupplyClient)
+	inventory := scanner.NewInventory(opaClient, pkgsupplyClient, provider, providerVersion)
 
 	log.Debug().Msgf("Starting repository analysis for: %s/%s on %s", org, repoName, provider)
 	bar := progressbar.NewOptions(
