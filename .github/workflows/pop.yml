@@ -12,6 +12,8 @@ on:
     paths:
       - .github/workflows/**
       - action.yml
+    paths-ignore:
+      - 'docs/**'
 
 permissions: {}
 
