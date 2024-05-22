@@ -18,6 +18,7 @@ func TestGithubWorkflows(t *testing.T) {
 		paths = append(paths, workflow.Path)
 	}
 	assert.ElementsMatch(t, paths, []string{
+		".github/workflows/debug_enabled_valid.yml",
 		".github/workflows/valid.yml",
 		".github/workflows/reusable.yml",
 		".github/workflows/secrets.yaml",

@@ -1,0 +1,15 @@
+name: debug_enabled_valid.yml
+on:
+  push:
+
+env:
+  ACTIONS_RUNNER_DEBUG: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - id: 1
+        env:
+          ACTIONS_STEP_DEBUG: true
+        run: echo Hello
