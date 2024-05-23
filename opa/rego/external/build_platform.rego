@@ -1,4 +1,4 @@
-package external.provider
+package external.build_platform
 
 advisories = {
 	"gitlab": {"CVE-2024-2651": {
