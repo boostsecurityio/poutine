@@ -85,6 +85,24 @@ func TestFindings(t *testing.T) {
 
 	findings := []opa.Finding{
 		{
+			RuleId: "debug_enabled",
+			Purl:   purl,
+			Meta: opa.FindingMeta{
+				Path:    ".github/workflows/debug_enabled_valid.yml",
+				Details: "ACTIONS_RUNNER_DEBUG",
+			},
+		},
+		{
+			RuleId: "debug_enabled",
+			Purl:   purl,
+			Meta: opa.FindingMeta{
+				Job:     "build",
+				Path:    ".github/workflows/debug_enabled_valid.yml",
+				Step:    "1",
+				Details: "ACTIONS_STEP_DEBUG",
+			},
+		},
+		{
 			RuleId: "injection",
 			Purl:   purl,
 			Meta: opa.FindingMeta{

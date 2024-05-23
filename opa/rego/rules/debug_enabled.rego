@@ -15,16 +15,16 @@ import rego.v1
 
 rule := poutine.rule(rego.metadata.chain())
 
+_gitlab_debug_vars := {"CI_DEBUG_TRACE", "CI_DEBUG_SERVICES"}
+
 results contains poutine.finding(rule, pkg_purl, {
 	"path": config_path,
 	"details": concat(" ", sort(vars)),
 }) if {
-	vars := _debug_enabled[[pkg_purl, config_path]]
+	vars := _gitlab_debug_enabled[[pkg_purl, config_path]]
 }
 
-_gitlab_debug_vars := {"CI_DEBUG_TRACE", "CI_DEBUG_SERVICES"}
-
-_debug_enabled[[pkg.purl, config.path]] contains var.name if {
+_gitlab_debug_enabled[[pkg.purl, config.path]] contains var.name if {
 	pkg := input.packages[_]
 	config := pkg.gitlabci_configs[_]
 	var := config.variables[_]
@@ -33,11 +33,54 @@ _debug_enabled[[pkg.purl, config.path]] contains var.name if {
 	lower(var.value) == "true"
 }
 
-_debug_enabled[[pkg.purl, config.path]] contains var.name if {
+_gitlab_debug_enabled[[pkg.purl, config.path]] contains var.name if {
 	pkg := input.packages[_]
 	config := pkg.gitlabci_configs[_]
 	var := config.jobs[_].variables[_]
 
 	var.name in _gitlab_debug_vars
 	lower(var.value) == "true"
+}
+
+_github_actions_debug_env_vars := {"ACTIONS_STEP_DEBUG", "ACTIONS_RUNNER_DEBUG"}
+
+is_debug_enabled(var) = true if {
+    var.name in _github_actions_debug_env_vars
+    lower(var.value) == "true"
+}
+
+results contains poutine.finding(rule, pkg.purl, {
+	"path": workflow.path,
+	"details": var.name,
+}) if {
+	pkg := input.packages[_]
+	workflow := pkg.github_actions_workflows[_]
+    var := workflow.env[_]
+    is_debug_enabled(var)
+}
+
+results contains poutine.finding(rule, pkg.purl, {
+	"path": workflow.path,
+	"job": job.id,
+	"details": var.name,
+}) if {
+	pkg := input.packages[_]
+    workflow := pkg.github_actions_workflows[_]
+    job := workflow.jobs[_]
+    var := job.env[_]
+    is_debug_enabled(var)
+}
+
+results contains poutine.finding(rule, pkg.purl, {
+	"path": workflow.path,
+	"job": job.id,
+	"step": step.id,
+	"details": var.name,
+}) if {
+	pkg := input.packages[_]
+    workflow := pkg.github_actions_workflows[_]
+    job := workflow.jobs[_]
+    step := job.steps[_]
+    var := step.env[_]
+    is_debug_enabled(var)
 }
