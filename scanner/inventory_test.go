@@ -73,9 +73,9 @@ func TestFindings(t *testing.T) {
 	assert.ElementsMatch(t, rule_ids, []string{
 		"default_permissions_on_risky_events",
 		"if_always_true",
-		"known_vulnerability",
+		"known_vulnerability_in_build_component",
 		"pr_runs_on_self_hosted",
-		"provider_known_vulnerability",
+		"known_vulnerability_in_build_platform",
 		"unpinnable_action",
 		"untrusted_checkout_exec",
 		"injection",
@@ -108,7 +108,7 @@ func TestFindings(t *testing.T) {
 			},
 		},
 		{
-			RuleId: "known_vulnerability",
+			RuleId: "known_vulnerability_in_build_component",
 			Purl:   purl,
 			Meta: opa.FindingMeta{
 				Path:    "composite/action.yml",
@@ -119,7 +119,7 @@ func TestFindings(t *testing.T) {
 			},
 		},
 		{
-			RuleId: "known_vulnerability",
+			RuleId: "known_vulnerability_in_build_component",
 			Purl:   purl,
 			Meta: opa.FindingMeta{
 				Path:    ".github/workflows/valid.yml",
@@ -131,7 +131,7 @@ func TestFindings(t *testing.T) {
 			},
 		},
 		{
-			RuleId: "known_vulnerability",
+			RuleId: "known_vulnerability_in_build_component",
 			Purl:   purl,
 			Meta: opa.FindingMeta{
 				Path:    ".github/workflows/valid.yml",
@@ -216,7 +216,7 @@ func TestFindings(t *testing.T) {
 			},
 		},
 		{
-			RuleId: "provider_known_vulnerability",
+			RuleId: "known_vulnerability_in_build_platform",
 			Purl:   "gitlab",
 			Meta: opa.FindingMeta{
 				OsvId:   "CVE-2024-2651",
@@ -290,7 +290,7 @@ func TestSkipRule(t *testing.T) {
 	i := NewInventory(o, nil, "", "")
 	ctx := context.TODO()
 	purl := "pkg:github/org/owner"
-	rule_id := "known_vulnerability"
+	rule_id := "known_vulnerability_in_build_component"
 	pkg := &models.PackageInsights{
 		Purl: purl,
 	}
