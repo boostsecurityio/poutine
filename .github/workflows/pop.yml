@@ -12,6 +12,11 @@ on:
     paths:
       - .github/workflows/**
       - action.yml
+    paths-ignore:
+      - 'README.md'
+      - 'LICENSE'
+      - 'docs/**'
+      - '.github/**'
 
 permissions: {}
 
