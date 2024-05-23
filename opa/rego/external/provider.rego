@@ -3,7 +3,7 @@ package external.provider
 advisories = {
 	"gitlab": {"CVE-2024-2651": {
 		"osv_id": "CVE-2024-2651",
-		"published": "2022-05-24T19:01:50Z",
+		"published": "2024-05-14T00:00:00Z",
 		"aliases": [],
 		"summary": "It was possible for an attacker to cause a denial of service using maliciously crafted markdown content.",
 		"severity": [{
@@ -17,7 +17,7 @@ advisories = {
 	}},
 	"github": {"CVE-2024-4985": {
 		"osv_id": "CVE-2024-4985",
-		"published": "2022-05-24T19:01:50Z",
+		"published": "2024-05-20T00:00:00Z",
 		"aliases": [],
 		"summary": "It was possible for an attacker to cause a denial of service using maliciously crafted markdown content.",
 		"severity": [{
