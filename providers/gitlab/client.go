@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/boostsecurityio/poutine/analyze"
@@ -85,12 +86,30 @@ func (gl GitLabRepo) GetProviderName() string {
 }
 
 func (s *ScmClient) GetProviderVersion(ctx context.Context) (string, error) {
-	met, _, err := s.client.client.Metadata.GetMetadata()
+
+	met, res, err := s.client.client.Metadata.GetMetadata()
 	if err != nil {
+		if res != nil && res.StatusCode == http.StatusNotFound {
+			version, _, err := s.client.client.Version.GetVersion()
+			if err != nil {
+				return "", fmt.Errorf("failed to get gitlab version: %w", err)
+			}
+			versionString := removeGitlabEditionFromVersion(version.Version)
+			return versionString, nil
+		}
 		return "", fmt.Errorf("failed to get gitlab metadata: %w", err)
 	}
 
-	return met.Version, nil
+	versionString := removeGitlabEditionFromVersion(met.Version)
+	return versionString, nil
+}
+
+func removeGitlabEditionFromVersion(version string) string {
+	index := strings.Index(version, "-")
+	if index != -1 {
+		version = version[:index]
+	}
+	return version
 }
 
 func (gl GitLabRepo) GetRepoIdentifier() string {
