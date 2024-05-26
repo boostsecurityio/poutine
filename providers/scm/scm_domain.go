@@ -25,5 +25,5 @@ func (d *ScmBaseDomain) String() string {
 }
 
 func (d *ScmBaseDomain) Type() string {
-	return "ScmBaseDomain"
+	return "string"
 }
