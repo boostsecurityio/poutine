@@ -26,7 +26,7 @@ import (
 var Format string
 var Verbose bool
 var ScmProvider string
-var ScmBaseURL string
+var ScmBaseURL scm.ScmBaseDomain
 var (
 	Version string
 	Commit  string
@@ -110,7 +110,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&Format, "format", "f", "pretty", "Output format (pretty, json, sarif)")
 	rootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "Enable verbose logging")
 	rootCmd.PersistentFlags().StringVarP(&ScmProvider, "scm", "s", "github", "SCM platform (github, gitlab)")
-	rootCmd.PersistentFlags().StringVarP(&ScmBaseURL, "scm-base-url", "b", "", "Base URI of the self-hosted SCM instance (optional)")
+	rootCmd.PersistentFlags().VarP(&ScmBaseURL, "scm-base-url", "b", "Base URI of the self-hosted SCM instance (optional)")
 }
 
 func initConfig() {
@@ -166,7 +166,7 @@ func GetFormatter() analyze.Formatter {
 }
 
 func GetAnalyzer(ctx context.Context, command string) (*analyze.Analyzer, error) {
-	scmClient, err := scm.NewScmClient(ctx, ScmProvider, ScmBaseURL, token, command)
+	scmClient, err := scm.NewScmClient(ctx, ScmProvider, ScmBaseURL.String(), token, command)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create SCM client: %w", err)
 	}
