@@ -13,6 +13,42 @@ potentially expose sensitive information.
 
 ## Remediation
 
+### GitHub Actions
+
+In the workflow file, remove the `ACTIONS_RUNNER_DEBUG` or `ACTIONS_STEP_DEBUG` environment variables. This may also be enabled by setting a secret or variable, so the fact that `poutine` does not detect those variables, does not guarantee it is not enabled otherwise.
+
+#### Recommended
+```yaml
+on:
+  push:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - id: 1
+        run: echo Hello
+```
+
+#### Anti-Pattern
+```yaml
+on:
+  push:
+
+env:
+  ACTIONS_RUNNER_DEBUG: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - id: 1
+        env:
+          ACTIONS_STEP_DEBUG: true
+        run: echo Hello
+```
+
+
 ### Gitlab CI
 
 In the workflow file, remove the `CI_DEBUG_TRACE` or `CI_DEBUG_SERVICES` variable in the `job` definition or set to false.
@@ -34,5 +70,6 @@ job_name:
 ```
 
 ## See Also
+ - https://docs.github.com/en/actions/monitoring-and-troubleshooting-workflows/enabling-debug-logging
  - https://docs.gitlab.com/ee/ci/variables/index.html#enable-debug-logging
  - https://docs.gitlab.com/ee/ci/variables/index.html#mask-a-cicd-variable
