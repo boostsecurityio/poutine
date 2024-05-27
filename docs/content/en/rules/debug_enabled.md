@@ -70,5 +70,6 @@ job_name:
 ```
 
 ## See Also
+ - https://docs.github.com/en/actions/monitoring-and-troubleshooting-workflows/enabling-debug-logging
  - https://docs.gitlab.com/ee/ci/variables/index.html#enable-debug-logging
  - https://docs.gitlab.com/ee/ci/variables/index.html#mask-a-cicd-variable

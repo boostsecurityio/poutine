@@ -1,0 +1,11 @@
+---
+more:
+  - name: Releases
+    ref: "https://github.com/boostsecurityio/poutine/releases"
+    external: true
+    icon: "gdoc_download"
+  - name: GitHub
+    ref: "https://github.com/boostsecurityio/poutine"
+    external: true
+    icon: "gdoc_github"
+  
