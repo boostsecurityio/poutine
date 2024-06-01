@@ -52,7 +52,7 @@ func printFindingsPerRule(out io.Writer, results map[string][]opa.Finding, rules
 		fmt.Fprintf(out, "Rule: %s\n", rules[ruleId].Title)
 		fmt.Fprintf(out, "Severity: %s\n", rules[ruleId].Level)
 		fmt.Fprintf(out, "Description: %s\n", rules[ruleId].Description)
-		fmt.Fprintf(out, "Documentation: https://github.com/boostsecurityio/poutine/blob/main/docs/content/en/rules/%s.md\n\n", ruleId)
+		fmt.Fprintf(out, "Documentation: https://boostsecurityio.github.io/poutine/rules/%s\n\n", ruleId)
 
 		for _, finding := range results[ruleId] {
 			purl, _ := models.NewPurl(finding.Purl)
