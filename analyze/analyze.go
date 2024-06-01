@@ -138,13 +138,13 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 
 				pkg, err := a.generatePackageInsights(ctx, tempDir, repo)
 				if err != nil {
-					errChan <- err
+					errChan <- fmt.Errorf("failed to generate package insights for repo repoNameWithOwner: %w", err)
 					return
 				}
 
 				err = inventory.AddPackage(ctx, pkg, tempDir)
 				if err != nil {
-					errChan <- err
+					errChan <- fmt.Errorf("failed to add package for repo repoNameWithOwner: %w", err)
 					return
 				}
 				_ = bar.Add(1)
