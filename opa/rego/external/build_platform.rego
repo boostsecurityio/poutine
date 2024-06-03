@@ -26,7 +26,12 @@ advisories = {
 		}],
 		"cwe_ids": ["CWE-303"],
 		"vulnerable_versions": [],
-		"vulnerable_version_ranges": ["<3.9.15","<3.10.12","<3.11.10","<3.12.4"],
+		"vulnerable_version_ranges": [
+			"<3.9.15",
+			">=3.10.0,<3.10.12",
+			">=3.11.0,<3.11.10",
+			">=3.12.0,<3.12.4",
+		],
 		"vulnerable_commit_shas": [],
 	}},
 }
