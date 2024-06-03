@@ -34,7 +34,7 @@ jobs:
         go-version: ${{ env.GO_VERSION }}
         cache: false
     - uses: sigstore/cosign-installer@59acb6260d9c0ba8f4a2f9d9b48431a222b68e20 # v3.5.0
-    - uses: actions/create-github-app-token@7bfa3a4717ef143a604ee0a99d859b8886a96d00 # v1.9.3
+    - uses: actions/create-github-app-token@a0de6af83968303c8c955486bf9739a57d23c7f1 # v1.10.0
       id: homebrew-tapper-bot-token
       with:
         app-id: ${{ vars.HOMEBREW_TAPPER_BOT_APP_ID }}
