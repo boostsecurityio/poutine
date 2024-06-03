@@ -8,8 +8,10 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      ACTIONS_STEP_DEBUG: true
     steps:
-      - id: 1
+      - id: one
         env:
           ACTIONS_STEP_DEBUG: true
         run: echo Hello

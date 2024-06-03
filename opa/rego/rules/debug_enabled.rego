@@ -44,9 +44,9 @@ _gitlab_debug_enabled[[pkg.purl, config.path]] contains var.name if {
 
 _github_actions_debug_env_vars := {"ACTIONS_STEP_DEBUG", "ACTIONS_RUNNER_DEBUG"}
 
-is_debug_enabled(var) = true if {
-    var.name in _github_actions_debug_env_vars
-    lower(var.value) == "true"
+is_debug_enabled(var) if {
+	var.name in _github_actions_debug_env_vars
+	lower(var.value) == "true"
 }
 
 results contains poutine.finding(rule, pkg.purl, {
@@ -55,32 +55,34 @@ results contains poutine.finding(rule, pkg.purl, {
 }) if {
 	pkg := input.packages[_]
 	workflow := pkg.github_actions_workflows[_]
-    var := workflow.env[_]
-    is_debug_enabled(var)
+	var := workflow.env[_]
+	is_debug_enabled(var)
 }
 
 results contains poutine.finding(rule, pkg.purl, {
 	"path": workflow.path,
 	"job": job.id,
 	"details": var.name,
+	"line": job.lines.start,
 }) if {
 	pkg := input.packages[_]
-    workflow := pkg.github_actions_workflows[_]
-    job := workflow.jobs[_]
-    var := job.env[_]
-    is_debug_enabled(var)
+	workflow := pkg.github_actions_workflows[_]
+	job := workflow.jobs[_]
+	var := job.env[_]
+	is_debug_enabled(var)
 }
 
 results contains poutine.finding(rule, pkg.purl, {
 	"path": workflow.path,
 	"job": job.id,
-	"step": step.id,
+	"step": step_id,
 	"details": var.name,
+	"line": step.lines.start,
 }) if {
 	pkg := input.packages[_]
-    workflow := pkg.github_actions_workflows[_]
-    job := workflow.jobs[_]
-    step := job.steps[_]
-    var := step.env[_]
-    is_debug_enabled(var)
+	workflow := pkg.github_actions_workflows[_]
+	job := workflow.jobs[_]
+	step := job.steps[step_id]
+	var := step.env[_]
+	is_debug_enabled(var)
 }
