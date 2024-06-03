@@ -73,7 +73,7 @@ func (f *Format) Format(ctx context.Context, report *opa.FindingsResult, package
 				line = 1
 			}
 			ruleDoc := docs[ruleId]
-			ruleUrl := fmt.Sprintf("https://github.com/boostsecurityio/poutine/tree/main/docs/content/en/rules/%s.md", ruleId)
+			ruleUrl := fmt.Sprintf("https://boostsecurityio.github.io/poutine/rules/%s", ruleId)
 
 			run.AddRule(ruleId).
 				WithName(rule.Title).
