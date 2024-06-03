@@ -99,8 +99,7 @@ func TestFindings(t *testing.T) {
 			Meta: opa.FindingMeta{
 				Job:     "build",
 				Path:    ".github/workflows/debug_enabled_valid.yml",
-				Step:    "0",
-				Line:    12,
+				Line:    9,
 				Details: "ACTIONS_STEP_DEBUG",
 			},
 		},
@@ -111,7 +110,7 @@ func TestFindings(t *testing.T) {
 				Job:     "build",
 				Path:    ".github/workflows/debug_enabled_valid.yml",
 				Step:    "0",
-				Line:    12,
+				Line:    14,
 				Details: "ACTIONS_STEP_DEBUG",
 			},
 		},
