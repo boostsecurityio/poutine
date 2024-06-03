@@ -163,8 +163,6 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 		}
 	}
 
-	fmt.Print("\n\n")
-
 	return a.finalizeAnalysis(ctx, inventory)
 }
 
