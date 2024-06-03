@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"github.com/rs/zerolog/log"
 	"strconv"
 )
 
@@ -60,7 +61,8 @@ func (m *FindingMeta) UnmarshalJSON(data []byte) error {
 		meta: (*meta)(m),
 	}
 	if err := json.Unmarshal(data, &aux); err != nil {
-		return err
+		log.Error().RawJSON("meta", data).Err(err).Msg("failed to unmarshal FindingMeta")
+		return nil
 	}
 	m.Step = aux.Step.String()
 	return nil
