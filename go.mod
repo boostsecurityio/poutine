@@ -9,7 +9,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/open-policy-agent/opa v0.64.1
 	github.com/owenrumney/go-sarif/v2 v2.3.1
-	github.com/package-url/packageurl-go v0.1.2
+	github.com/package-url/packageurl-go v0.1.3
 	github.com/rs/zerolog v1.33.0
 	github.com/schollz/progressbar/v3 v3.14.2
 	github.com/shurcooL/githubv4 v0.0.0-20240429030203-be2daab69064
