@@ -44,7 +44,7 @@ func (g *ExecGitCommand) Run(ctx context.Context, cmd string, args []string, dir
 	stdout, err := command.Output()
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
-			return nil, fmt.Errorf("command `%s` returned an error: %w stderr: %s", command.String(), err, string(exitErr.Stderr))
+			return nil, fmt.Errorf("command `%s` returned an error: %w stderr: %s", command.String(), err, string(bytes.TrimSpace(exitErr.Stderr)))
 		}
 		return nil, fmt.Errorf("error running command: %w", err)
 	}
