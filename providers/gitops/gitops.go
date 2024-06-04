@@ -3,6 +3,7 @@ package gitops
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"github.com/rs/zerolog/log"
 	"os"
 	"os/exec"
@@ -40,7 +41,14 @@ type ExecGitCommand struct{}
 func (g *ExecGitCommand) Run(ctx context.Context, cmd string, args []string, dir string) ([]byte, error) {
 	command := exec.CommandContext(ctx, cmd, args...)
 	command.Dir = dir
-	return command.CombinedOutput()
+	stdout, err := command.Output()
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return nil, fmt.Errorf("command `%s` returned an error: %w stderr: %s", command.String(), err, string(exitErr.Stderr))
+		}
+		return nil, fmt.Errorf("error running command: %w", err)
+	}
+	return stdout, nil
 }
 
 func (g *ExecGitCommand) ReadFile(path string) ([]byte, error) {
