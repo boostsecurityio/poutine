@@ -254,6 +254,7 @@ func (c *Client) GetOrgRepos(ctx context.Context, org string) <-chan analyze.Rep
 		for {
 			var query struct {
 				RepositoryOwner struct {
+					Login string
 					Repositories struct {
 						TotalCount int
 						Nodes      []GithubRepository
@@ -271,9 +272,12 @@ func (c *Client) GetOrgRepos(ctx context.Context, org string) <-chan analyze.Rep
 				return
 			}
 
+			if query.RepositoryOwner.Login == "" {
+				batchChan <- analyze.RepoBatch{Err: errors.New("org does not exist")}
+				return
+			}
 			if query.RepositoryOwner.Repositories.TotalCount == 0 {
-				log.Error().Msgf("No repositories found for org %s", org)
-				batchChan <- analyze.RepoBatch{Err: fmt.Errorf("no repositories found for org %s", org)}
+				log.Info().Msg("No repositories found for org. If this is unexpected, ensure your token has the correct permissions.")
 				return
 			}
 
