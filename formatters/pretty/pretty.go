@@ -3,10 +3,11 @@ package pretty
 import (
 	"context"
 	"fmt"
-	"github.com/rs/zerolog/log"
 	"io"
 	"os"
 	"sort"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/boostsecurityio/poutine/models"
 	"github.com/boostsecurityio/poutine/opa"
@@ -45,6 +46,11 @@ func printFindingsPerRule(out io.Writer, results map[string][]opa.Finding, rules
 	sort.Strings(sortedRuleIDs)
 
 	for _, ruleId := range sortedRuleIDs {
+		// Skip rules with no findings.
+		if len(results[ruleId]) == 0 {
+			continue
+		}
+
 		table := tablewriter.NewWriter(out)
 		table.SetAutoMergeCells(true)
 		table.SetHeader([]string{"Repository", "Details", "URL"})
@@ -95,11 +101,7 @@ func printFindingsPerRule(out io.Writer, results map[string][]opa.Finding, rules
 			table.Append([]string{})
 		}
 
-		if len(results[ruleId]) == 0 {
-			fmt.Fprint(out, "\nNo findings for this repository\n")
-		} else {
-			table.Render()
-		}
+		table.Render()
 		fmt.Fprint(out, "\n")
 	}
 }
