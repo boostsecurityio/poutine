@@ -82,6 +82,7 @@ func TestFindings(t *testing.T) {
 		"github_action_from_unverified_creator_used",
 		"debug_enabled",
 		"job_all_secrets",
+		"unverified_script_exec",
 	})
 
 	findings := []opa.Finding{
