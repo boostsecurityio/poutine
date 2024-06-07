@@ -3,13 +3,15 @@ package gitops
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
-	"github.com/rs/zerolog/log"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 type GitCloneError struct {
@@ -76,6 +78,10 @@ func (g *GitClient) Clone(ctx context.Context, clonePath string, url string, tok
 
 	for _, c := range commands {
 		if _, err := g.Command.Run(ctx, c.cmd, c.args, clonePath); err != nil {
+			if strings.Contains(err.Error(), token) {
+				return errors.New(strings.ReplaceAll(err.Error(), token, "REDACTED"))
+			}
+
 			return err
 		}
 	}
