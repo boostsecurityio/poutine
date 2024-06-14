@@ -15,6 +15,10 @@ builds:
       - amd64
       - arm64
       - arm
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
     goarm:
       - '7'
 
