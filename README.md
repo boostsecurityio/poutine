@@ -36,7 +36,12 @@ To install `poutine`, download the latest release from the [releases page](https
 
 #### Homebrew
 ``` bash
-brew install boostsecurityio/tap/poutine
+brew install poutine
+```
+
+If you've used early versions of poutine through `brew`, you should remove the legacy tap, then you can install from the new official Homebrew Core
+```bash
+brew untap boostsecurityio/tap/poutine
 ```
 
 #### Docker
