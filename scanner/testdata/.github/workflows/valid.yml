@@ -80,4 +80,3 @@ jobs:
       run: |
         curl https://raw.githubusercontent.com/org/repo/0a727065ae5a2313e8e6acf172844e8ca30c1822/install.sh | bash
         curl https://github.com/org/repo/raw/0a727065ae5a2313e8e6acf172844e8ca30c1822/install.sh | bash
-        curl https://gitlab.com/org/repo/-/raw/0a727065ae5a2313e8e6acf172844e8ca30c1822/files/install.sh | bash

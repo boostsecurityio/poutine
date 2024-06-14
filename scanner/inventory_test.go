@@ -309,6 +309,28 @@ func TestFindings(t *testing.T) {
 				Step: "3",
 			},
 		},
+		{
+			RuleId: "unverified_script_exec",
+			Purl:   purl,
+			Meta: opa.FindingMeta{
+				Path:    ".github/workflows/valid.yml",
+				Line:    70,
+				Job:     "build",
+				Step:    "12",
+				Details: "Command: curl https://example.com | bash",
+			},
+		},
+		{
+			RuleId: "unverified_script_exec",
+			Purl:   purl,
+			Meta: opa.FindingMeta{
+				Path:    ".github/workflows/valid.yml",
+				Line:    75,
+				Job:     "build",
+				Step:    "13",
+				Details: "Command: curl https://raw.githubusercontent.com/org/repo/main/install.sh | bash",
+			},
+		},
 	}
 
 	assert.Equal(t, len(findings), len(results.Findings))

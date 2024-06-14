@@ -21,16 +21,15 @@ patterns.shell contains sprintf("(%s)", [concat("|", [
 ])])
 
 patterns.safe contains sprintf("(%s)", [concat("|", [
-	`https://raw.githubusercontent.com/[^/]+/[^/]+/[a-f0-9]{40}/`,
-	`https://github.com/[^/]+/[^/]+/raw/[a-f0-9]{40}/`,
-	`https://gitlab.com/.*/-/raw/[a-f0-9]{40}/files/`,
+	`https://raw\.githubusercontent\.com/[^/]+/[^/]+/[a-f0-9]{40}/`,
+	`https://github\.com/[^/]+/[^/]+/raw/[a-f0-9]{40}/`,
 ])])
 
 results contains poutine.finding(rule, pkg_purl, _scripts[pkg_purl][_])
 
 _unverified_scripts(script) = [sprintf("Command: %s", [match]) |
 	match := regex.find_n(patterns.shell[_], script, -1)[_]
-	not _is_safe(script)
+	not _is_safe(match)
 ]
 
 _is_safe(match) = regex.match(patterns.safe[_], match)
