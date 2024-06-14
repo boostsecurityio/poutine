@@ -1,7 +1,7 @@
 # METADATA
 # title: Unverified Script Execution
 # description: |-
-#   The pipeline contains executes a script or binary fetched from a remote
+#   The pipeline executes a script or binary fetched from a remote
 #   server without verifying its integrity.
 # custom:
 #   level: note
@@ -20,11 +20,20 @@ patterns.shell contains sprintf("(%s)", [concat("|", [
 	`deno (run|install) (-A|--allow-all)[^\n]{0,128}https://[^\s]{0,128}`,
 ])])
 
+patterns.safe contains sprintf("(%s)", [concat("|", [
+	`https://raw.githubusercontent.com/[^/]+/[^/]+/[a-f0-9]{40}/`,
+	`https://github.com/[^/]+/[^/]+/raw/[a-f0-9]{40}/`,
+	`https://gitlab.com/.*/-/raw/[a-f0-9]{40}/files/`,
+])])
+
 results contains poutine.finding(rule, pkg_purl, _scripts[pkg_purl][_])
 
 _unverified_scripts(script) = [sprintf("Command: %s", [match]) |
 	match := regex.find_n(patterns.shell[_], script, -1)[_]
+	not _is_safe(script)
 ]
+
+_is_safe(match) = regex.match(patterns.safe[_], match)
 
 _scripts[pkg.purl] contains {
 	"path": workflow.path,
