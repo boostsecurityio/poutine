@@ -36,11 +36,7 @@ To install `poutine`, download the latest release from the [releases page](https
 
 #### Homebrew
 ``` bash
-[~] brew verify poutine
-==> poutine--0.10.1.sonoma.bottle.tar.gz has a valid attestation
-
-[~] brew install poutine
-🍺  /usr/local/Cellar/poutine/0.10.1: 9 files, 23.9MB
+brew install poutine
 ```
 
 #### Docker
