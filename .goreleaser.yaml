@@ -68,17 +68,6 @@ archives:
       - goos: windows
         format: zip
 
-brews:
-- repository:
-    owner: boostsecurityio
-    name: homebrew-tap
-    branch: main
-    token: "{{ .Env.TAP_GITHUB_TOKEN }}"
-  directory: Formula
-  homepage: https://boostsecurity.io
-  description: poutine - The Build Pipeline risk analyzer.
-  license: Apache 2.0
-
 changelog:
   sort: asc
   filters:
