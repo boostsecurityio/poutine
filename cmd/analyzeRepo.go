@@ -2,9 +2,12 @@ package cmd
 
 import (
 	"fmt"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
+
+var ref string
 
 // analyzeRepoCmd represents the analyzeRepo command
 var analyzeRepoCmd = &cobra.Command{
@@ -23,7 +26,7 @@ Example Scanning a remote Github Repository: poutine analyze_repo org/repo --tok
 
 		repo := args[0]
 
-		err = analyzer.AnalyzeRepo(ctx, repo)
+		err = analyzer.AnalyzeRepo(ctx, repo, ref)
 		if err != nil {
 			return fmt.Errorf("failed to analyze repo %s: %w", repo, err)
 		}
@@ -36,6 +39,7 @@ func init() {
 	rootCmd.AddCommand(analyzeRepoCmd)
 
 	analyzeRepoCmd.Flags().StringVarP(&token, "token", "t", "", "SCM access token (env: GH_TOKEN)")
+	analyzeRepoCmd.Flags().StringVarP(&ref, "ref", "r", "HEAD", "Commit or branch to analyze (defaults to HEAD)")
 
 	viper.BindPFlag("token", analyzeOrgCmd.Flags().Lookup("token"))
 	viper.BindEnv("token", "GH_TOKEN")
