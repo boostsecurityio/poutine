@@ -64,3 +64,19 @@ jobs:
       run: |
         # substring of go\ generate should not trigger
         cargo generate
+
+      # unverified_script_exec
+    - id: 12
+      run: |
+        curl https://example.com | bash
+
+      # unverified_script_exec
+    - id: 13
+      run: |
+        curl https://raw.githubusercontent.com/org/repo/main/install.sh | bash
+
+      # safe unverified_script_exec
+    - id: 13
+      run: |
+        curl https://raw.githubusercontent.com/org/repo/0a727065ae5a2313e8e6acf172844e8ca30c1822/install.sh | bash
+        curl https://github.com/org/repo/raw/0a727065ae5a2313e8e6acf172844e8ca30c1822/install.sh | bash

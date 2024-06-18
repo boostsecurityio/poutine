@@ -82,6 +82,7 @@ func TestFindings(t *testing.T) {
 		"github_action_from_unverified_creator_used",
 		"debug_enabled",
 		"job_all_secrets",
+		"unverified_script_exec",
 	})
 
 	findings := []opa.Finding{
@@ -306,6 +307,28 @@ func TestFindings(t *testing.T) {
 				Path: "composite/action.yml",
 				Line: 17,
 				Step: "3",
+			},
+		},
+		{
+			RuleId: "unverified_script_exec",
+			Purl:   purl,
+			Meta: opa.FindingMeta{
+				Path:    ".github/workflows/valid.yml",
+				Line:    70,
+				Job:     "build",
+				Step:    "12",
+				Details: "Command: curl https://example.com | bash",
+			},
+		},
+		{
+			RuleId: "unverified_script_exec",
+			Purl:   purl,
+			Meta: opa.FindingMeta{
+				Path:    ".github/workflows/valid.yml",
+				Line:    75,
+				Job:     "build",
+				Step:    "13",
+				Details: "Command: curl https://raw.githubusercontent.com/org/repo/main/install.sh | bash",
 			},
 		},
 	}

@@ -5,6 +5,7 @@ import (
 	"github.com/boostsecurityio/poutine/models"
 	"github.com/open-policy-agent/opa/ast"
 
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -177,4 +178,25 @@ func TestCapabilities(t *testing.T) {
 			t.Errorf("unexpected opa capabilities builtin: %v", b.Name)
 		}
 	}
+}
+
+func TestRulesMetadataLevel(t *testing.T) {
+	opa, err := NewOpa()
+	noOpaErrors(t, err)
+
+	query := `{rule_id: rule.level |
+	  rule := data.rules[rule_id].rule;
+	  not input[rule.level]
+	}`
+
+	var result map[string]string
+	err = opa.Eval(context.TODO(), query, map[string]interface{}{
+		"note":    true,
+		"warning": true,
+		"error":   true,
+		"none":    true,
+	}, &result)
+	noOpaErrors(t, err)
+
+	assert.Empty(t, result, fmt.Sprintf("rules with invalid levels: %v", result))
 }
