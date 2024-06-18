@@ -10,6 +10,7 @@ dependencies[pkg.purl] contains dep if {
 packages[pkg.purl] = {
 	"dependencies": object.get(dependencies, pkg.purl, []),
 	"commit_sha": pkg.source_git_commit_sha,
+	"ref": pkg.source_git_ref,
 } if {
 	pkg := input.packages[_]
 }

@@ -4,12 +4,13 @@ package analyze
 import (
 	"context"
 	"fmt"
-	"github.com/boostsecurityio/poutine/models"
-	"golang.org/x/sync/semaphore"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/boostsecurityio/poutine/models"
+	"golang.org/x/sync/semaphore"
 
 	"github.com/boostsecurityio/poutine/opa"
 	"github.com/boostsecurityio/poutine/providers/pkgsupply"
@@ -129,14 +130,14 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 				defer sem.Release(1)
 				defer wg.Done()
 				repoNameWithOwner := repo.GetRepoIdentifier()
-				tempDir, err := a.cloneRepoToTemp(ctx, repo.BuildGitURL(a.ScmClient.GetProviderBaseURL()), a.ScmClient.GetToken())
+				tempDir, err := a.cloneRepoToTemp(ctx, repo.BuildGitURL(a.ScmClient.GetProviderBaseURL()), a.ScmClient.GetToken(), "HEAD")
 				if err != nil {
 					log.Error().Err(err).Str("repo", repoNameWithOwner).Msg("failed to clone repo")
 					return
 				}
 				defer os.RemoveAll(tempDir)
 
-				pkg, err := a.generatePackageInsights(ctx, tempDir, repo)
+				pkg, err := a.generatePackageInsights(ctx, tempDir, repo, "HEAD")
 				if err != nil {
 					log.Error().Err(err).Str("repo", repoNameWithOwner).Msg("failed to generate package insights")
 					return
@@ -166,7 +167,7 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 	return a.finalizeAnalysis(ctx, inventory)
 }
 
-func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string) error {
+func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref string) error {
 	org, repoName, err := a.ScmClient.ParseRepoAndOrg(repoString)
 	if err != nil {
 		return fmt.Errorf("failed to parse repository: %w", err)
@@ -200,13 +201,13 @@ func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string) error {
 		progressbar.OptionSetWriter(os.Stderr),
 	)
 
-	tempDir, err := a.cloneRepoToTemp(ctx, repo.BuildGitURL(a.ScmClient.GetProviderBaseURL()), a.ScmClient.GetToken())
+	tempDir, err := a.cloneRepoToTemp(ctx, repo.BuildGitURL(a.ScmClient.GetProviderBaseURL()), a.ScmClient.GetToken(), ref)
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(tempDir)
 
-	pkg, err := a.generatePackageInsights(ctx, tempDir, repo)
+	pkg, err := a.generatePackageInsights(ctx, tempDir, repo, ref)
 	if err != nil {
 		return err
 	}
@@ -255,7 +256,7 @@ func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) error 
 		progressbar.OptionSetWriter(os.Stderr),
 	)
 
-	pkg, err := a.generatePackageInsights(ctx, repoPath, repo)
+	pkg, err := a.generatePackageInsights(ctx, repoPath, repo, "")
 	if err != nil {
 		return err
 	}
@@ -288,7 +289,7 @@ func (a *Analyzer) finalizeAnalysis(ctx context.Context, inventory *scanner.Inve
 	return nil
 }
 
-func (a *Analyzer) generatePackageInsights(ctx context.Context, tempDir string, repo Repository) (*models.PackageInsights, error) {
+func (a *Analyzer) generatePackageInsights(ctx context.Context, tempDir string, repo Repository, ref string) (*models.PackageInsights, error) {
 	commitDate, err := a.GitClient.LastCommitDate(ctx, tempDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get last commit date: %w", err)
@@ -299,9 +300,12 @@ func (a *Analyzer) generatePackageInsights(ctx context.Context, tempDir string, 
 		return nil, fmt.Errorf("failed to get commit SHA: %w", err)
 	}
 
-	headBranchName, err := a.GitClient.GetRepoHeadBranchName(ctx, tempDir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get head branch name: %w", err)
+	switch ref {
+	case "HEAD", "":
+		ref, err = a.GitClient.GetRepoHeadBranchName(ctx, tempDir)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get head branch name: %w", err)
+		}
 	}
 
 	purl := fmt.Sprintf("pkg:%s/%s", repo.GetProviderName(), strings.ToLower(repo.GetRepoIdentifier()))
@@ -311,7 +315,7 @@ func (a *Analyzer) generatePackageInsights(ctx context.Context, tempDir string, 
 		SourceGitCommitSha: commitSha,
 		SourceScmType:      repo.GetProviderName(),
 		SourceGitRepo:      repo.GetRepoIdentifier(),
-		SourceGitRef:       headBranchName,
+		SourceGitRef:       ref,
 	}
 	err = pkg.NormalizePurl()
 	if err != nil {
@@ -320,13 +324,13 @@ func (a *Analyzer) generatePackageInsights(ctx context.Context, tempDir string, 
 	return pkg, nil
 }
 
-func (a *Analyzer) cloneRepoToTemp(ctx context.Context, gitURL string, token string) (string, error) {
+func (a *Analyzer) cloneRepoToTemp(ctx context.Context, gitURL string, token string, ref string) (string, error) {
 	tempDir, err := os.MkdirTemp("", TEMP_DIR_PREFIX)
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp directory: %w", err)
 	}
 
-	err = a.GitClient.Clone(ctx, tempDir, gitURL, token, "HEAD")
+	err = a.GitClient.Clone(ctx, tempDir, gitURL, token, ref)
 	if err != nil {
 		os.RemoveAll(tempDir) // Clean up if cloning fails
 		return "", fmt.Errorf("failed to clone repo: %s", err)
