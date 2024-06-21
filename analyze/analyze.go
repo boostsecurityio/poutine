@@ -92,12 +92,7 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 	inventory := scanner.NewInventory(opaClient, pkgsupplyClient, provider, providerVersion)
 
 	log.Debug().Msgf("Starting repository analysis for organization: %s on %s", org, provider)
-	bar := progressbar.NewOptions(
-		0,
-		progressbar.OptionSetDescription("Analyzing repositories"),
-		progressbar.OptionShowCount(),
-		progressbar.OptionSetWriter(os.Stderr),
-	)
+	bar := a.progressBar(0, "Analyzing repositories")
 
 	var wg sync.WaitGroup
 	errChan := make(chan error, 1)
@@ -164,6 +159,8 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 		}
 	}
 
+	_ = bar.Finish()
+
 	return a.finalizeAnalysis(ctx, inventory)
 }
 
@@ -194,18 +191,17 @@ func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref strin
 	inventory := scanner.NewInventory(opaClient, pkgsupplyClient, provider, providerVersion)
 
 	log.Debug().Msgf("Starting repository analysis for: %s/%s on %s", org, repoName, provider)
-	bar := progressbar.NewOptions(
-		1,
-		progressbar.OptionSetDescription("Analyzing repository"),
-		progressbar.OptionShowCount(),
-		progressbar.OptionSetWriter(os.Stderr),
-	)
+	bar := a.progressBar(2, "Cloning repository")
+	_ = bar.RenderBlank()
 
 	tempDir, err := a.cloneRepoToTemp(ctx, repo.BuildGitURL(a.ScmClient.GetProviderBaseURL()), a.ScmClient.GetToken(), ref)
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(tempDir)
+
+	bar.Describe("Analyzing repository")
+	_ = bar.Add(1)
 
 	pkg, err := a.generatePackageInsights(ctx, tempDir, repo, ref)
 	if err != nil {
@@ -216,9 +212,8 @@ func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref strin
 	if err != nil {
 		return err
 	}
-	_ = bar.Add(1)
+	_ = bar.Finish()
 
-	fmt.Print("\n\n")
 	return a.finalizeAnalysis(ctx, inventory)
 }
 
@@ -245,16 +240,9 @@ func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) error 
 		return err
 	}
 	pkgsupplyClient := pkgsupply.NewStaticClient()
-
 	inventory := scanner.NewInventory(opaClient, pkgsupplyClient, provider, providerVersion)
 
 	log.Debug().Msgf("Starting repository analysis for: %s/%s on %s", org, repoName, provider)
-	bar := progressbar.NewOptions(
-		1,
-		progressbar.OptionSetDescription("Analyzing repository"),
-		progressbar.OptionShowCount(),
-		progressbar.OptionSetWriter(os.Stderr),
-	)
 
 	pkg, err := a.generatePackageInsights(ctx, repoPath, repo, "")
 	if err != nil {
@@ -265,9 +253,7 @@ func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) error 
 	if err != nil {
 		return err
 	}
-	_ = bar.Add(1)
 
-	fmt.Print("\n\n")
 	return a.finalizeAnalysis(ctx, inventory)
 }
 
@@ -347,4 +333,19 @@ func (a *Analyzer) newOpa(ctx context.Context) (*opa.Opa, error) {
 	_ = opaClient.WithConfig(ctx, a.Config)
 
 	return opaClient, nil
+}
+
+func (a *Analyzer) progressBar(max int64, description string) *progressbar.ProgressBar {
+	if a.Config.Quiet {
+		return progressbar.DefaultSilent(max, description)
+	} else {
+		return progressbar.NewOptions64(
+			max,
+			progressbar.OptionSetDescription(description),
+			progressbar.OptionShowCount(),
+			progressbar.OptionSetWriter(os.Stderr),
+			progressbar.OptionClearOnFinish(),
+		)
+
+	}
 }
