@@ -20,7 +20,12 @@ Example: poutine analyze_local /path/to/repo`,
 		ctx := cmd.Context()
 		repoPath := args[0]
 
-		formatter := GetFormatter()
+		opaClient, err := newOpa(ctx)
+		if err != nil {
+			return err
+		}
+
+		formatter := GetFormatter(opaClient)
 
 		localScmClient, err := local.NewGitSCMClient(ctx, repoPath, nil)
 		if err != nil {
@@ -29,7 +34,7 @@ Example: poutine analyze_local /path/to/repo`,
 
 		localGitClient := gitops.NewLocalGitClient(nil)
 
-		analyzer := analyze.NewAnalyzer(localScmClient, localGitClient, formatter, config)
+		analyzer := analyze.NewAnalyzer(localScmClient, localGitClient, formatter, config, opaClient)
 
 		err = analyzer.AnalyzeLocalRepo(ctx, repoPath)
 		if err != nil {
