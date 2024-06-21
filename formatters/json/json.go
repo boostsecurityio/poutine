@@ -23,20 +23,28 @@ type Format struct {
 }
 
 func (f *Format) Format(ctx context.Context, report *opa.FindingsResult, packages []*models.PackageInsights) error {
-	var reportString string
+	var result struct {
+		Output string `json:"output"`
+		Error  string `json:"error"`
+	}
 	err := f.opa.Eval(ctx,
-		"data.poutine.format[input.format].result",
+		"data.poutine.queries.format.result",
 		map[string]interface{}{
-			"packages": packages,
-			"results":  report,
-			"format":   f.format,
+			"packages":        packages,
+			"results":         report,
+			"format":          f.format,
+			"builtin_formats": []string{"sarif", "pretty"},
 		},
-		&reportString,
+		&result,
 	)
 	if err != nil {
 		return err
 	}
 
-	fmt.Fprint(f.out, reportString)
+	if result.Error != "" {
+		return fmt.Errorf(result.Error)
+	}
+
+	fmt.Fprint(f.out, result.Output)
 	return nil
 }
