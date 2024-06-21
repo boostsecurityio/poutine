@@ -27,6 +27,7 @@ var Format string
 var Verbose bool
 var ScmProvider string
 var ScmBaseURL scm.ScmBaseDomain
+var Quiet bool
 var (
 	Version string
 	Commit  string
@@ -59,7 +60,6 @@ By BoostSecurity.io - https://github.com/boostsecurityio/poutine `,
 			return strings.ToUpper(fmt.Sprintf("| %-6s|", i))
 		}
 		log.Logger = log.Output(output)
-
 	},
 }
 
@@ -111,6 +111,9 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "Enable verbose logging")
 	rootCmd.PersistentFlags().StringVarP(&ScmProvider, "scm", "s", "github", "SCM platform (github, gitlab)")
 	rootCmd.PersistentFlags().VarP(&ScmBaseURL, "scm-base-url", "b", "Base URI of the self-hosted SCM instance (optional)")
+	rootCmd.PersistentFlags().BoolVarP(&Quiet, "quiet", "q", false, "Disable progress output")
+
+	viper.BindPFlag("quiet", rootCmd.PersistentFlags().Lookup("quiet"))
 }
 
 func initConfig() {
