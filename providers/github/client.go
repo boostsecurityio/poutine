@@ -254,7 +254,7 @@ func (c *Client) GetOrgRepos(ctx context.Context, org string) <-chan analyze.Rep
 		for {
 			var query struct {
 				RepositoryOwner struct {
-					Login string
+					Login        string
 					Repositories struct {
 						TotalCount int
 						Nodes      []GithubRepository

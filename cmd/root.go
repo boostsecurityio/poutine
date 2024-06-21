@@ -152,17 +152,15 @@ func cleanup() {
 	log.Debug().Msg("Finished cleaning up temp directories")
 }
 
-func GetFormatter() analyze.Formatter {
+func GetFormatter(opaClient *opa.Opa) analyze.Formatter {
 	switch Format {
 	case "pretty":
 		return &pretty.Format{}
-	case "json":
-		opaClient, _ := opa.NewOpa()
-		return json.NewFormat(opaClient, Format, os.Stdout)
 	case "sarif":
 		return sarif.NewFormat(os.Stdout)
 	}
-	return &pretty.Format{}
+
+	return json.NewFormat(opaClient, Format, os.Stdout)
 }
 
 func GetAnalyzer(ctx context.Context, command string) (*analyze.Analyzer, error) {
@@ -171,10 +169,26 @@ func GetAnalyzer(ctx context.Context, command string) (*analyze.Analyzer, error)
 		return nil, fmt.Errorf("failed to create SCM client: %w", err)
 	}
 
-	formatter := GetFormatter()
+	opaClient, err := newOpa(ctx)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create OPA client")
+		return nil, err
+	}
 
+	formatter := GetFormatter(opaClient)
 	gitClient := gitops.NewGitClient(nil)
 
-	analyzer := analyze.NewAnalyzer(scmClient, gitClient, formatter, config)
+	analyzer := analyze.NewAnalyzer(scmClient, gitClient, formatter, config, opaClient)
 	return analyzer, nil
+}
+
+func newOpa(ctx context.Context) (*opa.Opa, error) {
+	opaClient, err := opa.NewOpa()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create OPA client")
+		return nil, err
+	}
+	_ = opaClient.WithConfig(ctx, config)
+
+	return opaClient, nil
 }

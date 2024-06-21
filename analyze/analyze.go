@@ -52,7 +52,7 @@ type GitClient interface {
 	GetRepoHeadBranchName(ctx context.Context, repoPath string) (string, error)
 }
 
-func NewAnalyzer(scmClient ScmClient, gitClient GitClient, formatter Formatter, config *models.Config) *Analyzer {
+func NewAnalyzer(scmClient ScmClient, gitClient GitClient, formatter Formatter, config *models.Config, opaClient *opa.Opa) *Analyzer {
 	if config == nil {
 		config = &models.Config{}
 	}
@@ -61,6 +61,7 @@ func NewAnalyzer(scmClient ScmClient, gitClient GitClient, formatter Formatter, 
 		GitClient: gitClient,
 		Formatter: formatter,
 		Config:    config,
+		Opa:       opaClient,
 	}
 }
 
@@ -69,6 +70,7 @@ type Analyzer struct {
 	GitClient GitClient
 	Formatter Formatter
 	Config    *models.Config
+	Opa       *opa.Opa
 }
 
 func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutines *int) error {
@@ -84,12 +86,8 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 	log.Debug().Msgf("Fetching list of repositories for organization: %s on %s", org, provider)
 	orgReposBatches := a.ScmClient.GetOrgRepos(ctx, org)
 
-	opaClient, err := a.newOpa(ctx)
-	if err != nil {
-		return err
-	}
 	pkgsupplyClient := pkgsupply.NewStaticClient()
-	inventory := scanner.NewInventory(opaClient, pkgsupplyClient, provider, providerVersion)
+	inventory := scanner.NewInventory(a.Opa, pkgsupplyClient, provider, providerVersion)
 
 	log.Debug().Msgf("Starting repository analysis for organization: %s on %s", org, provider)
 	bar := progressbar.NewOptions(
@@ -185,13 +183,8 @@ func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref strin
 
 	log.Debug().Msgf("Provider: %s, Version: %s", provider, providerVersion)
 
-	opaClient, err := a.newOpa(ctx)
-	if err != nil {
-		return err
-	}
 	pkgsupplyClient := pkgsupply.NewStaticClient()
-
-	inventory := scanner.NewInventory(opaClient, pkgsupplyClient, provider, providerVersion)
+	inventory := scanner.NewInventory(a.Opa, pkgsupplyClient, provider, providerVersion)
 
 	log.Debug().Msgf("Starting repository analysis for: %s/%s on %s", org, repoName, provider)
 	bar := progressbar.NewOptions(
@@ -240,13 +233,8 @@ func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) error 
 
 	log.Debug().Msgf("Provider: %s, Version: %s", provider, providerVersion)
 
-	opaClient, err := a.newOpa(ctx)
-	if err != nil {
-		return err
-	}
 	pkgsupplyClient := pkgsupply.NewStaticClient()
-
-	inventory := scanner.NewInventory(opaClient, pkgsupplyClient, provider, providerVersion)
+	inventory := scanner.NewInventory(a.Opa, pkgsupplyClient, provider, providerVersion)
 
 	log.Debug().Msgf("Starting repository analysis for: %s/%s on %s", org, repoName, provider)
 	bar := progressbar.NewOptions(
@@ -336,15 +324,4 @@ func (a *Analyzer) cloneRepoToTemp(ctx context.Context, gitURL string, token str
 		return "", fmt.Errorf("failed to clone repo: %s", err)
 	}
 	return tempDir, nil
-}
-
-func (a *Analyzer) newOpa(ctx context.Context) (*opa.Opa, error) {
-	opaClient, err := opa.NewOpa()
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to create OPA client")
-		return nil, err
-	}
-	_ = opaClient.WithConfig(ctx, a.Config)
-
-	return opaClient, nil
 }
