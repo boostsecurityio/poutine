@@ -16,7 +16,6 @@ permissions: {}
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
-    environment: homebrew-tap
     permissions:
       contents: write
       packages: write
@@ -34,12 +33,6 @@ jobs:
         go-version: ${{ env.GO_VERSION }}
         cache: false
     - uses: sigstore/cosign-installer@59acb6260d9c0ba8f4a2f9d9b48431a222b68e20 # v3.5.0
-    - uses: actions/create-github-app-token@a0de6af83968303c8c955486bf9739a57d23c7f1 # v1.10.0
-      id: homebrew-tapper-bot-token
-      with:
-        app-id: ${{ vars.HOMEBREW_TAPPER_BOT_APP_ID }}
-        private-key: ${{ secrets.HOMEBREW_TAPPER_BOT_PRIVATE_KEY }}
-        repositories: homebrew-tap
     - name: Login to GitHub Container Registry to allow cosign signature push
       run: echo "$DOCKER_PASSWORD" | docker login ghcr.io --username "$DOCKER_USERNAME" --password-stdin
       env:
@@ -53,4 +46,3 @@ jobs:
         args: release --clean
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        TAP_GITHUB_TOKEN: ${{ steps.homebrew-tapper-bot-token.outputs.token }}
