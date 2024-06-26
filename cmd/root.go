@@ -3,6 +3,12 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"strings"
+	"syscall"
+
 	"github.com/boostsecurityio/poutine/analyze"
 	"github.com/boostsecurityio/poutine/formatters/json"
 	"github.com/boostsecurityio/poutine/formatters/pretty"
@@ -14,11 +20,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
-	"os"
-	"os/signal"
-	"path/filepath"
-	"strings"
-	"syscall"
 
 	"github.com/spf13/cobra"
 )
@@ -186,12 +187,24 @@ func GetAnalyzer(ctx context.Context, command string) (*analyze.Analyzer, error)
 }
 
 func newOpa(ctx context.Context) (*opa.Opa, error) {
+	if config == nil {
+		err := fmt.Errorf("config is nil")
+		log.Error().Err(err).Msg("Config must be initialized before creating OPA client")
+		return nil, err
+	}
+
 	opaClient, err := opa.NewOpa()
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create OPA client")
 		return nil, err
 	}
-	_ = opaClient.WithConfig(ctx, config)
+
+	log.Debug().Msg("Configuring OPA client with provided config")
+	err = opaClient.WithConfig(ctx, config)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to configure OPA client")
+		return nil, err
+	}
 
 	return opaClient, nil
 }
