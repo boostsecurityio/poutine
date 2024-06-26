@@ -27,7 +27,6 @@ var Format string
 var Verbose bool
 var ScmProvider string
 var ScmBaseURL scm.ScmBaseDomain
-var Quiet bool
 var (
 	Version string
 	Commit  string
@@ -35,7 +34,7 @@ var (
 )
 var token string
 var cfgFile string
-var config *models.Config
+var config *models.Config = models.DefaultConfig()
 
 var legacyFlags = []string{"-token", "-format", "-verbose", "-scm", "-scm-base-uri", "-threads"}
 
@@ -111,7 +110,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "Enable verbose logging")
 	rootCmd.PersistentFlags().StringVarP(&ScmProvider, "scm", "s", "github", "SCM platform (github, gitlab)")
 	rootCmd.PersistentFlags().VarP(&ScmBaseURL, "scm-base-url", "b", "Base URI of the self-hosted SCM instance (optional)")
-	rootCmd.PersistentFlags().BoolVarP(&Quiet, "quiet", "q", false, "Disable progress output")
+	rootCmd.PersistentFlags().BoolVarP(&config.Quiet, "quiet", "q", false, "Disable progress output")
 
 	viper.BindPFlag("quiet", rootCmd.PersistentFlags().Lookup("quiet"))
 }
