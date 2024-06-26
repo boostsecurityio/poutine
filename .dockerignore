@@ -1,0 +1,8 @@
+.github
+.git
+docs/themes
+Dockerfile
+.dockerignore
+.env
+/*.md
+/poutine
