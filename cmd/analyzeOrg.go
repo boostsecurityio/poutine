@@ -46,7 +46,7 @@ func init() {
 	analyzeOrgCmd.Flags().StringVarP(&token, "token", "t", "", "SCM access token (env: GH_TOKEN)")
 
 	analyzeOrgCmd.Flags().IntVarP(&threads, "threads", "j", 2, "Parallelization factor for scanning organizations")
-	analyzeOrgCmd.Flags().BoolP("ignore-forks", "i", false, "Ignore forked repositories in the organization")
+	analyzeOrgCmd.Flags().BoolVarP(&config.IgnoreForks, "ignore-forks", "i", false, "Ignore forked repositories in the organization")
 
 	viper.BindPFlag("token", analyzeOrgCmd.Flags().Lookup("token"))
 	viper.BindPFlag("ignoreForks", analyzeOrgCmd.Flags().Lookup("ignore-forks"))
