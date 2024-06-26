@@ -24,7 +24,7 @@ builds:
 
 kos:
   - repository: ghcr.io/boostsecurityio/poutine
-    base_image: 'cgr.dev/chainguard/git:latest@sha256:f06036ea97419c784339638cf4a21b52d39df8dfd8aa0e0e73307fc1082c6043'
+    base_image: 'cgr.dev/chainguard/git:latest@sha256:06119871a608d163eac2daddd0745582e457a29ee8402bd351c13f294ede30e1'
     tags:
       - '{{.Version}}'
       - latest
