@@ -254,6 +254,14 @@ func TestFindings(t *testing.T) {
 			},
 		},
 		{
+			RuleId: "known_vulnerability_in_build_platform",
+			Purl:   "gitlab",
+			Meta: opa.FindingMeta{
+				OsvId:   "CVE-2024-5655",
+				Details: "Provider: gitlab",
+			},
+		},
+		{
 			RuleId: "injection",
 			Purl:   purl,
 			Meta: opa.FindingMeta{
