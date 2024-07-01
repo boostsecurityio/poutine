@@ -13,7 +13,7 @@ require (
 	github.com/rs/zerolog v1.33.0
 	github.com/schollz/progressbar/v3 v3.14.3
 	github.com/shurcooL/githubv4 v0.0.0-20240429030203-be2daab69064
-	github.com/spf13/cobra v1.8.0
+	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.9.0
 	github.com/xanzy/go-gitlab v0.105.0
