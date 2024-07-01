@@ -1,20 +1,40 @@
 package external.build_platform
 
 advisories = {
-	"gitlab": {"CVE-2024-2651": {
-		"osv_id": "CVE-2024-2651",
-		"published": "2024-05-14T00:00:00Z",
-		"aliases": [],
-		"summary": "It was possible for an attacker to cause a denial of service using maliciously crafted markdown content.",
-		"severity": [{
-			"type": "CVSS_V3",
-			"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
-		}],
-		"cwe_ids": ["CWE-400"],
-		"vulnerable_versions": [],
-		"vulnerable_version_ranges": [">=0,<16.9.7"],
-		"vulnerable_commit_shas": [],
-	}},
+	"gitlab": {
+		"CVE-2024-5655": {
+			"osv_id": "CVE-2024-5655",
+			"published": "2024-06-26T00:00:00Z",
+			"aliases": [],
+			"summary": "It was possible for an attacker to trigger a pipeline as another user under certain circumstances.",
+			"severity": [{
+				"type": "CVSS_V3",
+				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:N",
+			}],
+			"cwe_ids": ["CWE-284"],
+			"vulnerable_versions": [],
+			"vulnerable_version_ranges": [
+				">=15.8.0,<16.11.5",
+				">=17.0.0,<17.0.3",
+				">=17.1.0,<17.1.1",
+			],
+			"vulnerable_commit_shas": [],
+		},
+		"CVE-2024-2651": {
+			"osv_id": "CVE-2024-2651",
+			"published": "2024-05-14T00:00:00Z",
+			"aliases": [],
+			"summary": "It was possible for an attacker to cause a denial of service using maliciously crafted markdown content.",
+			"severity": [{
+				"type": "CVSS_V3",
+				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
+			}],
+			"cwe_ids": ["CWE-400"],
+			"vulnerable_versions": [],
+			"vulnerable_version_ranges": [">=0,<16.9.7"],
+			"vulnerable_commit_shas": [],
+		},
+	},
 	"github": {"CVE-2024-4985": {
 		"osv_id": "CVE-2024-4985",
 		"published": "2024-05-20T00:00:00Z",
