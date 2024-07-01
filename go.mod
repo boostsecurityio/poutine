@@ -11,7 +11,7 @@ require (
 	github.com/owenrumney/go-sarif/v2 v2.3.1
 	github.com/package-url/packageurl-go v0.1.3
 	github.com/rs/zerolog v1.33.0
-	github.com/schollz/progressbar/v3 v3.14.3
+	github.com/schollz/progressbar/v3 v3.14.4
 	github.com/shurcooL/githubv4 v0.0.0-20240429030203-be2daab69064
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.18.2
