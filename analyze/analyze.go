@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -275,17 +274,19 @@ func (a *Analyzer) generatePackageInsights(ctx context.Context, tempDir string, 
 		return nil, fmt.Errorf("failed to get commit SHA: %w", err)
 	}
 
+	purl, _ := models.NewPurl(fmt.Sprintf("pkg:%s/%s", repo.GetProviderName(), repo.GetRepoIdentifier()))
 	switch ref {
 	case "HEAD", "":
 		ref, err = a.GitClient.GetRepoHeadBranchName(ctx, tempDir)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get head branch name: %w", err)
 		}
+	default:
+		purl.Version = ref
 	}
 
-	purl := fmt.Sprintf("pkg:%s/%s", repo.GetProviderName(), strings.ToLower(repo.GetRepoIdentifier()))
 	pkg := &models.PackageInsights{
-		Purl:               purl,
+		Purl:               purl.String(),
 		LastCommitedAt:     commitDate.String(),
 		SourceGitCommitSha: commitSha,
 		SourceScmType:      repo.GetProviderName(),
