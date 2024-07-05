@@ -200,3 +200,29 @@ func TestRulesMetadataLevel(t *testing.T) {
 
 	assert.Empty(t, result, fmt.Sprintf("rules with invalid levels: %v", result))
 }
+
+func TestWithRulesConfig(t *testing.T) {
+	o, err := NewOpa()
+	noOpaErrors(t, err)
+	ctx := context.TODO()
+
+	var rule *Rule
+	err = o.Eval(ctx, "data.rules.pr_runs_on_self_hosted.rule", nil, &rule)
+	noOpaErrors(t, err)
+	assert.Equal(t, []interface{}{}, rule.Config["allowed_runners"].Default)
+	assert.Equal(t, []interface{}{}, rule.Config["allowed_runners"].Value)
+
+	err = o.WithConfig(ctx, &models.Config{
+		RulesConfig: map[string]map[string]interface{}{
+			"pr_runs_on_self_hosted": {
+				"allowed_runners": []string{"self-hosted"},
+			},
+		},
+	})
+	assert.NoError(t, err)
+
+	err = o.Eval(ctx, "data.rules.pr_runs_on_self_hosted.rule", nil, &rule)
+	noOpaErrors(t, err)
+	assert.Equal(t, []interface{}{}, rule.Config["allowed_runners"].Default)
+	assert.Equal(t, []interface{}{"self-hosted"}, rule.Config["allowed_runners"].Value)
+}
