@@ -2,6 +2,15 @@
 # default: false
 ignoreForks: true
 
+# Set rule configuration options
+rulesConfig:
+  pr_runs_on_self_hosted:
+    allowed_runners:
+    - self-hosted
+    - label:gpu
+    - group:prdeploy
+
+
 # Skip findings if any rules in this list matches the finding's properties.
 # Each rule can have the following keys: job, level, osv_id, path, purl, rule.
 # The value of each key is a string or a list of strings.

@@ -24,6 +24,7 @@ func TestGithubWorkflows(t *testing.T) {
 		".github/workflows/secrets.yaml",
 		".github/workflows/workflow_run_valid.yml",
 		".github/workflows/workflow_run_reusable.yml",
+		".github/workflows/allowed_pr_runner.yml",
 	})
 }
 

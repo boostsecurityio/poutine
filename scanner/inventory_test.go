@@ -239,6 +239,24 @@ func TestFindings(t *testing.T) {
 				Details: "runs-on: self-hosted"},
 		},
 		{
+			RuleId: "pr_runs_on_self_hosted",
+			Purl:   purl,
+			Meta: opa.FindingMeta{
+				Path:    ".github/workflows/allowed_pr_runner.yml",
+				Job:     "group",
+				Line:    13,
+				Details: "runs-on: group:prdeploy"},
+		},
+		{
+			RuleId: "pr_runs_on_self_hosted",
+			Purl:   purl,
+			Meta: opa.FindingMeta{
+				Path:    ".github/workflows/allowed_pr_runner.yml",
+				Job:     "labels",
+				Line:    19,
+				Details: "runs-on: label:linux"},
+		},
+		{
 			RuleId: "github_action_from_unverified_creator_used",
 			Purl:   "pkg:githubactions/kartverket/github-workflows",
 			Meta: opa.FindingMeta{
@@ -387,4 +405,51 @@ func TestSkipRule(t *testing.T) {
 	}
 
 	assert.NotContains(t, rule_ids, rule_id)
+}
+
+func TestRulesConfig(t *testing.T) {
+	o, _ := opa.NewOpa()
+	i := NewInventory(o, nil, "", "")
+	ctx := context.TODO()
+	purl := "pkg:github/org/owner"
+	rule_id := "pr_runs_on_self_hosted"
+	path := ".github/workflows/allowed_pr_runner.yml"
+	pkg := &models.PackageInsights{
+		Purl: purl,
+	}
+	_ = pkg.NormalizePurl()
+
+	err := i.AddPackage(ctx, pkg, "testdata")
+	assert.NoError(t, err)
+
+	results, err := i.Findings(ctx)
+	assert.NoError(t, err)
+
+	labels := []string{}
+	for _, f := range results.Findings {
+		if f.RuleId == rule_id && f.Meta.Path == path {
+			labels = append(labels, f.Meta.Details)
+		}
+	}
+	assert.ElementsMatch(t, labels, []string{"runs-on: label:linux", "runs-on: group:prdeploy"})
+
+	err = o.WithConfig(ctx, &models.Config{
+		RulesConfig: map[string]map[string]interface{}{
+			rule_id: {
+				"allowed_runners": []string{"label:linux", "group:prdeploy"},
+			},
+		},
+	})
+	assert.NoError(t, err)
+
+	results, err = i.Findings(ctx)
+	assert.NoError(t, err)
+
+	labels = []string{}
+	for _, f := range results.Findings {
+		if f.RuleId == rule_id && f.Meta.Path == path {
+			labels = append(labels, f.Meta.Details)
+		}
+	}
+	assert.Empty(t, labels)
 }
