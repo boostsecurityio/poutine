@@ -1,0 +1,9 @@
+pr: none
+
+# implicit stage, job
+steps:
+- task: DownloadPipelineArtifact@2
+- powershell: |
+    echo "Hello, pr!"
+- bash: |
+    curl $(URL) | bash

@@ -29,8 +29,8 @@ type PackageInsights struct {
 
 	GithubActionsWorkflows []GithubActionsWorkflow `json:"github_actions_workflows"`
 	GithubActionsMetadata  []GithubActionsMetadata `json:"github_actions_metadata"`
-
-	GitlabciConfigs []GitlabciConfig `json:"gitlabci_configs"`
+	GitlabciConfigs        []GitlabciConfig        `json:"gitlabci_configs"`
+	AzurePipelines         []AzurePipeline         `json:"azure_pipelines"`
 }
 
 func (p *PackageInsights) GetSourceGitRepoURI() string {

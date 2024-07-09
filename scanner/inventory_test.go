@@ -43,10 +43,12 @@ func TestPurls(t *testing.T) {
 		"pkg:docker/debian%3Avuln",
 		"pkg:githubactions/bridgecrewio/checkov-action@main",
 		"pkg:githubactions/org/repo@main#.github/workflows/Reusable.yml",
+		"pkg:azurepipelinestask/DownloadPipelineArtifact@2",
+		"pkg:azurepipelinestask/Cache@2",
 	}
 	assert.ElementsMatch(t, i.Purls(), purls)
 	assert.Equal(t, 1, len(i.Packages))
-	assert.Equal(t, 16, len(i.Packages[0].BuildDependencies))
+	assert.Equal(t, 18, len(i.Packages[0].BuildDependencies))
 	assert.Equal(t, 4, len(i.Packages[0].PackageDependencies))
 }
 
@@ -355,6 +357,27 @@ func TestFindings(t *testing.T) {
 				Job:     "build",
 				Step:    "13",
 				Details: "Command: curl https://raw.githubusercontent.com/org/repo/main/install.sh | bash",
+			},
+		},
+		{
+			RuleId: "unverified_script_exec",
+			Purl:   purl,
+			Meta: opa.FindingMeta{
+				Path:    "azure-pipelines-1.yml",
+				Line:    8,
+				Step:    "2",
+				Details: "Command: curl $(URL) | bash",
+			},
+		},
+		{
+			RuleId: "injection",
+			Purl:   purl,
+			Meta: opa.FindingMeta{
+				Path:    ".azure-pipelines.yml",
+				Line:    11,
+				Job:     "build",
+				Step:    "1",
+				Details: "Sources: Build.SourceBranch",
 			},
 		},
 	}

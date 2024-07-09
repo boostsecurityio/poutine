@@ -77,3 +77,27 @@ results contains poutine.finding(rule, pkg.purl, {
 	exprs := gl_injections(script)
 	count(exprs) > 0
 }
+
+# Azure Pipelines
+patterns.azure contains `\$\((Build\.(SourceBranchName|SourceBranch|SourceVersionMessage)|System\.PullRequest\.SourceBranch)\)`
+
+azure_injections(str) = {expr |
+	match := regex.find_n(patterns.azure[_], str, -1)[_]
+	expr := regex.find_all_string_submatch_n(`\$\(([^\)]+)\)`, match, 1)[0][1]
+}
+
+results contains poutine.finding(rule, pkg.purl, {
+	"path": pipeline.path,
+	"job": job.job,
+	"step": step_id,
+	"line": step.lines[attr],
+	"details": sprintf("Sources: %s", [concat(" ", exprs)]),
+}) if {
+	some attr in {"script", "powershell", "pwsh", "bash"}
+	pkg := input.packages[_]
+	pipeline := pkg.azure_pipelines[_]
+	job := pipeline.stages[_].jobs[_]
+	step := job.steps[step_id]
+	exprs := azure_injections(step[attr])
+	count(exprs) > 0
+}

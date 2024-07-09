@@ -13,6 +13,7 @@ import (
 
 	"github.com/boostsecurityio/poutine/opa"
 	"gopkg.in/yaml.v3"
+	"regexp"
 )
 
 const MAX_DEPTH = 150
@@ -72,6 +73,11 @@ func (s *Scanner) parse() error {
 	}
 
 	s.Package.GitlabciConfigs, err = s.GitlabciConfigs()
+	if err != nil {
+		return err
+	}
+
+	s.Package.AzurePipelines, err = s.AzurePipelines()
 	if err != nil {
 		return err
 	}
@@ -219,4 +225,59 @@ func (s *Scanner) GitlabciConfigs() ([]models.GitlabciConfig, error) {
 	}
 
 	return configs, nil
+}
+
+var azurePipelineFileRegex = regexp.MustCompile(`\.?azure-pipelines(-.+)?\.ya?ml$`)
+
+func (s *Scanner) AzurePipelines() ([]models.AzurePipeline, error) {
+	pipelines := []models.AzurePipeline{}
+	err := filepath.Walk(s.Path,
+		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
+			if info.IsDir() && info.Name() == ".git" {
+				return filepath.SkipDir
+			}
+
+			if info.IsDir() {
+				return nil
+			}
+
+			if !azurePipelineFileRegex.MatchString(info.Name()) {
+				return nil
+			}
+
+			rel_path, err := filepath.Rel(s.Path, path)
+			if err != nil {
+				return err
+			}
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+
+			pipeline := models.AzurePipeline{}
+			err = yaml.Unmarshal(data, &pipeline)
+			if err != nil {
+				return err
+			}
+
+			if pipeline.IsValid() {
+				pipeline.Path = rel_path
+				pipelines = append(pipelines, pipeline)
+			} else {
+				log.Debug().Str("file", rel_path).Msg("failed to parse azure pipeline")
+			}
+
+			return nil
+		},
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return pipelines, nil
 }
