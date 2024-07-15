@@ -18,130 +18,57 @@ import (
 
 const MAX_DEPTH = 150
 
-type Scanner struct {
-	Path          string
-	Package       *models.PackageInsights
-	ResolvedPurls map[string]bool
-}
+type parseFunc func(*Scanner, string, fs.FileInfo) error
 
-func NewScanner(path string) Scanner {
-	return Scanner{
-		Path:          path,
-		Package:       &models.PackageInsights{},
-		ResolvedPurls: map[string]bool{},
-	}
-}
-
-func (s *Scanner) Run(ctx context.Context, o *opa.Opa) error {
-	err := s.parse()
-	if err != nil {
-		return err
-	}
-
-	return s.inventory(ctx, o)
-}
-
-func (s *Scanner) inventory(ctx context.Context, o *opa.Opa) error {
-	result := opa.InventoryResult{}
-	err := o.Eval(ctx,
-		"data.poutine.queries.inventory.result",
-		map[string]interface{}{
-			"packages": []interface{}{s.Package},
-		},
-		&result,
-	)
-	if err != nil {
-		return err
-	}
-
-	s.Package.BuildDependencies = result.BuildDependencies
-	s.Package.PackageDependencies = result.PackageDependencies
-
-	return nil
-}
-
-func (s *Scanner) parse() error {
-	var err error
-	s.Package.GithubActionsMetadata, err = s.GithubActionsMetadata()
-	if err != nil {
-		return err
-	}
-
-	s.Package.GithubActionsWorkflows, err = s.GithubWorkflows()
-	if err != nil {
-		return err
-	}
-
-	s.Package.GitlabciConfigs, err = s.GitlabciConfigs()
-	if err != nil {
-		return err
-	}
-
-	s.Package.AzurePipelines, err = s.AzurePipelines()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *Scanner) GithubActionsMetadata() ([]models.GithubActionsMetadata, error) {
+func parseGithubActionsMetadata(scanner *Scanner, filePath string, fileInfo fs.FileInfo) error {
 	metadata := make([]models.GithubActionsMetadata, 0)
 
-	err := filepath.Walk(s.Path,
-		func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
+	if fileInfo.IsDir() && fileInfo.Name() == ".git" {
+		return filepath.SkipDir
+	}
 
-			if info.IsDir() && info.Name() == ".git" {
-				return filepath.SkipDir
-			}
+	if fileInfo.IsDir() || (fileInfo.Name() != "action.yml" && fileInfo.Name() != "action.yaml") {
+		return nil
+	}
 
-			if info.IsDir() || (info.Name() != "action.yml" && info.Name() != "action.yaml") {
-				return nil
-			}
+	relPath, err := filepath.Rel(scanner.Path, filePath)
+	if err != nil {
+		return err
+	}
 
-			rel_path, err := filepath.Rel(s.Path, path)
-			if err != nil {
-				return err
-			}
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
 
-			data, err := os.ReadFile(path)
-			if err != nil {
-				return err
-			}
+	meta := models.GithubActionsMetadata{
+		Path: relPath,
+	}
+	err = yaml.Unmarshal(data, &meta)
+	if err != nil {
+		log.Debug().Err(err).Str("file", relPath).Msg("failed to unmarshal yaml file")
+		return nil
+	}
 
-			meta := models.GithubActionsMetadata{
-				Path: rel_path,
-			}
-			err = yaml.Unmarshal(data, &meta)
-			if err != nil {
-				log.Debug().Err(err).Str("file", rel_path).Msg("failed to unmarshal yaml file")
-				return nil
-			}
+	if meta.IsValid() {
+		metadata = append(metadata, meta)
+	} else {
+		log.Debug().Str("file", relPath).Msg("failed to parse github actions metadata")
+	}
 
-			if meta.IsValid() {
-				metadata = append(metadata, meta)
-			} else {
-				log.Debug().Str("file", rel_path).Msg("failed to parse github actions metadata")
-			}
+	scanner.Package.GithubActionsMetadata = append(scanner.Package.GithubActionsMetadata, metadata...)
 
-			return nil
-		},
-	)
-
-	return metadata, err
+	return nil
 }
 
-func (s *Scanner) GithubWorkflows() ([]models.GithubActionsWorkflow, error) {
-	folder := filepath.Join(s.Path, ".github/workflows")
+func parseGithubWorkflows(scanner *Scanner, filePath string, fileInfo fs.FileInfo) error {
+	folder := filepath.Join(scanner.Path, ".github/workflows")
 	files, err := os.ReadDir(folder)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return []models.GithubActionsWorkflow{}, nil
+			return nil
 		}
-		return nil, err
+		return err
 	}
 
 	workflows := make([]models.GithubActionsWorkflow, 0, len(files))
@@ -150,45 +77,83 @@ func (s *Scanner) GithubWorkflows() ([]models.GithubActionsWorkflow, error) {
 			continue
 		}
 
-		path := path.Join(folder, file.Name())
-		if !strings.HasSuffix(path, ".yml") && !strings.HasSuffix(path, ".yaml") {
+		workflowFilePath := path.Join(folder, file.Name())
+		if !strings.HasSuffix(workflowFilePath, ".yml") && !strings.HasSuffix(workflowFilePath, ".yaml") {
 			continue
 		}
-		rel_path, err := filepath.Rel(s.Path, path)
+		relPath, err := filepath.Rel(scanner.Path, workflowFilePath)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(workflowFilePath)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		workflow := models.GithubActionsWorkflow{Path: rel_path}
+		workflow := models.GithubActionsWorkflow{Path: relPath}
 		err = yaml.Unmarshal(data, &workflow)
 		if err != nil {
-			log.Debug().Err(err).Str("file", rel_path).Msg("failed to unmarshal yaml file")
+			log.Debug().Err(err).Str("file", relPath).Msg("failed to unmarshal yaml file")
 			continue
 		}
 
 		if workflow.IsValid() {
 			workflows = append(workflows, workflow)
 		} else {
-			log.Debug().Str("file", rel_path).Msg("failed to parse github actions workflow")
+			log.Debug().Str("file", relPath).Msg("failed to parse github actions workflow")
 		}
 	}
 
-	return workflows, err
+	scanner.Package.GithubActionsWorkflows = append(scanner.Package.GithubActionsWorkflows, workflows...)
+
+	return nil
 }
 
-func (s *Scanner) GitlabciConfigs() ([]models.GitlabciConfig, error) {
+func parseAzurePipelines(scanner *Scanner, filePath string, fileInfo fs.FileInfo) error {
+	pipelines := []models.AzurePipeline{}
+	if fileInfo.IsDir() && fileInfo.Name() == ".git" {
+		return filepath.SkipDir
+	}
+
+	if fileInfo.IsDir() {
+		return nil
+	}
+	relPath, err := filepath.Rel(scanner.Path, filePath)
+	if err != nil {
+		return err
+	}
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+
+	pipeline := models.AzurePipeline{}
+	err = yaml.Unmarshal(data, &pipeline)
+	if err != nil {
+		return err
+	}
+
+	if pipeline.IsValid() {
+		pipeline.Path = relPath
+		pipelines = append(pipelines, pipeline)
+	} else {
+		log.Debug().Str("file", relPath).Msg("failed to parse azure pipeline")
+	}
+
+	scanner.Package.AzurePipelines = append(scanner.Package.AzurePipelines, pipelines...)
+
+	return nil
+}
+
+func parseGitlabCi(scanner *Scanner, filePath string, fileInfo fs.FileInfo) error {
 	files := map[string]bool{}
 	queue := []string{"/.gitlab-ci.yml"}
 	configs := []models.GitlabciConfig{}
 
 	for len(queue) > 0 && len(configs) < MAX_DEPTH {
 		repoPath := filepath.Join("/", queue[0])
-		configPath := filepath.Join(s.Path, repoPath)
+		configPath := filepath.Join(scanner.Path, repoPath)
 		queue = queue[1:]
 
 		if files[repoPath] {
@@ -224,60 +189,73 @@ func (s *Scanner) GitlabciConfigs() ([]models.GitlabciConfig, error) {
 		configs = append(configs, *config)
 	}
 
-	return configs, nil
+	scanner.Package.GitlabciConfigs = append(scanner.Package.GitlabciConfigs, configs...)
+
+	return nil
 }
 
-var azurePipelineFileRegex = regexp.MustCompile(`\.?azure-pipelines(-.+)?\.ya?ml$`)
+type Scanner struct {
+	Path          string
+	Package       *models.PackageInsights
+	ResolvedPurls map[string]bool
+	ParseFuncs    map[*regexp.Regexp]parseFunc
+}
 
-func (s *Scanner) AzurePipelines() ([]models.AzurePipeline, error) {
-	pipelines := []models.AzurePipeline{}
-	err := filepath.Walk(s.Path,
-		func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-
-			if info.IsDir() && info.Name() == ".git" {
-				return filepath.SkipDir
-			}
-
-			if info.IsDir() {
-				return nil
-			}
-
-			if !azurePipelineFileRegex.MatchString(info.Name()) {
-				return nil
-			}
-
-			rel_path, err := filepath.Rel(s.Path, path)
-			if err != nil {
-				return err
-			}
-			data, err := os.ReadFile(path)
-			if err != nil {
-				return err
-			}
-
-			pipeline := models.AzurePipeline{}
-			err = yaml.Unmarshal(data, &pipeline)
-			if err != nil {
-				return err
-			}
-
-			if pipeline.IsValid() {
-				pipeline.Path = rel_path
-				pipelines = append(pipelines, pipeline)
-			} else {
-				log.Debug().Str("file", rel_path).Msg("failed to parse azure pipeline")
-			}
-
-			return nil
+func NewScanner(path string) Scanner {
+	return Scanner{
+		Path:          path,
+		Package:       &models.PackageInsights{},
+		ResolvedPurls: map[string]bool{},
+		ParseFuncs: map[*regexp.Regexp]parseFunc{
+			regexp.MustCompile(`action\.ya?ml$`):                   parseGithubActionsMetadata,
+			regexp.MustCompile(`.github`):                          parseGithubWorkflows,
+			regexp.MustCompile(`\.?azure-pipelines(-.+)?\.ya?ml$`): parseAzurePipelines,
+			regexp.MustCompile(`\.?gitlab-ci(-.+)?\.y?ml$`):        parseGitlabCi,
 		},
-	)
+	}
+}
 
+func (s *Scanner) Run(ctx context.Context, o *opa.Opa) error {
+	err := s.walkAndParse()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return pipelines, nil
+	return s.inventory(ctx, o)
+}
+
+func (s *Scanner) walkAndParse() error {
+	return filepath.Walk(s.Path, func(filePath string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		for pattern, parseFunc := range s.ParseFuncs {
+			if pattern.MatchString(info.Name()) {
+				if err := parseFunc(s, filePath, info); err != nil {
+					log.Error().Err(err).Msg("error parsing file")
+					// Decide whether to return error or continue processing other files
+				}
+			}
+		}
+		return nil
+	})
+}
+
+func (s *Scanner) inventory(ctx context.Context, o *opa.Opa) error {
+	result := opa.InventoryResult{}
+	err := o.Eval(ctx,
+		"data.poutine.queries.inventory.result",
+		map[string]interface{}{
+			"packages": []interface{}{s.Package},
+		},
+		&result,
+	)
+	if err != nil {
+		return err
+	}
+
+	s.Package.BuildDependencies = result.BuildDependencies
+	s.Package.PackageDependencies = result.PackageDependencies
+
+	return nil
 }
