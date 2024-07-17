@@ -1,3 +1,6 @@
+//go:build build_platform_vuln_database
+// +build build_platform_vuln_database
+
 package opa
 
 import (
