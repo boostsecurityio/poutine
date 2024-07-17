@@ -7,8 +7,10 @@ import (
 	"github.com/boostsecurityio/poutine/providers/gitops"
 	"github.com/stretchr/testify/assert"
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -43,9 +45,9 @@ type CVEData struct {
 				Vendor   string `json:"vendor"`
 				Product  string `json:"product"`
 				Versions []struct {
-					LessThanOrEqual string `json:"lessThanOrEqual"`
-					Version         string `json:"version"`
-					VersionType     string `json:"versionType"`
+					LessThan    string `json:"lessThan"`
+					Version     string `json:"version"`
+					VersionType string `json:"versionType"`
 				}
 			} `json:"affected"`
 			Descriptions []struct {
@@ -76,27 +78,46 @@ func TransformCVEDataToAdvisories(cveData []CVEData) PlatformAdvisories {
 			}
 
 			cveItem := CVEItem{
-				OsvId:     data.CveMetadata.ID,
-				Published: data.CveMetadata.DatePublished,
-				Summary:   data.Containers.CNA.Descriptions[0].Value,
-				CweIds:    []string{},
-				Severity:  []Severity{},
+				OsvId:                   data.CveMetadata.ID,
+				Published:               data.CveMetadata.DatePublished,
+				Aliases:                 []string{},
+				Summary:                 data.Containers.CNA.Descriptions[0].Value,
+				Severity:                []Severity{},
+				CweIds:                  []string{},
+				VulnerableVersions:      []string{},
+				VulnerableVersionRanges: []string{},
+				VulnerableCommitSHAs:    []string{},
 			}
 
-			// Populate CWE IDs
 			for _, problemType := range data.Containers.CNA.ProblemTypes {
 				for _, description := range problemType.Descriptions {
 					cveItem.CweIds = append(cveItem.CweIds, description.CweId)
 				}
 			}
 
-			// Populate Severity
 			for _, metric := range data.Containers.CNA.Metrics {
 				cveItem.Severity = append(cveItem.Severity, Severity{
-					Type:  "CVSS_V3", // Assuming all are CVSS V3 for simplicity
+					Type:  "CVSS_V3",
 					Score: metric.CvssV31.VectorString,
 				})
 			}
+
+			var versionRanges []string
+
+			for _, version := range affected.Versions {
+				if version.VersionType == "custom" || version.VersionType == "semver" {
+					if version.LessThan != "" && version.Version != "" {
+						versionRange := fmt.Sprintf(">=%s,<%s", version.Version, version.LessThan)
+						versionRanges = append(versionRanges, versionRange)
+					}
+				} else {
+					if strings.Contains(version.Version, "<") || strings.Contains(version.Version, ">") {
+						versionRanges = append(versionRanges, version.Version)
+					}
+				}
+			}
+
+			cveItem.VulnerableVersionRanges = append(cveItem.VulnerableVersionRanges, versionRanges...)
 
 			if _, ok := advisories[vendor]; !ok {
 				advisories[vendor] = make(map[string]CVEItem)
@@ -106,6 +127,14 @@ func TransformCVEDataToAdvisories(cveData []CVEData) PlatformAdvisories {
 	}
 
 	return advisories
+}
+
+func AdvisoriesToJSON(advisories PlatformAdvisories) (string, error) {
+	jsonData, err := json.MarshalIndent(advisories, "", "    ")
+	if err != nil {
+		return "", err
+	}
+	return string(jsonData), nil
 }
 
 func TestPopulateDatabase(t *testing.T) {
@@ -120,7 +149,7 @@ func TestPopulateDatabase(t *testing.T) {
 		{"git", []string{"config", "core.sparseCheckout", "true"}},
 		{"git", []string{"config", "index.sparse", "true"}},
 		{"git", []string{"sparse-checkout", "init", "--sparse-index"}},
-		{"git", []string{"sparse-checkout", "set", "cves/2022", "cves/2023", "cves/2024"}},
+		{"git", []string{"sparse-checkout", "set", "cves/2020", "cves/2021", "cves/2022", "cves/2023", "cves/2024"}},
 		{"git", []string{"fetch", "--quiet", "--no-tags", "--depth", "1", "--filter=blob:none", "origin", "main"}},
 		{"git", []string{"checkout", "--quiet", "-b", "target", "FETCH_HEAD"}},
 	}
@@ -163,8 +192,6 @@ func TestPopulateDatabase(t *testing.T) {
 
 				if product == "github enterprise server" || product == "gitlab" {
 					cves = append(cves, cveData)
-					fmt.Println("Found matching file:", path)
-					// Process the file as needed
 				}
 
 			}
@@ -175,5 +202,23 @@ func TestPopulateDatabase(t *testing.T) {
 
 	advisories := TransformCVEDataToAdvisories(cves)
 
-	assert.Len(t, advisories, 2)
+	advisoriesJson, err := AdvisoriesToJSON(advisories)
+	assert.NoError(t, err)
+
+	regoFilePath := "rego/external/build_platform.rego"
+
+	content, err := os.ReadFile(regoFilePath)
+	if err != nil {
+		log.Fatalf("Failed to read file: %v", err)
+	}
+
+	contentStr := string(content)
+
+	re := regexp.MustCompile(`(?s)advisories = \{.*?\n}`)
+	updatedContent := re.ReplaceAllString(contentStr, "advisories = "+advisoriesJson)
+
+	err = os.WriteFile(regoFilePath, []byte(updatedContent), 0644)
+	if err != nil {
+		log.Fatalf("Failed to write updated content to file: %v", err)
+	}
 }
