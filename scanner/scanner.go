@@ -2,12 +2,10 @@ package scanner
 
 import (
 	"context"
-	"errors"
 	"github.com/boostsecurityio/poutine/models"
 	"github.com/rs/zerolog/log"
 	"io/fs"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -62,67 +60,54 @@ func parseGithubActionsMetadata(scanner *Scanner, filePath string, fileInfo fs.F
 }
 
 func parseGithubWorkflows(scanner *Scanner, filePath string, fileInfo fs.FileInfo) error {
-	folder := filepath.Join(scanner.Path, ".github/workflows")
-	files, err := os.ReadDir(folder)
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return nil
-		}
-		return err
-	}
-
-	workflows := make([]models.GithubActionsWorkflow, 0, len(files))
-	for _, file := range files {
-		if file.IsDir() {
-			continue
-		}
-
-		workflowFilePath := path.Join(folder, file.Name())
-		if !strings.HasSuffix(workflowFilePath, ".yml") && !strings.HasSuffix(workflowFilePath, ".yaml") {
-			continue
-		}
-		relPath, err := filepath.Rel(scanner.Path, workflowFilePath)
-		if err != nil {
-			return err
-		}
-
-		data, err := os.ReadFile(workflowFilePath)
-		if err != nil {
-			return err
-		}
-
-		workflow := models.GithubActionsWorkflow{Path: relPath}
-		err = yaml.Unmarshal(data, &workflow)
-		if err != nil {
-			log.Debug().Err(err).Str("file", relPath).Msg("failed to unmarshal yaml file")
-			continue
-		}
-
-		if workflow.IsValid() {
-			workflows = append(workflows, workflow)
-		} else {
-			log.Debug().Str("file", relPath).Msg("failed to parse github actions workflow")
-		}
-	}
-
-	scanner.Package.GithubActionsWorkflows = append(scanner.Package.GithubActionsWorkflows, workflows...)
-
-	return nil
-}
-
-func parseAzurePipelines(scanner *Scanner, filePath string, fileInfo fs.FileInfo) error {
-	pipelines := []models.AzurePipeline{}
-	if fileInfo.IsDir() && fileInfo.Name() == ".git" {
-		return filepath.SkipDir
+	if !strings.HasPrefix(filePath, filepath.Join(scanner.Path, ".github/workflows")) {
+		return nil
 	}
 
 	if fileInfo.IsDir() {
 		return nil
 	}
+
+	if !strings.HasSuffix(fileInfo.Name(), ".yml") && !strings.HasSuffix(fileInfo.Name(), ".yaml") {
+		return nil
+	}
+
 	relPath, err := filepath.Rel(scanner.Path, filePath)
 	if err != nil {
 		return err
 	}
+
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+
+	workflow := models.GithubActionsWorkflow{Path: relPath}
+	err = yaml.Unmarshal(data, &workflow)
+	if err != nil {
+		log.Debug().Err(err).Str("file", relPath).Msg("failed to unmarshal yaml file")
+		return nil
+	}
+
+	if workflow.IsValid() {
+		scanner.Package.GithubActionsWorkflows = append(scanner.Package.GithubActionsWorkflows, workflow)
+	} else {
+		log.Debug().Str("file", relPath).Msg("failed to parse github actions workflow")
+	}
+
+	return nil
+}
+
+func parseAzurePipelines(scanner *Scanner, filePath string, fileInfo fs.FileInfo) error {
+	if !strings.HasSuffix(fileInfo.Name(), ".yaml") && !strings.HasSuffix(fileInfo.Name(), ".yml") {
+		return nil
+	}
+
+	relPath, err := filepath.Rel(scanner.Path, filePath)
+	if err != nil {
+		return err
+	}
+
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return err
@@ -131,17 +116,16 @@ func parseAzurePipelines(scanner *Scanner, filePath string, fileInfo fs.FileInfo
 	pipeline := models.AzurePipeline{}
 	err = yaml.Unmarshal(data, &pipeline)
 	if err != nil {
-		return err
+		log.Debug().Err(err).Str("file", relPath).Msg("failed to unmarshal yaml file")
+		return nil
 	}
 
 	if pipeline.IsValid() {
 		pipeline.Path = relPath
-		pipelines = append(pipelines, pipeline)
+		scanner.Package.AzurePipelines = append(scanner.Package.AzurePipelines, pipeline)
 	} else {
 		log.Debug().Str("file", relPath).Msg("failed to parse azure pipeline")
 	}
-
-	scanner.Package.AzurePipelines = append(scanner.Package.AzurePipelines, pipelines...)
 
 	return nil
 }
@@ -208,7 +192,7 @@ func NewScanner(path string) Scanner {
 		ResolvedPurls: map[string]bool{},
 		ParseFuncs: map[*regexp.Regexp]parseFunc{
 			regexp.MustCompile(`action\.ya?ml$`):                   parseGithubActionsMetadata,
-			regexp.MustCompile(`.github`):                          parseGithubWorkflows,
+			regexp.MustCompile(`.github/workflows`):                parseGithubWorkflows,
 			regexp.MustCompile(`\.?azure-pipelines(-.+)?\.ya?ml$`): parseAzurePipelines,
 			regexp.MustCompile(`\.?gitlab-ci(-.+)?\.y?ml$`):        parseGitlabCi,
 		},
@@ -230,7 +214,7 @@ func (s *Scanner) walkAndParse() error {
 			return err
 		}
 		for pattern, parseFunc := range s.ParseFuncs {
-			if pattern.MatchString(info.Name()) {
+			if pattern.MatchString(filePath) {
 				if err := parseFunc(s, filePath, info); err != nil {
 					log.Error().Err(err).Msg("error parsing file")
 					// Decide whether to return error or continue processing other files
