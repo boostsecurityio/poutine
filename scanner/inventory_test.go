@@ -54,7 +54,7 @@ func TestPurls(t *testing.T) {
 
 func TestFindings(t *testing.T) {
 	o, _ := opa.NewOpa()
-	i := NewInventory(o, nil, "gitlab", "16.9.6")
+	i := NewInventory(o, nil, "gitlab", "")
 	purl := "pkg:github/org/owner"
 	pkg := &models.PackageInsights{
 		Purl: purl,
@@ -263,22 +263,6 @@ func TestFindings(t *testing.T) {
 			Purl:   "pkg:githubactions/kartverket/github-workflows",
 			Meta: opa.FindingMeta{
 				Details: "Used in 1 repo(s)",
-			},
-		},
-		{
-			RuleId: "known_vulnerability_in_build_platform",
-			Purl:   "gitlab",
-			Meta: opa.FindingMeta{
-				OsvId:   "CVE-2024-2651",
-				Details: "Provider: gitlab",
-			},
-		},
-		{
-			RuleId: "known_vulnerability_in_build_platform",
-			Purl:   "gitlab",
-			Meta: opa.FindingMeta{
-				OsvId:   "CVE-2024-5655",
-				Details: "Provider: gitlab",
 			},
 		},
 		{
