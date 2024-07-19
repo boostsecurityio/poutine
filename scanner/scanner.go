@@ -189,8 +189,8 @@ func (s *Scanner) walkAndParse() error {
 		if err != nil {
 			return err
 		}
-		if info.IsDir() && info.Name() == ".git" {
-			return filepath.SkipDir
+		if info.IsDir() {
+			return nil
 		}
 		relativePath, err := filepath.Rel(s.Path, filePath)
 		if err != nil {
