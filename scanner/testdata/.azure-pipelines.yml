@@ -3,6 +3,9 @@ pr:
     include:
       - master
 
+variables:
+  system.debug: true
+
 # implicit stage
 jobs:
 - job: build

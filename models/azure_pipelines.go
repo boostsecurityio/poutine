@@ -9,8 +9,9 @@ import (
 type AzurePipeline struct {
 	Path string `json:"path" yaml:"-"`
 
-	Stages []AzureStage `json:"stages"`
-	Pr     AzurePr      `json:"pr"`
+	Stages    []AzureStage      `json:"stages"`
+	Pr        AzurePr           `json:"pr"`
+	Variables map[string]string `json:"variables"`
 }
 
 func (o AzurePipeline) IsValid() bool {
