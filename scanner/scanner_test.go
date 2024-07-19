@@ -9,7 +9,9 @@ import (
 
 func TestGithubWorkflows(t *testing.T) {
 	s := NewScanner("testdata")
-	workflows, err := s.GithubWorkflows()
+	o, _ := opa.NewOpa()
+	err := s.Run(context.TODO(), o)
+	workflows := s.Package.GithubActionsWorkflows
 
 	assert.Nil(t, err)
 
@@ -30,7 +32,9 @@ func TestGithubWorkflows(t *testing.T) {
 
 func TestGithubWorkflowsNotFound(t *testing.T) {
 	s := NewScanner("testdata/.github")
-	workflows, err := s.GithubWorkflows()
+	o, _ := opa.NewOpa()
+	err := s.Run(context.TODO(), o)
+	workflows := s.Package.GithubActionsWorkflows
 
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(workflows))
@@ -38,7 +42,10 @@ func TestGithubWorkflowsNotFound(t *testing.T) {
 
 func TestGithubActionsMetadata(t *testing.T) {
 	s := NewScanner("testdata")
-	metadata, err := s.GithubActionsMetadata()
+	o, _ := opa.NewOpa()
+	err := s.Run(context.TODO(), o)
+
+	metadata := s.Package.GithubActionsMetadata
 
 	assert.Nil(t, err)
 
