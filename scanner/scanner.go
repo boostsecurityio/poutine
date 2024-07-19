@@ -167,10 +167,10 @@ func NewScanner(path string) Scanner {
 		Package:       &models.PackageInsights{},
 		ResolvedPurls: map[string]bool{},
 		ParseFuncs: map[*regexp.Regexp]parseFunc{
-			regexp.MustCompile(`(\b|/)action\.ya?ml$`):             parseGithubActionsMetadata,
-			regexp.MustCompile(`\.github/workflows/[^/]+\.ya?ml$`): parseGithubWorkflows,
-			regexp.MustCompile(`\.?azure-pipelines(-.+)?\.ya?ml$`): parseAzurePipelines,
-			regexp.MustCompile(`\.?gitlab-ci(-.+)?\.ya?ml$`):       parseGitlabCi,
+			regexp.MustCompile(`(\b|/)action\.ya?ml$`):              parseGithubActionsMetadata,
+			regexp.MustCompile(`^\.github/workflows/[^/]+\.ya?ml$`): parseGithubWorkflows,
+			regexp.MustCompile(`\.?azure-pipelines(-.+)?\.ya?ml$`):  parseAzurePipelines,
+			regexp.MustCompile(`\.?gitlab-ci(-.+)?\.ya?ml$`):        parseGitlabCi,
 		},
 	}
 }
@@ -192,8 +192,13 @@ func (s *Scanner) walkAndParse() error {
 		if info.IsDir() && info.Name() == ".git" {
 			return filepath.SkipDir
 		}
+		relativePath, err := filepath.Rel(s.Path, filePath)
+		if err != nil {
+			log.Error().Err(err).Msg("error getting relative path")
+			return err
+		}
 		for pattern, parseFunc := range s.ParseFuncs {
-			if pattern.MatchString(filePath) {
+			if pattern.MatchString(relativePath) {
 				if err := parseFunc(s, filePath, info); err != nil {
 					log.Error().Err(err).Msg("error parsing file")
 					// Decide whether to return error or continue processing other files
