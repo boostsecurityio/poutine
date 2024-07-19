@@ -4,7 +4,7 @@ pr:
       - master
 
 variables:
-  system.debug: true
+  system.debug: 'true'
 
 # implicit stage
 jobs:
