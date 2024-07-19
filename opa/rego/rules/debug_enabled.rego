@@ -89,16 +89,14 @@ results contains poutine.finding(rule, pkg.purl, {
 
 results contains poutine.finding(rule, pkg.purl, {
 	"path": pipeline.path,
-	"job": job.id,
-	"step": step_id,
-	"details": var.key,
-	"line": step.lines.start,
+	"job": "",
+	"step": "1",
+	"details": key,
+	"line": 0,
 }) if {
 	pkg := input.packages[_]
 	pipeline := pkg.azure_pipelines[_]
-	job := pipeline.stages[_].jobs[_]
-    step := job.steps[step_id]
-	var := pipeline.variables[_]
-	var.key == "system.debug"
-    lower(var.value) == "true"
+	pipeline.variables[key]
+	key == "system.debug"
+	pipeline.variables[key] == "true"
 }
