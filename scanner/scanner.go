@@ -21,14 +21,6 @@ type parseFunc func(*Scanner, string, fs.FileInfo) error
 func parseGithubActionsMetadata(scanner *Scanner, filePath string, fileInfo fs.FileInfo) error {
 	metadata := make([]models.GithubActionsMetadata, 0)
 
-	if fileInfo.IsDir() && fileInfo.Name() == ".git" {
-		return filepath.SkipDir
-	}
-
-	if fileInfo.IsDir() || (fileInfo.Name() != "action.yml" && fileInfo.Name() != "action.yaml") {
-		return nil
-	}
-
 	relPath, err := filepath.Rel(scanner.Path, filePath)
 	if err != nil {
 		return err
@@ -60,18 +52,6 @@ func parseGithubActionsMetadata(scanner *Scanner, filePath string, fileInfo fs.F
 }
 
 func parseGithubWorkflows(scanner *Scanner, filePath string, fileInfo fs.FileInfo) error {
-	if !strings.HasPrefix(filePath, filepath.Join(scanner.Path, ".github/workflows")) {
-		return nil
-	}
-
-	if fileInfo.IsDir() {
-		return nil
-	}
-
-	if !strings.HasSuffix(fileInfo.Name(), ".yml") && !strings.HasSuffix(fileInfo.Name(), ".yaml") {
-		return nil
-	}
-
 	relPath, err := filepath.Rel(scanner.Path, filePath)
 	if err != nil {
 		return err
@@ -99,10 +79,6 @@ func parseGithubWorkflows(scanner *Scanner, filePath string, fileInfo fs.FileInf
 }
 
 func parseAzurePipelines(scanner *Scanner, filePath string, fileInfo fs.FileInfo) error {
-	if !strings.HasSuffix(fileInfo.Name(), ".yaml") && !strings.HasSuffix(fileInfo.Name(), ".yml") {
-		return nil
-	}
-
 	relPath, err := filepath.Rel(scanner.Path, filePath)
 	if err != nil {
 		return err
@@ -191,10 +167,10 @@ func NewScanner(path string) Scanner {
 		Package:       &models.PackageInsights{},
 		ResolvedPurls: map[string]bool{},
 		ParseFuncs: map[*regexp.Regexp]parseFunc{
-			regexp.MustCompile(`action\.ya?ml$`):                   parseGithubActionsMetadata,
-			regexp.MustCompile(`.github/workflows`):                parseGithubWorkflows,
+			regexp.MustCompile(`(\b|/)action\.ya?ml$`):             parseGithubActionsMetadata,
+			regexp.MustCompile(`\.github/workflows/[^/]+\.ya?ml$`): parseGithubWorkflows,
 			regexp.MustCompile(`\.?azure-pipelines(-.+)?\.ya?ml$`): parseAzurePipelines,
-			regexp.MustCompile(`\.?gitlab-ci(-.+)?\.y?ml$`):        parseGitlabCi,
+			regexp.MustCompile(`\.?gitlab-ci(-.+)?\.ya?ml$`):       parseGitlabCi,
 		},
 	}
 }
@@ -212,6 +188,9 @@ func (s *Scanner) walkAndParse() error {
 	return filepath.Walk(s.Path, func(filePath string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
+		}
+		if info.IsDir() && info.Name() == ".git" {
+			return filepath.SkipDir
 		}
 		for pattern, parseFunc := range s.ParseFuncs {
 			if pattern.MatchString(filePath) {
