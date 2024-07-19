@@ -120,6 +120,13 @@ cd poutine
 make build
 ```
 
+## Development
+### Updating Build Platform CVE Database
+```bash
+go test -tags build_platform_vuln_database ./...
+opa fmt -w opa/rego/external/build_platform.rego
+```
+
 ## See Also 
 
 For examples of vulnerabilities in GitHub Actions workflows, you can explore the [Messy poutine GitHub organization](https://github.com/messypoutine). It showcases real-world vulnerabilities from open-source projects readily exploitable for educational purposes. 

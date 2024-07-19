@@ -152,7 +152,7 @@ func TestPopulateDatabase(t *testing.T) {
 		{"git", []string{"config", "core.sparseCheckout", "true"}},
 		{"git", []string{"config", "index.sparse", "true"}},
 		{"git", []string{"sparse-checkout", "init", "--sparse-index"}},
-		{"git", []string{"sparse-checkout", "set", "cves/2020", "cves/2021", "cves/2022", "cves/2023", "cves/2024"}},
+		{"git", []string{"sparse-checkout", "set", "cves/2020", "cves/2021", "cves/2022", "cves/2023", "cves/2024", "cves/2025", "cves/2026"}},
 		{"git", []string{"fetch", "--quiet", "--no-tags", "--depth", "1", "--filter=blob:none", "origin", "main"}},
 		{"git", []string{"checkout", "--quiet", "-b", "target", "FETCH_HEAD"}},
 	}
