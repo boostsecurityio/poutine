@@ -68,8 +68,24 @@ job_name:
     CI_DEBUG_TRACE: "true"
     CI_DEBUG_SERVICES: "true"
 ```
+### Azure DevOps
+
+In the pipeline file, remove the `system.debug` variable in the `variables` definition or set to false.
+
+#### Recommended
+```yaml
+variables:
+  system.debug: 'false' # Or, better, simply omit this variable as they default to `false` anyway.
+```
+
+#### Anti-Pattern
+```yaml
+variables:
+  system.debug: 'true'
+```
 
 ## See Also
  - https://docs.github.com/en/actions/monitoring-and-troubleshooting-workflows/enabling-debug-logging
  - https://docs.gitlab.com/ee/ci/variables/index.html#enable-debug-logging
  - https://docs.gitlab.com/ee/ci/variables/index.html#mask-a-cicd-variable
+ - https://learn.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml#systemdebug

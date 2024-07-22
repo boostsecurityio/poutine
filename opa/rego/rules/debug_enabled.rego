@@ -86,3 +86,17 @@ results contains poutine.finding(rule, pkg.purl, {
 	var := step.env[_]
 	is_debug_enabled(var)
 }
+
+results contains poutine.finding(rule, pkg.purl, {
+	"path": pipeline.path,
+	"job": "",
+	"step": "1",
+	"details": key,
+	"line": 0,
+}) if {
+	pkg := input.packages[_]
+	pipeline := pkg.azure_pipelines[_]
+	pipeline.variables[key]
+	key == "system.debug"
+	pipeline.variables[key] == "true"
+}

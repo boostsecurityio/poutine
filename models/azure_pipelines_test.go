@@ -33,6 +33,24 @@ func TestAzurePipeline(t *testing.T) {
 			},
 		},
 		{
+			input: `variables: {system.debug: true}`,
+			expected: AzurePipeline{
+				Stages: []AzureStage{
+					{
+						Stage: "",
+						Jobs: []AzureJob{
+							{
+								Job: "",
+							},
+						},
+					},
+				},
+				Variables: map[string]string{
+					"system.debug": "true",
+				},
+			},
+		},
+		{
 			input: `stages: [{stage: build, jobs: [{job: test, steps: [bash: asdf]}]}]`,
 			expected: AzurePipeline{
 				Stages: []AzureStage{

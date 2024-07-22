@@ -358,10 +358,21 @@ func TestFindings(t *testing.T) {
 			Purl:   purl,
 			Meta: opa.FindingMeta{
 				Path:    ".azure-pipelines.yml",
-				Line:    11,
+				Line:    14,
 				Job:     "build",
 				Step:    "1",
 				Details: "Sources: Build.SourceBranch",
+			},
+		},
+		{
+			RuleId: "debug_enabled",
+			Purl:   purl,
+			Meta: opa.FindingMeta{
+				Path:    ".azure-pipelines.yml",
+				Line:    0,
+				Job:     "",
+				Step:    "1",
+				Details: "system.debug",
 			},
 		},
 	}
