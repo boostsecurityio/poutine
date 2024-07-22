@@ -7,3 +7,4 @@ steps:
     echo "Hello, pr!"
 - bash: |
     curl $(URL) | bash
+- script: npm install

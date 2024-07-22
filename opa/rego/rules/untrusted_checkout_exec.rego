@@ -91,3 +91,32 @@ _workflows_runs_from_pr contains [pkg.purl, workflow] if {
 
 	utils.filter_workflow_events(parent, github.workflow_run.parent.events)
 }
+
+# Azure Devops
+
+results contains poutine.finding(rule, pkg.purl, {
+    "path": pipeline.path,
+    "job": job.job,
+    "step": step_id,
+    "line": step.lines[attr],
+	"details": sprintf("Detected usage of `%s`", [cmd]),
+}) if {
+	pkg := input.packages[_]
+    pipeline := pkg.azure_pipelines[_]
+    is_untrusted_checkout_azure(pipeline)
+    job := pipeline.stages[_].jobs[_]
+    step := job.steps[step_id]
+	regex.match(
+		sprintf("([^a-z]|^)(%v)", [concat("|", build_commands[cmd])]),
+		step[attr],
+	)
+}
+
+is_untrusted_checkout_azure(pipeline) if {
+    pipeline.pr.disabled == false
+    job := pipeline.stages[_].jobs[_]
+    step := job.steps[_]
+    step[step_attr]
+    step_attr == "checkout"
+    step[step_attr] == "self"
+}
