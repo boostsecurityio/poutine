@@ -96,7 +96,7 @@ results contains poutine.finding(rule, pkg.purl, {
 }) if {
 	pkg := input.packages[_]
 	pipeline := pkg.azure_pipelines[_]
-	pipeline.variables[key]
+	pipeline.variables.map[key]
 	key == "system.debug"
-	pipeline.variables[key] == "true"
+	pipeline.variables.map[key] == "true"
 }

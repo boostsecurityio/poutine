@@ -9,9 +9,9 @@ import (
 type AzurePipeline struct {
 	Path string `json:"path" yaml:"-"`
 
-	Stages    []AzureStage      `json:"stages"`
-	Pr        AzurePr           `json:"pr"`
-	Variables map[string]string `json:"variables"`
+	Stages    []AzureStage           `json:"stages"`
+	Pr        AzurePr                `json:"pr"`
+	Variables AzurePipelineVariables `json:"variables"`
 }
 
 func (o AzurePipeline) IsValid() bool {
@@ -127,4 +127,33 @@ func (o *AzureStep) UnmarshalYAML(node *yaml.Node) error {
 
 	*o = AzureStep(s)
 	return nil
+}
+
+type AzurePipelineVariable struct {
+	Name  string `yaml:"name"`
+	Value string `yaml:"value"`
+}
+
+type AzurePipelineVariables struct {
+	Map map[string]string `json:"map"`
+}
+
+func (v *AzurePipelineVariables) UnmarshalYAML(value *yaml.Node) error {
+	v.Map = make(map[string]string)
+
+	var mapFormat map[string]string
+	if err := value.Decode(&mapFormat); err == nil {
+		v.Map = mapFormat
+		return nil
+	}
+
+	var listFormat []AzurePipelineVariable
+	if err := value.Decode(&listFormat); err == nil {
+		for _, variable := range listFormat {
+			v.Map[variable.Name] = variable.Value
+		}
+		return nil
+	}
+
+	return fmt.Errorf("variables must be either a map or a list of objects")
 }
