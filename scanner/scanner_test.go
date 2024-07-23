@@ -10,6 +10,7 @@ import (
 func TestGithubWorkflows(t *testing.T) {
 	s := NewScanner("testdata")
 	o, _ := opa.NewOpa()
+	o.Trace = true
 	err := s.Run(context.TODO(), o)
 	workflows := s.Package.GithubActionsWorkflows
 

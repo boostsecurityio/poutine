@@ -11,6 +11,7 @@ import (
 	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/storage/inmem"
+	"github.com/open-policy-agent/opa/topdown"
 	"github.com/open-policy-agent/opa/topdown/print"
 	"github.com/rs/zerolog/log"
 	"io/fs"
@@ -28,6 +29,7 @@ type Opa struct {
 	Compiler  *ast.Compiler
 	Store     storage.Store
 	LoadPaths []string
+	Trace     bool
 }
 
 func NewOpa() (*Opa, error) {
@@ -124,6 +126,12 @@ func (o *Opa) Eval(ctx context.Context, query string, input map[string]interface
 		}
 	}
 
+	traceOpt := func(rego *rego.Rego) {}
+	bufferTracer := topdown.NewBufferTracer()
+	if o.Trace {
+		traceOpt = rego.QueryTracer(bufferTracer)
+	}
+
 	rego := rego.New(
 		rego.Query(query),
 		rego.Compiler(o.Compiler),
@@ -131,9 +139,15 @@ func (o *Opa) Eval(ctx context.Context, query string, input map[string]interface
 		rego.Input(input),
 		rego.Imports([]string{"data.poutine.utils"}),
 		rego.Store(o.Store),
+		traceOpt,
 	)
 
 	rs, err := rego.Eval(ctx)
+
+	if o.Trace {
+		topdown.PrettyTraceWithOpts(os.Stderr, *bufferTracer, topdown.PrettyTraceOptions{Locations: true, ExprVariables: true, LocalVariables: true})
+	}
+
 	if err != nil {
 		return err
 	}
