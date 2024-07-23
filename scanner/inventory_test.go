@@ -386,6 +386,17 @@ func TestFindings(t *testing.T) {
 				Details: "Detected usage of `npm`",
 			},
 		},
+		{
+			RuleId: "untrusted_checkout_exec",
+			Purl:   purl,
+			Meta: opa.FindingMeta{
+				Path:    "azure-pipelines-4.yml",
+				Line:    11,
+				Job:     "",
+				Step:    "2",
+				Details: "Detected usage of `npm`",
+			},
+		},
 	}
 
 	assert.Equal(t, len(findings), len(results.Findings))
