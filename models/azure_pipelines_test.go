@@ -45,9 +45,9 @@ func TestAzurePipeline(t *testing.T) {
 						},
 					},
 				},
-				Variables: map[string]string{
+				Variables: AzurePipelineVariables{map[string]string{
 					"system.debug": "true",
-				},
+				}},
 			},
 		},
 		{

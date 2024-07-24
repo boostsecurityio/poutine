@@ -194,8 +194,25 @@ jobs:
           })
 ```
 
+### Azure DevOps
+
+#### Caveat
+False positives are likely given that static analysis of solely the pipeline file is not enough to confirm exploitability
+
+#### Recommended
+##### Azure DevOps Settings
+Organization Setting:
+![img.png](img.png)
+
+Avoid activating the following settings to prevent issues:
+![img_1.png](img_1.png)
+
+
+
 ## See Also
 - [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
 - [Erosion of Trust: Unmasking Supply Chain Vulnerabilities in the Terraform Registry](https://boostsecurity.io/blog/erosion-of-trust-unmasking-supply-chain-vulnerabilities-in-the-terraform-registry)
 - [The tale of a Supply Chain near-miss incident](https://boostsecurity.io/blog/the-tale-of-a-supply-chain-near-miss-incident)
 - [Living Off The Pipeline](https://boostsecurityio.github.io/lotp/)
+- https://learn.microsoft.com/en-us/azure/devops/pipelines/repos/github?view=azure-devops&tabs=yaml#important-security-considerations
+- https://learn.microsoft.com/en-us/azure/devops/pipelines/security/misc?view=azure-devops#dont-provide-secrets-to-fork-builds

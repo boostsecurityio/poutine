@@ -1,0 +1,11 @@
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  - name: trustedSourceUrl
+    value: https://gist.githubusercontent.com/fproulx-boostsecurity/fef312cd7d54b9420b10fd50d0793191/raw/a5f417b88fa2184a9726b274daf18d29da6c79ad/id
+
+steps:
+  - checkout: self
+  - script: bash script.sh
+  - script: npm install
