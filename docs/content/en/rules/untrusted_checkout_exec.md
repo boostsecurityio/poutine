@@ -207,43 +207,7 @@ Organization Setting:
 Avoid activating the following settings to prevent issues:
 ![img_1.png](img_1.png)
 
-```yaml
-pr:
-  - main
 
-pool:
-  vmImage: ubuntu-latest
-
-variables:
-  - name: someVariable
-    value: someValue
-
-steps:
-  - checkout: self
-    path: trusted
-  - script: npm ci
-    workingDirectory: trusted
-
-```
-
-#### Anti-Pattern
-    
-```yaml
-pr:
-  - main
-
-pool:
-  vmImage: ubuntu-latest
-
-variables:
-  - name: someVariable
-    value: someValue
-
-steps:
-  - checkout: self
-  - script: npm install
-
-```
 
 ## See Also
 - [Keeping your GitHub Actions and workflows secure Part 1: Preventing pwn requests](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
