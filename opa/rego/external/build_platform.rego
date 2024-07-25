@@ -937,7 +937,11 @@ advisories = {
 			}],
 			"cwe_ids": [""],
 			"vulnerable_versions": [],
-			"vulnerable_version_ranges": [">=10.8"],
+			"vulnerable_version_ranges": [
+				">=10.8, <13.0.12",
+				">=13.1, <13.1.6",
+				">=13.2, <13.2.3",
+			],
 			"vulnerable_commit_shas": [],
 		},
 		"CVE-2020-13284": {
