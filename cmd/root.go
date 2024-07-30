@@ -159,7 +159,7 @@ func GetFormatter(opaClient *opa.Opa) analyze.Formatter {
 	case "pretty":
 		return &pretty.Format{}
 	case "sarif":
-		return sarif.NewFormat(os.Stdout)
+		return sarif.NewFormat(os.Stdout, Version)
 	}
 
 	return json.NewFormat(opaClient, Format, os.Stdout)
