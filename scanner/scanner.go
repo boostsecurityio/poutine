@@ -154,6 +154,29 @@ func parseGitlabCi(scanner *Scanner, filePath string, fileInfo fs.FileInfo) erro
 	return nil
 }
 
+func parsePipelineAsCodeTekton(scanner *Scanner, filePath string, fileInfo fs.FileInfo) error {
+	relPath, err := filepath.Rel(scanner.Path, filePath)
+	if err != nil {
+		return err
+	}
+
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+
+	pipelineAsCode := models.PipelineAsCodeTekton{}
+	err = yaml.Unmarshal(data, &pipelineAsCode)
+	if err != nil {
+		log.Debug().Err(err).Str("file", relPath).Msg("failed to unmarshal pipeline as code yaml file")
+		return nil
+	}
+
+	scanner.Package.PipelineAsCodeTekton = append(scanner.Package.PipelineAsCodeTekton, pipelineAsCode)
+
+	return nil
+}
+
 type Scanner struct {
 	Path          string
 	Package       *models.PackageInsights
@@ -169,6 +192,7 @@ func NewScanner(path string) Scanner {
 		ParseFuncs: map[*regexp.Regexp]parseFunc{
 			regexp.MustCompile(`(\b|/)action\.ya?ml$`):              parseGithubActionsMetadata,
 			regexp.MustCompile(`^\.github/workflows/[^/]+\.ya?ml$`): parseGithubWorkflows,
+			regexp.MustCompile(`^\.tekton/[^/]+\.ya?ml$`):           parsePipelineAsCodeTekton,
 			regexp.MustCompile(`\.?azure-pipelines(-.+)?\.ya?ml$`):  parseAzurePipelines,
 			regexp.MustCompile(`\.?gitlab-ci(-.+)?\.ya?ml$`):        parseGitlabCi,
 		},

@@ -31,6 +31,7 @@ type PackageInsights struct {
 	GithubActionsMetadata  []GithubActionsMetadata `json:"github_actions_metadata"`
 	GitlabciConfigs        []GitlabciConfig        `json:"gitlabci_configs"`
 	AzurePipelines         []AzurePipeline         `json:"azure_pipelines"`
+	PipelineAsCodeTekton   []PipelineAsCodeTekton  `json:"pipeline_as_code_tekton"`
 }
 
 func (p *PackageInsights) GetSourceGitRepoURI() string {

@@ -2,6 +2,7 @@ package scanner
 
 import (
 	"context"
+	"github.com/boostsecurityio/poutine/models"
 	"github.com/boostsecurityio/poutine/opa"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -68,4 +69,32 @@ func TestRun(t *testing.T) {
 	assert.Contains(t, s.Package.PackageDependencies, "pkg:githubactions/actions/github-script@main")
 	assert.Contains(t, s.Package.PackageDependencies, "pkg:docker/alpine%3Alatest")
 	assert.Equal(t, 3, len(s.Package.GitlabciConfigs))
+}
+
+func TestPipelineAsCodeTekton(t *testing.T) {
+	s := NewScanner("testdata")
+	o, _ := opa.NewOpa()
+	err := s.Run(context.TODO(), o)
+	assert.NoError(t, err)
+
+	pipelines := s.Package.PipelineAsCodeTekton
+
+	assert.Len(t, pipelines, 1)
+	expectedAnnotations := map[string]string{
+		"pipelinesascode.tekton.dev/on-event":         "[push, pull_request]",
+		"pipelinesascode.tekton.dev/on-target-branch": "[*]",
+		"pipelinesascode.tekton.dev/task":             "[git-clone]",
+	}
+	expectedPipeline := models.PipelineAsCodeTekton{
+		ApiVersion: "tekton.dev/v1beta1",
+		Kind:       "PipelineRun",
+		Metadata: struct {
+			Name        string            `json:"name"`
+			Annotations map[string]string `json:"annotations"`
+		}{
+			Name:        "linters",
+			Annotations: expectedAnnotations,
+		},
+	}
+	assert.Equal(t, expectedPipeline, pipelines[0])
 }
