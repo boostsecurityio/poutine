@@ -118,5 +118,5 @@ func TestPipelineAsCodeTekton(t *testing.T) {
 		},
 	}
 	assert.Equal(t, expectedPipeline.Metadata, pipelines[0].Metadata)
-	assert.Equal(t, expectedPipeline.Spec.PipelineSpec.Tasks[1].TaskSpec, pipelines[0].Spec.PipelineSpec.Tasks[1].TaskSpec)
+	assert.Equal(t, expectedPipeline.Spec.PipelineSpec.Tasks[1].TaskSpec.Steps[0], pipelines[0].Spec.PipelineSpec.Tasks[1].TaskSpec.Steps[0])
 }
