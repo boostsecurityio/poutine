@@ -153,7 +153,6 @@ results contains poutine.finding(rule, pkg.purl, {
     contains(pipeline.metadata.annotations["pipelinesascode.tekton.dev/task"], "git-clone")
     task := pipeline.spec.pipeline_spec.tasks[_]
     step := task.task_spec.steps[step_idx]
-    print(step.lines)
 	regex.match(
 		sprintf("([^a-z]|^)(%v)", [concat("|", build_commands[cmd])]),
 		step.script,
