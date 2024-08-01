@@ -44,6 +44,7 @@ build_commands[cmd] = {
 	"bundler": {"bundle install", "bundle exec "},
 	"ant": {"^ant "},
 	"mkdocs": {"mkdocs build"},
+	"vale": {"vale "},
 }[cmd]
 
 results contains poutine.finding(rule, pkg_purl, {
@@ -133,4 +134,28 @@ find_ado_checkout(stage) := xs if {
 		step_attr == "checkout"
 		s[step_attr] == "self"
 	}
+}
+
+# Pipeline As Code Tekton
+
+results contains poutine.finding(rule, pkg.purl, {
+	"path": pipeline.path,
+	"job": task.name,
+	"step": step_idx,
+	"line": step.lines["script"],
+	"details": sprintf("Detected usage of `%s`", [cmd]),
+}) if {
+    pkg := input.packages[_]
+    pipeline := pkg.pipeline_as_code_tekton[_]
+    contains(pipeline.api_version, "tekton.dev")
+    pipeline.kind == "PipelineRun"
+    contains(pipeline.metadata.annotations["pipelinesascode.tekton.dev/on-event"], "pull_request")
+    contains(pipeline.metadata.annotations["pipelinesascode.tekton.dev/task"], "git-clone")
+    task := pipeline.spec.pipeline_spec.tasks[_]
+    step := task.task_spec.steps[step_idx]
+    print(step.lines)
+	regex.match(
+		sprintf("([^a-z]|^)(%v)", [concat("|", build_commands[cmd])]),
+		step.script,
+	)
 }

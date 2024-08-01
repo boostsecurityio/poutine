@@ -172,6 +172,7 @@ func parsePipelineAsCodeTekton(scanner *Scanner, filePath string, fileInfo fs.Fi
 		return nil
 	}
 
+	pipelineAsCode.Path = relPath
 	scanner.Package.PipelineAsCodeTekton = append(scanner.Package.PipelineAsCodeTekton, pipelineAsCode)
 
 	return nil

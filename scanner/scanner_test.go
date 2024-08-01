@@ -108,6 +108,7 @@ func TestPipelineAsCodeTekton(t *testing.T) {
 								{
 									Name:   "vale-lint",
 									Script: "vale docs/content --minAlertLevel=error --output=line\n",
+									Lines:  map[string]int{"script": 43, "start": 40},
 								},
 							},
 						},
