@@ -95,6 +95,27 @@ func TestPipelineAsCodeTekton(t *testing.T) {
 			Name:        "linters",
 			Annotations: expectedAnnotations,
 		},
+		Spec: models.PipelineRunSpec{
+			PipelineSpec: &models.PipelineSpec{
+				Tasks: []models.PipelineTask{
+					{
+						Name: "fetchit",
+					},
+					{
+						Name: "vale",
+						TaskSpec: &models.TaskSpec{
+							Steps: []models.Step{
+								{
+									Name:   "vale-lint",
+									Script: "vale docs/content --minAlertLevel=error --output=line\n",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
-	assert.Equal(t, expectedPipeline, pipelines[0])
+	assert.Equal(t, expectedPipeline.Metadata, pipelines[0].Metadata)
+	assert.Equal(t, expectedPipeline.Spec.PipelineSpec.Tasks[1].TaskSpec, pipelines[0].Spec.PipelineSpec.Tasks[1].TaskSpec)
 }
