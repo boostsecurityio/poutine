@@ -101,3 +101,31 @@ results contains poutine.finding(rule, pkg.purl, {
 	exprs := azure_injections(step[attr])
 	count(exprs) > 0
 }
+
+patterns.pipeline_as_code_tekton contains "\\{\\{\\s*(body\\.pull_request\\.(title|user\\.email|body)|source_branch)\\s*\\}\\}"
+
+pipeline_as_code_tekton_injections(str) = {expr |
+	match := regex.find_n(patterns.pipeline_as_code_tekton[_], str, -1)[_]
+	expr := regex.find_all_string_submatch_n("\\{\\{\\s*([^}]+?)\\s*\\}\\}", match, 1)[0][1]
+}
+
+results contains poutine.finding(rule, pkg.purl, {
+	"path": pipeline.path,
+	"job": task.name,
+	"step": step_idx,
+	"line": step.lines["start"],
+	"details": sprintf("Sources: %s", [concat(" ", exprs)]),
+}) if {
+    pkg := input.packages[_]
+    pipeline := pkg.pipeline_as_code_tekton[_]
+    contains(pipeline.api_version, "tekton.dev")
+    pipeline.kind == "PipelineRun"
+    contains(pipeline.metadata.annotations["pipelinesascode.tekton.dev/on-event"], "pull_request")
+    task := pipeline.spec.pipeline_spec.tasks[_]
+    step := task.task_spec.steps[step_idx]
+
+    exprs := pipeline_as_code_tekton_injections(step.script)
+    count(exprs) > 0
+}
+
+

@@ -397,6 +397,28 @@ func TestFindings(t *testing.T) {
 				Details: "Detected usage of `npm`",
 			},
 		},
+		{
+			RuleId: "untrusted_checkout_exec",
+			Purl:   purl,
+			Meta: opa.FindingMeta{
+				Path:    ".tekton/pipeline-as-code-tekton.yml",
+				Line:    43,
+				Job:     "vale",
+				Step:    "0",
+				Details: "Detected usage of `vale`",
+			},
+		},
+		{
+			RuleId: "injection",
+			Purl:   purl,
+			Meta: opa.FindingMeta{
+				Path:    ".tekton/pipeline-as-code-tekton.yml",
+				Line:    45,
+				Job:     "vale",
+				Step:    "1",
+				Details: "Sources: body.pull_request.body",
+			},
+		},
 	}
 
 	assert.Equal(t, len(findings), len(results.Findings))
