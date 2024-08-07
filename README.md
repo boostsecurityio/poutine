@@ -24,7 +24,14 @@ See the [documentation](docs/content/en/rules) for a list of rules currently sup
 
 ## Why `poutine`?
 
-In French, the word "poutine", when not referring to the [dish](https://en.wikipedia.org/wiki/Poutine), can be used to mean "messy". Inspired by the complexity and intertwined dependencies of modern open-source projects, `poutine` reflects both a nod to our Montreal roots and the often messy, complex nature of securing software supply chains. 
+In French, the word "poutine", when not referring to the [dish](https://en.wikipedia.org/wiki/Poutine), can be used to mean "messy". Inspired by the complexity and intertwined dependencies of modern open-source projects, `poutine` reflects both a nod to our Montreal roots and the often messy, complex nature of securing software supply chains.
+
+## Supported Platforms
+
+- GitHub Actions
+- Gitlab Pipelines
+- Azure DevOps
+- Pipelines As Code Tekton
 
 ## Getting Started
 

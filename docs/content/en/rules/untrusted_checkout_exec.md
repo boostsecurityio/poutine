@@ -207,6 +207,59 @@ Organization Setting:
 Avoid activating the following settings to prevent issues:
 ![img_1.png](img_1.png)
 
+### Pipeline As Code Tekton
+
+#### Anti-Pattern
+
+```yaml
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: linters
+  annotations:
+    pipelinesascode.tekton.dev/on-event: "[push, pull_request]"
+    pipelinesascode.tekton.dev/on-target-branch: "[*]"
+    pipelinesascode.tekton.dev/task: "[git-clone]"
+spec:
+  params:
+    - name: repo_url
+      value: "{{repo_url}}"
+    - name: revision
+      value: "{{revision}}"
+  pipelineSpec:
+    params:
+      - name: repo_url
+      - name: revision
+    tasks:
+      - name: fetchit
+        displayName: "Fetch git repository"
+        params:
+          - name: url
+            value: $(params.repo_url)
+          - name: revision
+            value: $(params.revision)
+        taskRef:
+          name: git-clone
+        workspaces:
+          - name: output
+            workspace: source
+      - name: npm
+        displayName: "NPM Install"
+        runAfter:
+          - fetchit
+        taskSpec:
+          workspaces:
+            - name: source
+          steps:
+            - name: npm-install
+              image: node:16
+              workingDir: $(workspaces.source.path)
+              script: |
+                npm install
+...
+
+```
+
 
 
 ## See Also
