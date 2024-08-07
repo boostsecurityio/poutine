@@ -112,8 +112,8 @@ spec:
         workspaces:
           - name: output
             workspace: source
-      - name: vale
-        displayName: "Spelling and Grammar"
+      - name: validate
+        displayName: "Injecting body in script"
         runAfter:
           - fetchit
         taskSpec:
@@ -123,21 +123,8 @@ spec:
             - name: execute
               image: some.registry/some-image
               script: |
-                binary {{body.pull_request.body}}
-        workspaces:
-          - name: source
-            workspace: source
-    workspaces:
-      - name: source
-  workspaces:
-    - name: source
-      volumeClaimTemplate:
-        spec:
-          accessModes:
-            - ReadWriteOnce
-          resources:
-            requests:
-              storage: 5Gi
+                validate_pr "{{body.pull_request.body}}"
+...
 ```
 
 ## See Also

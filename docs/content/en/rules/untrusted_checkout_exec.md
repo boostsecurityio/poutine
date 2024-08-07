@@ -243,33 +243,20 @@ spec:
         workspaces:
           - name: output
             workspace: source
-      - name: vale
-        displayName: "Spelling and Grammar"
+      - name: npm
+        displayName: "NPM Install"
         runAfter:
           - fetchit
         taskSpec:
           workspaces:
             - name: source
           steps:
-            - name: vale-lint
-              image: jdkato/vale
+            - name: npm-install
+              image: node:16
               workingDir: $(workspaces.source.path)
               script: |
-                vale docs/content --minAlertLevel=error --output=line
-        workspaces:
-          - name: source
-            workspace: source
-    workspaces:
-      - name: source
-  workspaces:
-    - name: source
-      volumeClaimTemplate:
-        spec:
-          accessModes:
-            - ReadWriteOnce
-          resources:
-            requests:
-              storage: 5Gi
+                npm install
+...
 
 ```
 
