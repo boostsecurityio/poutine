@@ -80,7 +80,7 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 		log.Debug().Err(err).Msgf("Failed to get provider version for %s", provider)
 	}
 
-	log.Debug().Msgf("Provider: %s, Version: %s", provider, providerVersion)
+	log.Debug().Msgf("Provider: %s, Version: %s, BaseURL: %s", provider, providerVersion, a.ScmClient.GetProviderBaseURL())
 
 	log.Debug().Msgf("Fetching list of repositories for organization: %s on %s", org, provider)
 	orgReposBatches := a.ScmClient.GetOrgRepos(ctx, org)
@@ -177,7 +177,7 @@ func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref strin
 		log.Debug().Err(err).Msgf("Failed to get provider version for %s", provider)
 	}
 
-	log.Debug().Msgf("Provider: %s, Version: %s", provider, providerVersion)
+	log.Debug().Msgf("Provider: %s, Version: %s, BaseURL: %s", provider, providerVersion, a.ScmClient.GetProviderBaseURL())
 
 	pkgsupplyClient := pkgsupply.NewStaticClient()
 	inventory := scanner.NewInventory(a.Opa, pkgsupplyClient, provider, providerVersion)
@@ -225,7 +225,7 @@ func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) error 
 		log.Debug().Err(err).Msgf("Failed to get provider version for %s", provider)
 	}
 
-	log.Debug().Msgf("Provider: %s, Version: %s", provider, providerVersion)
+	log.Debug().Msgf("Provider: %s, Version: %s, BaseURL: %s", provider, providerVersion, a.ScmClient.GetProviderBaseURL())
 
 	pkgsupplyClient := pkgsupply.NewStaticClient()
 	inventory := scanner.NewInventory(a.Opa, pkgsupplyClient, provider, providerVersion)
