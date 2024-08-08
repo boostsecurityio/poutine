@@ -19,17 +19,19 @@ import (
 )
 
 const GitHub string = "github"
+const defaultDomain string = "github.com"
 
 func NewGithubSCMClient(ctx context.Context, baseURL string, token string) (*ScmClient, error) {
-	client, err := NewClient(ctx, token)
+	domain := defaultDomain
+	if baseURL != "" {
+		domain = baseURL
+	}
+
+	client, err := NewClient(ctx, token, domain)
 	if err != nil {
 		return nil, err
 	}
 
-	domain := "github.com"
-	if baseURL != "" {
-		domain = baseURL
-	}
 	return &ScmClient{
 		client:  client,
 		baseURL: domain,
@@ -131,19 +133,35 @@ type Client struct {
 	Token         string
 }
 
-func NewClient(ctx context.Context, token string) (*Client, error) {
+func NewClient(ctx context.Context, token string, domain string) (*Client, error) {
 	rateLimiter, err := github_ratelimit.NewRateLimitWaiterClient(nil)
 	if err != nil {
 		return nil, err
 	}
-	restClient := github.NewClient(rateLimiter).WithAuthToken(token)
 
-	src := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: token},
+	var (
+		// REST client
+		restClient = github.NewClient(rateLimiter).WithAuthToken(token)
+		// GraphQL client
+		src = oauth2.StaticTokenSource(
+			&oauth2.Token{AccessToken: token},
+		)
+		httpClient    = oauth2.NewClient(ctx, src)
+		graphQLClient *githubv4.Client
 	)
-	httpClient := oauth2.NewClient(ctx, src)
 
-	graphQLClient := githubv4.NewClient(httpClient)
+	if domain == defaultDomain {
+		graphQLClient = githubv4.NewClient(httpClient)
+	} else {
+		baseURL := fmt.Sprintf("https://%s/", domain)
+		restClient, err = restClient.WithEnterpriseURLs(baseURL, baseURL)
+		if err != nil {
+			return nil, err
+		}
+
+		graphQLClient = githubv4.NewEnterpriseClient(baseURL+"api/graphql", httpClient)
+	}
+
 	return &Client{
 		restClient:    restClient,
 		graphQLClient: graphQLClient,
