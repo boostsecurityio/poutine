@@ -78,7 +78,7 @@ func (g *GitClient) Clone(ctx context.Context, clonePath string, url string, tok
 
 	for _, c := range commands {
 		if _, err := g.Command.Run(ctx, c.cmd, c.args, clonePath); err != nil {
-			if strings.Contains(err.Error(), token) {
+			if token != "" && strings.Contains(err.Error(), token) {
 				return errors.New(strings.ReplaceAll(err.Error(), token, "REDACTED"))
 			}
 
