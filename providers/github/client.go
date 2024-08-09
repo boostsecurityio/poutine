@@ -148,6 +148,58 @@ func (gh GithubRepository) GetIsFork() bool {
 	return gh.IsFork
 }
 
+func (gh GithubRepository) GetHasIssues() bool {
+	return gh.HasIssues
+}
+
+func (gh GithubRepository) GetHasWiki() bool {
+	return gh.HasWiki
+}
+
+func (gh GithubRepository) GetHasDiscussion() bool {
+	return gh.HasDiscussions
+}
+
+func (gh GithubRepository) GetPrimaryLanguage() string {
+	return gh.PrimaryLanguage.Name
+}
+
+func (gh GithubRepository) GetSize() int {
+	return gh.RepoSize
+}
+
+func (gh GithubRepository) GetDefaultBranch() string {
+	return gh.DefaultBranchRef.Name
+}
+
+func (gh GithubRepository) GetLicense() string {
+	return gh.License.Name
+}
+
+func (gh GithubRepository) GetIsTemplate() bool {
+	return gh.IsTemplate
+}
+
+func (gh GithubRepository) GetOrganizationID() string {
+	return gh.Owner.ID
+}
+
+func (gh GithubRepository) GetRepositoryID() string {
+	return gh.RepoID
+}
+
+func (gh GithubRepository) GetForksCount() int {
+	return gh.ForkCount
+}
+
+func (gh GithubRepository) GetStarsCount() int {
+	return gh.StargazerCount
+}
+
+func (gh GithubRepository) GetOpenIssuesCount() int {
+	return gh.Issues.TotalCount
+}
+
 type Client struct {
 	restClient    *github.Client
 	graphQLClient *githubv4.Client

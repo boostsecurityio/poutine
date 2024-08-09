@@ -26,6 +26,19 @@ type Repository interface {
 	GetRepoIdentifier() string
 	GetIsFork() bool
 	BuildGitURL(baseURL string) string
+	GetHasIssues() bool
+	GetHasWiki() bool
+	GetHasDiscussion() bool
+	GetOpenIssuesCount() int
+	GetForksCount() int
+	GetStarsCount() int
+	GetPrimaryLanguage() string
+	GetSize() int
+	GetDefaultBranch() string
+	GetLicense() string
+	GetIsTemplate() bool
+	GetOrganizationID() string
+	GetRepositoryID() string
 }
 
 type RepoBatch struct {
@@ -316,12 +329,26 @@ func (a *Analyzer) generatePackageInsights(ctx context.Context, tempDir string, 
 	}
 
 	pkg := &models.PackageInsights{
-		Purl:               purl.String(),
 		LastCommitedAt:     commitDate.Format(time.RFC3339),
-		SourceGitCommitSha: commitSha,
+		Purl:               purl.String(),
 		SourceScmType:      repo.GetProviderName(),
 		SourceGitRepo:      repo.GetRepoIdentifier(),
 		SourceGitRef:       ref,
+		SourceGitCommitSha: commitSha,
+		OrgID:              repo.GetOrganizationID(),
+		RepoID:             repo.GetRepositoryID(),
+		RepoSize:           repo.GetSize(),
+		DefaultBranch:      repo.GetDefaultBranch(),
+		IsFork:             repo.GetIsFork(),
+		ForksCount:         repo.GetForksCount(),
+		StarsCount:         repo.GetStarsCount(),
+		IsTemplate:         repo.GetIsTemplate(),
+		HasIssues:          repo.GetHasIssues(),
+		OpenIssuesCount:    repo.GetOpenIssuesCount(),
+		HasWiki:            repo.GetHasWiki(),
+		HasDiscussions:     repo.GetHasDiscussion(),
+		PrimaryLanguage:    repo.GetPrimaryLanguage(),
+		License:            repo.GetLicense(),
 	}
 	err = pkg.NormalizePurl()
 	if err != nil {
