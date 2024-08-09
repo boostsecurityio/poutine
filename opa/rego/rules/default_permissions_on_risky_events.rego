@@ -30,3 +30,14 @@ results contains poutine.finding(rule, pkg.purl, {"path": workflow.path}) if {
 	utils.empty(workflow.permissions)
 	utils.empty(job.permissions)
 }
+
+results contains poutine.finding(rule, pkg.purl, {"path": workflow.path}) if {
+	pkg := input.packages[_]
+	workflow = pkg.github_actions_workflows[_]
+	job := workflow.jobs[_]
+
+	utils.filter_workflow_events(workflow, github.events)
+
+	not workflow.permissions
+	not job.permissions
+}
