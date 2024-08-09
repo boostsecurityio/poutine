@@ -64,14 +64,14 @@ type StringList []string
 
 type GithubActionsInput struct {
 	Name        string `json:"name"`
-	Description string `json:"description"`
+	Description string `json:"description,omitempty"`
 	Required    bool   `json:"required"`
 	Type        string `json:"type"`
 }
 
 type GithubActionsOutput struct {
 	Name        string `json:"name"`
-	Description string `json:"description"`
+	Description string `json:"description,omitempty"`
 	Value       string `json:"value"`
 }
 
@@ -81,19 +81,19 @@ type GithubActionsEnv struct {
 }
 
 type GithubActionsStep struct {
-	ID               string            `json:"id"`
-	Name             string            `json:"name"`
-	If               string            `json:"if"`
-	Env              GithubActionsEnvs `json:"env"`
-	Uses             string            `json:"uses"`
-	Shell            string            `json:"shell"`
-	Run              string            `json:"run" yaml:"run"`
-	WorkingDirectory string            `json:"working_directory" yaml:"working-directory"`
-	With             GithubActionsWith `json:"with"`
-	WithRef          string            `json:"with_ref" yaml:"-"`
-	WithScript       string            `json:"with_script" yaml:"-"`
+	ID               string            `json:"id,omitempty"`
+	Name             string            `json:"name,omitempty"`
+	If               string            `json:"if,omitempty"`
+	Env              GithubActionsEnvs `json:"env,omitempty"`
+	Uses             string            `json:"uses,omitempty"`
+	Shell            string            `json:"shell,omitempty"`
+	Run              string            `json:"run,omitempty" yaml:"run"`
+	WorkingDirectory string            `json:"working_directory,omitempty" yaml:"working-directory"`
+	With             GithubActionsWith `json:"with,omitempty"`
+	WithRef          string            `json:"with_ref,omitempty" yaml:"-"`
+	WithScript       string            `json:"with_script,omitempty" yaml:"-"`
 	Line             int               `json:"line" yaml:"-"`
-	Action           string            `json:"action" yaml:"-"`
+	Action           string            `json:"action,omitempty" yaml:"-"`
 
 	Lines map[string]int `json:"lines" yaml:"-"`
 }
@@ -128,18 +128,18 @@ type GithubActionsPermission struct {
 
 type GithubActionsEvent struct {
 	Name           string               `json:"name"`
-	Types          StringList           `json:"types"`
-	Branches       StringList           `json:"branches"`
-	BranchesIgnore StringList           `json:"branches_ignore"`
-	Paths          StringList           `json:"paths"`
-	PathsIgnore    StringList           `json:"paths_ignore"`
-	Tags           StringList           `json:"tags"`
-	TagsIgnore     StringList           `json:"tags_ignore"`
-	Cron           StringList           `json:"cron"`
-	Inputs         GithubActionsInputs  `json:"inputs"`
-	Outputs        GithubActionsOutputs `json:"outputs"`
-	Secrets        GithubActionsSecrets `json:"secrets"`
-	Workflows      StringList           `json:"workflows"`
+	Types          StringList           `json:"types,omitempty"`
+	Branches       StringList           `json:"branches,omitempty"`
+	BranchesIgnore StringList           `json:"branches_ignore,omitempty"`
+	Paths          StringList           `json:"paths,omitempty"`
+	PathsIgnore    StringList           `json:"paths_ignore,omitempty"`
+	Tags           StringList           `json:"tags,omitempty"`
+	TagsIgnore     StringList           `json:"tags_ignore,omitempty"`
+	Cron           StringList           `json:"cron,omitempty"`
+	Inputs         GithubActionsInputs  `json:"inputs,omitempty"`
+	Outputs        GithubActionsOutputs `json:"outputs,omitempty"`
+	Secrets        GithubActionsSecrets `json:"secrets,omitempty"`
+	Workflows      StringList           `json:"workflows,omitempty"`
 }
 
 type GithubActionsJobContainer struct {
@@ -148,7 +148,7 @@ type GithubActionsJobContainer struct {
 
 type GithubActionsJobEnvironment struct {
 	Name string `json:"name"`
-	Url  string `json:"url"`
+	Url  string `json:"url,omitempty"`
 }
 
 type GithubActionsJobSecret struct {
@@ -158,18 +158,18 @@ type GithubActionsJobSecret struct {
 
 type GithubActionsJob struct {
 	ID                string                       `json:"id"`
-	Name              string                       `json:"name"`
-	Uses              string                       `json:"uses"`
-	Secrets           GithubActionsJobSecrets      `json:"secrets"`
-	With              GithubActionsWith            `json:"with"`
-	Permissions       GithubActionsPermissions     `json:"permissions"`
-	Needs             StringList                   `json:"needs"`
-	If                string                       `json:"if"`
+	Name              string                       `json:"name,omitempty"`
+	Uses              string                       `json:"uses,omitempty"`
+	Secrets           GithubActionsJobSecrets      `json:"secrets,omitempty"`
+	With              GithubActionsWith            `json:"with,omitempty"`
+	Permissions       GithubActionsPermissions     `json:"permissions,omitempty"`
+	Needs             StringList                   `json:"needs,omitempty"`
+	If                string                       `json:"if,omitempty"`
 	RunsOn            GithubActionsJobRunsOn       `json:"runs_on" yaml:"runs-on"`
 	Container         GithubActionsJobContainer    `json:"container"`
-	Environment       GithubActionsJobEnvironments `json:"environment"`
-	Outputs           GithubActionsEnvs            `json:"outputs"`
-	Env               GithubActionsEnvs            `json:"env"`
+	Environment       GithubActionsJobEnvironments `json:"environment,omitempty"`
+	Outputs           GithubActionsEnvs            `json:"outputs,omitempty"`
+	Env               GithubActionsEnvs            `json:"env,omitempty"`
 	Steps             GithubActionsSteps           `json:"steps"`
 	ReferencesSecrets []string                     `json:"references_secrets" yaml:"-"`
 	Line              int                          `json:"line" yaml:"-"`
@@ -181,8 +181,8 @@ type GithubActionsWorkflow struct {
 	Path        string                   `json:"path" yaml:"-"`
 	Name        string                   `json:"name"`
 	Events      GithubActionsEvents      `json:"events" yaml:"on"`
-	Permissions GithubActionsPermissions `json:"permissions"`
-	Env         GithubActionsEnvs        `json:"env"`
+	Permissions GithubActionsPermissions `json:"permissions,omitempty"`
+	Env         GithubActionsEnvs        `json:"env,omitempty"`
 	Jobs        GithubActionsJobs        `json:"jobs"`
 }
 

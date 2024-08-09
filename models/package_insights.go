@@ -11,8 +11,6 @@ type PackageInsights struct {
 
 	Purl string `json:"purl"`
 
-	AnalysisResult   string `json:"analysis_result"`
-	AnalysisDetails  string `json:"analysis_details"`
 	PackageEcosystem string `json:"package_ecosystem"`
 	PackageName      string `json:"package_name"`
 	PackageNamespace string `json:"package_namespace"`

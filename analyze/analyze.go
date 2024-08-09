@@ -287,7 +287,7 @@ func (a *Analyzer) generatePackageInsights(ctx context.Context, tempDir string, 
 
 	pkg := &models.PackageInsights{
 		Purl:               purl.String(),
-		LastCommitedAt:     commitDate.String(),
+		LastCommitedAt:     commitDate.Format(time.RFC3339),
 		SourceGitCommitSha: commitSha,
 		SourceScmType:      repo.GetProviderName(),
 		SourceGitRepo:      repo.GetRepoIdentifier(),
