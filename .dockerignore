@@ -5,4 +5,4 @@ Dockerfile
 .dockerignore
 .env
 /*.md
-/bin
+/poutine
