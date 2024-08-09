@@ -2,7 +2,6 @@ package models
 
 import (
 	"fmt"
-	"github.com/boostsecurityio/poutine/poutine"
 	"gopkg.in/yaml.v3"
 	"strings"
 )
@@ -64,16 +63,16 @@ type GithubActionsJobRunsOn StringList
 type StringList []string
 
 type GithubActionsInput struct {
-	Name        string  `json:"name"`
-	Description *string `json:"description,omitempty"`
-	Required    bool    `json:"required"`
-	Type        string  `json:"type"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Required    bool   `json:"required"`
+	Type        string `json:"type"`
 }
 
 type GithubActionsOutput struct {
-	Name        string  `json:"name"`
-	Description *string `json:"description,omitempty"`
-	Value       string  `json:"value"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Value       string `json:"value"`
 }
 
 type GithubActionsEnv struct {
@@ -82,19 +81,19 @@ type GithubActionsEnv struct {
 }
 
 type GithubActionsStep struct {
-	ID               *string           `json:"id,omitempty"`
-	Name             *string           `json:"name,omitempty"`
-	If               *string           `json:"if,omitempty"`
+	ID               string            `json:"id,omitempty"`
+	Name             string            `json:"name,omitempty"`
+	If               string            `json:"if,omitempty"`
 	Env              GithubActionsEnvs `json:"env,omitempty"`
-	Uses             *string           `json:"uses,omitempty"`
-	Shell            *string           `json:"shell,omitempty"`
-	Run              *string           `json:"run,omitempty" yaml:"run"`
-	WorkingDirectory *string           `json:"working_directory,omitempty" yaml:"working-directory"`
+	Uses             string            `json:"uses,omitempty"`
+	Shell            string            `json:"shell,omitempty"`
+	Run              string            `json:"run,omitempty" yaml:"run"`
+	WorkingDirectory string            `json:"working_directory,omitempty" yaml:"working-directory"`
 	With             GithubActionsWith `json:"with,omitempty"`
-	WithRef          *string           `json:"with_ref,omitempty" yaml:"-"`
-	WithScript       *string           `json:"with_script,omitempty" yaml:"-"`
+	WithRef          string            `json:"with_ref,omitempty" yaml:"-"`
+	WithScript       string            `json:"with_script,omitempty" yaml:"-"`
 	Line             int               `json:"line" yaml:"-"`
-	Action           *string           `json:"action,omitempty" yaml:"-"`
+	Action           string            `json:"action,omitempty" yaml:"-"`
 
 	Lines map[string]int `json:"lines" yaml:"-"`
 }
@@ -148,8 +147,8 @@ type GithubActionsJobContainer struct {
 }
 
 type GithubActionsJobEnvironment struct {
-	Name string  `json:"name"`
-	Url  *string `json:"url,omitempty"`
+	Name string `json:"name"`
+	Url  string `json:"url,omitempty"`
 }
 
 type GithubActionsJobSecret struct {
@@ -159,13 +158,13 @@ type GithubActionsJobSecret struct {
 
 type GithubActionsJob struct {
 	ID                string                       `json:"id"`
-	Name              *string                      `json:"name,omitempty"`
-	Uses              *string                      `json:"uses,omitempty"`
+	Name              string                       `json:"name,omitempty"`
+	Uses              string                       `json:"uses,omitempty"`
 	Secrets           GithubActionsJobSecrets      `json:"secrets,omitempty"`
 	With              GithubActionsWith            `json:"with,omitempty"`
 	Permissions       GithubActionsPermissions     `json:"permissions,omitempty"`
 	Needs             StringList                   `json:"needs,omitempty"`
-	If                *string                      `json:"if,omitempty"`
+	If                string                       `json:"if,omitempty"`
 	RunsOn            GithubActionsJobRunsOn       `json:"runs_on" yaml:"runs-on"`
 	Container         GithubActionsJobContainer    `json:"container"`
 	Environment       GithubActionsJobEnvironments `json:"environment,omitempty"`
@@ -425,17 +424,16 @@ func (o *GithubActionsStep) UnmarshalYAML(node *yaml.Node) error {
 				switch name {
 				case "ref":
 					o.Lines["with_ref"] = arg.Line
-					o.WithRef = poutine.String(arg.Value)
+					o.WithRef = arg.Value
 				case "script":
 					o.Lines["with_script"] = arg.Line
-					o.WithScript = poutine.String(arg.Value)
+					o.WithScript = arg.Value
 				}
 			}
 		}
 	}
 
-	before, _, _ := strings.Cut(poutine.StringValue(o.Uses), "@")
-	o.Action = poutine.String(before)
+	o.Action, _, _ = strings.Cut(o.Uses, "@")
 
 	return nil
 }
