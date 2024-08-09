@@ -154,7 +154,7 @@ func TestGithubActionsWorkflowJobs(t *testing.T) {
 				Environment: []GithubActionsJobEnvironment{
 					{
 						Name: "dev",
-						Url:  "example.com",
+						Url:  poutine.String("example.com"),
 					},
 				},
 			},
@@ -299,7 +299,7 @@ func TestGithubActionsWorkflowEvents(t *testing.T) {
 					Outputs: []GithubActionsOutput{
 						{
 							Name:        "build",
-							Description: "build_id",
+							Description: poutine.String("build_id"),
 							Value:       "${{ jobs.build.outputs.build }}",
 						},
 					},
@@ -415,7 +415,7 @@ jobs:
 	assert.Equal(t, "string", workflow.Events[1].Inputs[0].Type)
 	assert.Equal(t, true, workflow.Events[1].Inputs[0].Required)
 	assert.Equal(t, "build", workflow.Events[1].Outputs[0].Name)
-	assert.Equal(t, "build_id", workflow.Events[1].Outputs[0].Description)
+	assert.Equal(t, poutine.String("build_id"), workflow.Events[1].Outputs[0].Description)
 	assert.Equal(t, "${{ jobs.build.outputs.build }}", workflow.Events[1].Outputs[0].Value)
 	assert.Equal(t, "BOARD_TOKEN", workflow.Events[1].Secrets[0].Name)
 	assert.Equal(t, true, workflow.Events[1].Secrets[0].Required)
@@ -450,7 +450,7 @@ jobs:
 	assert.Equal(t, poutine.String("actions/checkout@v2"), workflow.Jobs[0].Steps[0].Uses)
 	assert.Equal(t, poutine.String("actions/checkout"), workflow.Jobs[0].Steps[0].Action)
 	assert.Equal(t, poutine.String("powershell"), workflow.Jobs[0].Steps[0].Shell)
-	assert.Equal(t, "git pull", workflow.Jobs[0].Steps[0].Run)
+	assert.Equal(t, poutine.String("git pull"), workflow.Jobs[0].Steps[0].Run)
 	assert.Equal(t, poutine.String("/tmp"), workflow.Jobs[0].Steps[0].WorkingDirectory)
 	assert.Equal(t, "ref", workflow.Jobs[0].Steps[0].With[0].Name)
 	assert.Equal(t, 50, workflow.Jobs[0].Steps[0].Lines["with_ref"])
@@ -510,7 +510,7 @@ runs:
 	assert.Equal(t, true, actionMetadata.Inputs[0].Required)
 	assert.Equal(t, "string", actionMetadata.Inputs[0].Type)
 	assert.Equal(t, "response", actionMetadata.Outputs[0].Name)
-	assert.Equal(t, "Response from the command executed", actionMetadata.Outputs[0].Description)
+	assert.Equal(t, poutine.String("Response from the command executed"), actionMetadata.Outputs[0].Description)
 	assert.Equal(t, "composite", actionMetadata.Runs.Using)
 	assert.Equal(t, poutine.String("actions/checkout@v2"), actionMetadata.Runs.Steps[0].Uses)
 	assert.Equal(t, poutine.String("checkout"), actionMetadata.Runs.Steps[0].ID)

@@ -64,16 +64,16 @@ type GithubActionsJobRunsOn StringList
 type StringList []string
 
 type GithubActionsInput struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Required    bool   `json:"required"`
-	Type        string `json:"type"`
+	Name        string  `json:"name"`
+	Description *string `json:"description,omitempty"`
+	Required    bool    `json:"required"`
+	Type        string  `json:"type"`
 }
 
 type GithubActionsOutput struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Value       string `json:"value"`
+	Name        string  `json:"name"`
+	Description *string `json:"description,omitempty"`
+	Value       string  `json:"value"`
 }
 
 type GithubActionsEnv struct {
@@ -88,7 +88,7 @@ type GithubActionsStep struct {
 	Env              GithubActionsEnvs `json:"env,omitempty"`
 	Uses             *string           `json:"uses,omitempty"`
 	Shell            *string           `json:"shell,omitempty"`
-	Run              string            `json:"run,omitempty" yaml:"run"`
+	Run              *string           `json:"run,omitempty" yaml:"run"`
 	WorkingDirectory *string           `json:"working_directory,omitempty" yaml:"working-directory"`
 	With             GithubActionsWith `json:"with,omitempty"`
 	WithRef          *string           `json:"with_ref,omitempty" yaml:"-"`
@@ -148,8 +148,8 @@ type GithubActionsJobContainer struct {
 }
 
 type GithubActionsJobEnvironment struct {
-	Name string `json:"name"`
-	Url  string `json:"url"`
+	Name string  `json:"name"`
+	Url  *string `json:"url,omitempty"`
 }
 
 type GithubActionsJobSecret struct {
