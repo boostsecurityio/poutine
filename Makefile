@@ -4,7 +4,7 @@ SHELL=/usr/bin/env bash
 
 .PHONY: build
 build:
-	go build -o poutine .
+	go build -o bin .
 
 ci: fmt test lint
 
