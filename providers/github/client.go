@@ -78,8 +78,29 @@ type GithubRepository struct {
 	IsDisabled     bool   `graphql:"isDisabled"`
 	IsEmpty        bool   `graphql:"isEmpty"`
 	IsTemplate     bool   `graphql:"isTemplate"`
+	IsArchived     bool   `graphql:"isArchived"`
 	StargazerCount int    `graphql:"stargazerCount"`
 	ForkCount      int    `graphql:"forkCount"`
+	Owner          struct {
+		ID string `graphql:"id"`
+	} `graphql:"owner"`
+	RepoID           string `graphql:"id"`
+	RepoSize         int    `graphql:"diskUsage"` // kilobytes
+	DefaultBranchRef struct {
+		Name string `graphql:"name"`
+	} `graphql:"defaultBranchRef"`
+	HasIssues       bool `graphql:"hasIssuesEnabled"`
+	HasWiki         bool `graphql:"hasWikiEnabled"`
+	HasDiscussions  bool `graphql:"hasDiscussionsEnabled"`
+	PrimaryLanguage struct {
+		Name string `graphql:"name"`
+	} `graphql:"primaryLanguage"`
+	License struct {
+		Name string `graphql:"name"`
+	} `graphql:"licenseInfo"`
+	Issues struct {
+		TotalCount int `graphql:"totalCount"`
+	} `graphql:"issues"`
 }
 
 func (gh GithubRepository) GetProviderName() string {
