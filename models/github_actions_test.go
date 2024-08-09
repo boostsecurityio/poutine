@@ -1,6 +1,7 @@
 package models
 
 import (
+	"github.com/boostsecurityio/poutine/poutine"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
 	"testing"
@@ -430,10 +431,10 @@ jobs:
 
 	assert.Equal(t, "build", workflow.Jobs[0].ID)
 	assert.Equal(t, 33, workflow.Jobs[0].Lines["start"])
-	assert.Equal(t, "Build job", workflow.Jobs[0].Name)
+	assert.Equal(t, poutine.String("Build job"), workflow.Jobs[0].Name)
 	assert.Equal(t, "ubuntu-latest", workflow.Jobs[0].RunsOn[0])
 	assert.Equal(t, "windows-latest", workflow.Jobs[0].RunsOn[1])
-	assert.Equal(t, "${{ github.actor == 'bot' }}", workflow.Jobs[0].If)
+	assert.Equal(t, poutine.String("${{ github.actor == 'bot' }}"), workflow.Jobs[0].If)
 	assert.Equal(t, "other", workflow.Jobs[0].Needs[0])
 
 	// write-all is normalized to all scopes
@@ -443,22 +444,22 @@ jobs:
 
 	assert.Equal(t, "build", workflow.Jobs[0].Outputs[0].Name)
 	assert.Equal(t, "${{ steps.checkout.outputs.build }}", workflow.Jobs[0].Outputs[0].Value)
-	assert.Equal(t, "checkout", workflow.Jobs[0].Steps[0].ID)
+	assert.Equal(t, poutine.String("checkout"), workflow.Jobs[0].Steps[0].ID)
 	assert.Equal(t, 43, workflow.Jobs[0].Steps[0].Line)
-	assert.Equal(t, "Checkout", workflow.Jobs[0].Steps[0].Name)
-	assert.Equal(t, "actions/checkout@v2", workflow.Jobs[0].Steps[0].Uses)
-	assert.Equal(t, "actions/checkout", workflow.Jobs[0].Steps[0].Action)
-	assert.Equal(t, "powershell", workflow.Jobs[0].Steps[0].Shell)
+	assert.Equal(t, poutine.String("Checkout"), workflow.Jobs[0].Steps[0].Name)
+	assert.Equal(t, poutine.String("actions/checkout@v2"), workflow.Jobs[0].Steps[0].Uses)
+	assert.Equal(t, poutine.String("actions/checkout"), workflow.Jobs[0].Steps[0].Action)
+	assert.Equal(t, poutine.String("powershell"), workflow.Jobs[0].Steps[0].Shell)
 	assert.Equal(t, "git pull", workflow.Jobs[0].Steps[0].Run)
-	assert.Equal(t, "/tmp", workflow.Jobs[0].Steps[0].WorkingDirectory)
+	assert.Equal(t, poutine.String("/tmp"), workflow.Jobs[0].Steps[0].WorkingDirectory)
 	assert.Equal(t, "ref", workflow.Jobs[0].Steps[0].With[0].Name)
 	assert.Equal(t, 50, workflow.Jobs[0].Steps[0].Lines["with_ref"])
 	assert.Equal(t, "${{ github.head_ref }}", workflow.Jobs[0].Steps[0].With[0].Value)
-	assert.Equal(t, "${{ github.head_ref }}", workflow.Jobs[0].Steps[0].WithRef)
+	assert.Equal(t, poutine.String("${{ github.head_ref }}"), workflow.Jobs[0].Steps[0].WithRef)
 	assert.Equal(t, "script", workflow.Jobs[0].Steps[0].With[1].Name)
 	assert.Equal(t, 51, workflow.Jobs[0].Steps[0].Lines["with_script"])
 	assert.Equal(t, "console.log(1)", workflow.Jobs[0].Steps[0].With[1].Value)
-	assert.Equal(t, "console.log(1)", workflow.Jobs[0].Steps[0].WithScript)
+	assert.Equal(t, poutine.String("console.log(1)"), workflow.Jobs[0].Steps[0].WithScript)
 	assert.Equal(t, "GITHUB_TOKEN", workflow.Jobs[0].Steps[0].Env[0].Name)
 	assert.Equal(t, "${{ secrets.GITHUB_TOKEN }}", workflow.Jobs[0].Steps[0].Env[0].Value)
 	assert.Equal(t, "noperms", workflow.Jobs[1].ID)
@@ -467,7 +468,7 @@ jobs:
 	assert.Contains(t, workflow.Jobs[1].Permissions, GithubActionsPermission{Scope: "metadata", Permission: "read"})
 	assert.Contains(t, workflow.Jobs[1].Permissions, GithubActionsPermission{Scope: "contents", Permission: "read"})
 
-	assert.Equal(t, "octo-org/example-repo/.github/workflows/reusable-workflow.yml@main", workflow.Jobs[1].Uses)
+	assert.Equal(t, poutine.String("octo-org/example-repo/.github/workflows/reusable-workflow.yml@main"), workflow.Jobs[1].Uses)
 	assert.Equal(t, "config-path", workflow.Jobs[1].With[0].Name)
 	assert.Equal(t, ".github/labeler.yml", workflow.Jobs[1].With[0].Value)
 	assert.Equal(t, "*ALL", workflow.Jobs[1].Secrets[0].Name)
@@ -511,8 +512,8 @@ runs:
 	assert.Equal(t, "response", actionMetadata.Outputs[0].Name)
 	assert.Equal(t, "Response from the command executed", actionMetadata.Outputs[0].Description)
 	assert.Equal(t, "composite", actionMetadata.Runs.Using)
-	assert.Equal(t, "actions/checkout@v2", actionMetadata.Runs.Steps[0].Uses)
-	assert.Equal(t, "checkout", actionMetadata.Runs.Steps[0].ID)
+	assert.Equal(t, poutine.String("actions/checkout@v2"), actionMetadata.Runs.Steps[0].Uses)
+	assert.Equal(t, poutine.String("checkout"), actionMetadata.Runs.Steps[0].ID)
 	assert.Equal(t, "ref", actionMetadata.Runs.Steps[0].With[0].Name)
 	assert.Equal(t, "koi", actionMetadata.Runs.Steps[0].With[0].Value)
 	assert.Equal(t, 17, actionMetadata.Runs.Steps[0].Lines["uses"])
