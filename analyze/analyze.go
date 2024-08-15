@@ -37,8 +37,9 @@ type Repository interface {
 	GetDefaultBranch() string
 	GetLicense() string
 	GetIsTemplate() bool
-	GetOrganizationID() string
-	GetRepositoryID() string
+	GetOrganizationID() int
+	GetRepositoryID() int
+	GetIsEmpty() bool
 }
 
 type RepoBatch struct {
@@ -340,6 +341,7 @@ func (a *Analyzer) generatePackageInsights(ctx context.Context, tempDir string, 
 		RepoSize:           repo.GetSize(),
 		DefaultBranch:      repo.GetDefaultBranch(),
 		IsFork:             repo.GetIsFork(),
+		IsEmpty:            repo.GetIsEmpty(),
 		ForksCount:         repo.GetForksCount(),
 		StarsCount:         repo.GetStarsCount(),
 		IsTemplate:         repo.GetIsTemplate(),

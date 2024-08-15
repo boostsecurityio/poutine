@@ -22,11 +22,12 @@ type PackageInsights struct {
 	SourceGitRef       string `json:"source_git_ref"`
 	SourceGitCommitSha string `json:"source_git_commit_sha"`
 
-	OrgID           string `json:"org_id"`
-	RepoID          string `json:"repo_id"`
+	OrgID           int    `json:"org_id"`
+	RepoID          int    `json:"repo_id"`
 	RepoSize        int    `json:"repo_size"`
 	DefaultBranch   string `json:"default_branch"`
 	IsFork          bool   `json:"is_fork"`
+	IsEmpty         bool   `json:"is_empty"`
 	ForksCount      int    `json:"forks_count"`
 	StarsCount      int    `json:"stars_count"`
 	IsTemplate      bool   `json:"is_template"`

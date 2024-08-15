@@ -82,10 +82,15 @@ type GithubRepository struct {
 	StargazerCount int    `graphql:"stargazerCount"`
 	ForkCount      int    `graphql:"forkCount"`
 	Owner          struct {
-		ID string `graphql:"id"`
+		Organization struct {
+			DatabaseId int `graphql:"databaseId"`
+		} `graphql:"... on Organization"`
+		User struct {
+			DatabaseId int `graphql:"databaseId"`
+		} `graphql:"... on User"`
 	} `graphql:"owner"`
-	RepoID           string `graphql:"id"`
-	RepoSize         int    `graphql:"diskUsage"` // kilobytes
+	DatabaseId       int `graphql:"databaseId"`
+	RepoSize         int `graphql:"diskUsage"` // kilobytes
 	DefaultBranchRef struct {
 		Name string `graphql:"name"`
 	} `graphql:"defaultBranchRef"`
@@ -180,12 +185,12 @@ func (gh GithubRepository) GetIsTemplate() bool {
 	return gh.IsTemplate
 }
 
-func (gh GithubRepository) GetOrganizationID() string {
-	return gh.Owner.ID
+func (gh GithubRepository) GetOrganizationID() int {
+	return gh.Owner.Organization.DatabaseId // even if it's a user, the organization will be filled with the same id
 }
 
-func (gh GithubRepository) GetRepositoryID() string {
-	return gh.RepoID
+func (gh GithubRepository) GetRepositoryID() int {
+	return gh.DatabaseId
 }
 
 func (gh GithubRepository) GetForksCount() int {
@@ -198,6 +203,10 @@ func (gh GithubRepository) GetStarsCount() int {
 
 func (gh GithubRepository) GetOpenIssuesCount() int {
 	return gh.Issues.TotalCount
+}
+
+func (gh GithubRepository) GetIsEmpty() bool {
+	return gh.IsEmpty
 }
 
 type Client struct {
