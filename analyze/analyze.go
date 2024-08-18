@@ -13,6 +13,7 @@ import (
 
 	"github.com/boostsecurityio/poutine/opa"
 	"github.com/boostsecurityio/poutine/providers/pkgsupply"
+	"github.com/boostsecurityio/poutine/providers/scm/domain"
 	"github.com/boostsecurityio/poutine/scanner"
 	"github.com/rs/zerolog/log"
 	"github.com/schollz/progressbar/v3"
@@ -274,7 +275,16 @@ func (a *Analyzer) generatePackageInsights(ctx context.Context, tempDir string, 
 		return nil, fmt.Errorf("failed to get commit SHA: %w", err)
 	}
 
-	purl, _ := models.NewPurl(fmt.Sprintf("pkg:%s/%s", repo.GetProviderName(), repo.GetRepoIdentifier()))
+	var (
+		purl   models.Purl
+		domain = a.ScmClient.GetProviderBaseURL()
+	)
+	if domain != scm_domain.DefaultGitHubDomain && domain != scm_domain.DefaultGitLabDomain {
+		purl, _ = models.NewPurl(fmt.Sprintf("pkg:%s/%s?repository_url=%s", repo.GetProviderName(), repo.GetRepoIdentifier(), domain))
+	} else {
+		purl, _ = models.NewPurl(fmt.Sprintf("pkg:%s/%s", repo.GetProviderName(), repo.GetRepoIdentifier()))
+	}
+
 	switch ref {
 	case "HEAD", "":
 		ref, err = a.GitClient.GetRepoHeadBranchName(ctx, tempDir)

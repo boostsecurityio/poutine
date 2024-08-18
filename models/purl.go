@@ -2,8 +2,9 @@ package models
 
 import (
 	"fmt"
-	"github.com/package-url/packageurl-go"
 	"strings"
+
+	"github.com/package-url/packageurl-go"
 )
 
 type Purl struct {
@@ -45,11 +46,22 @@ func (p *Purl) FullName() string {
 
 func (p *Purl) Link() string {
 	repo := p.FullName()
+	qualifiers := p.Qualifiers.Map()
+	repoUrl := qualifiers["repository_url"]
+
 	if p.Type == "githubactions" || p.Type == "github" {
-		return fmt.Sprintf("https://github.com/%s", repo)
+		if repoUrl != "" {
+			return fmt.Sprintf("https://%s/%s", repoUrl, repo)
+		} else {
+			return fmt.Sprintf("https://github.com/%s", repo)
+		}
 	}
 	if p.Type == "gitlab" {
-		return fmt.Sprintf("https://gitlab.com/%s", repo)
+		if repoUrl != "" {
+			return fmt.Sprintf("https://%s/%s", repoUrl, repo)
+		} else {
+			return fmt.Sprintf("https://gitlab.com/%s", repo)
+		}
 	}
 	return ""
 }

@@ -87,3 +87,44 @@ func TestPurlFromGithubActions(t *testing.T) {
 		}
 	}
 }
+
+func TestPurlLink(t *testing.T) {
+	cases := []struct {
+		name     string
+		purl     string
+		expected string
+	}{
+		// GitHub
+		{
+			name:     "github.com default",
+			purl:     "pkg:githubactions/actions/checkout@v4",
+			expected: "https://github.com/actions/checkout",
+		},
+		{
+			name:     "github custom base ",
+			purl:     "pkg:githubactions/actions/checkout@v4?repository_url=github.example.com",
+			expected: "https://github.example.com/actions/checkout",
+		},
+		// GitLab
+		{
+			name:     "gitlab.com default",
+			purl:     "pkg:gitlab/include/remote?download_url=https%3A%2F%2Fexample.com%2F.gitlab-ci.yml",
+			expected: "https://gitlab.com/include/remote",
+		},
+		{
+			name:     "gitlab custom base",
+			purl:     "pkg:gitlab/include/remote?download_url=https%3A%2F%2Fexample.com%2F.gitlab-ci.yml&repository_url=gitlab.example.com",
+			expected: "https://gitlab.example.com/include/remote",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			p, err := NewPurl(c.purl)
+			assert.Nil(t, err)
+
+			link := p.Link()
+			assert.Equal(t, c.expected, link)
+		})
+	}
+}

@@ -1,9 +1,12 @@
-package scm
+package scm_domain
 
 import "strings"
 
 // ScmBaseDomain represent the base domain for a SCM provider.
 type ScmBaseDomain string
+
+const DefaultGitHubDomain string = "github.com"
+const DefaultGitLabDomain string = "gitlab.com"
 
 var schemePrefixes = []string{"https://", "http://"}
 
