@@ -6,6 +6,7 @@ import (
 	"github.com/boostsecurityio/poutine/models"
 	"github.com/boostsecurityio/poutine/opa"
 	"github.com/boostsecurityio/poutine/providers/pkgsupply"
+	"sync"
 )
 
 type ReputationClient interface {
@@ -20,6 +21,8 @@ type Inventory struct {
 	opa             *opa.Opa
 	pkgsupplyClient ReputationClient
 }
+
+var packageMu sync.Mutex
 
 func NewInventory(opa *opa.Opa, pkgsupplyClient ReputationClient, provider string, providerVersion string) *Inventory {
 	return &Inventory{
@@ -40,6 +43,8 @@ func (i *Inventory) AddPackage(ctx context.Context, pkg *models.PackageInsights,
 		return err
 	}
 
+	packageMu.Lock()
+	defer packageMu.Unlock()
 	i.Packages = append(i.Packages, s.Package)
 	return nil
 }
