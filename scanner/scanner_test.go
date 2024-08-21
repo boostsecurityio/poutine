@@ -10,7 +10,9 @@ import (
 
 func TestGithubWorkflows(t *testing.T) {
 	s := NewScanner("testdata")
-	o, _ := opa.NewOpa()
+	o, _ := opa.NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
 	err := s.Run(context.TODO(), o)
 	workflows := s.Package.GithubActionsWorkflows
 
@@ -33,7 +35,9 @@ func TestGithubWorkflows(t *testing.T) {
 
 func TestGithubWorkflowsNotFound(t *testing.T) {
 	s := NewScanner("testdata/.github")
-	o, _ := opa.NewOpa()
+	o, _ := opa.NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
 	err := s.Run(context.TODO(), o)
 	workflows := s.Package.GithubActionsWorkflows
 
@@ -43,7 +47,9 @@ func TestGithubWorkflowsNotFound(t *testing.T) {
 
 func TestGithubActionsMetadata(t *testing.T) {
 	s := NewScanner("testdata")
-	o, _ := opa.NewOpa()
+	o, _ := opa.NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
 	err := s.Run(context.TODO(), o)
 
 	metadata := s.Package.GithubActionsMetadata
@@ -58,7 +64,9 @@ func TestGithubActionsMetadata(t *testing.T) {
 
 func TestRun(t *testing.T) {
 	s := NewScanner("testdata")
-	o, _ := opa.NewOpa()
+	o, _ := opa.NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
 	s.Package.Purl = "pkg:github/org/owner"
 
 	err := s.Run(context.TODO(), o)
@@ -73,7 +81,9 @@ func TestRun(t *testing.T) {
 
 func TestPipelineAsCodeTekton(t *testing.T) {
 	s := NewScanner("testdata")
-	o, _ := opa.NewOpa()
+	o, _ := opa.NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
 	err := s.Run(context.TODO(), o)
 	assert.NoError(t, err)
 

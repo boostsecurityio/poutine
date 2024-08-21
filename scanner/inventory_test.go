@@ -10,7 +10,9 @@ import (
 )
 
 func TestPurls(t *testing.T) {
-	o, _ := opa.NewOpa()
+	o, _ := opa.NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
 	i := NewInventory(o, nil, "", "")
 	pkg := &models.PackageInsights{
 		Purl: "pkg:github/org/owner",
@@ -53,7 +55,9 @@ func TestPurls(t *testing.T) {
 }
 
 func TestFindings(t *testing.T) {
-	o, _ := opa.NewOpa()
+	o, _ := opa.NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
 	i := NewInventory(o, nil, "gitlab", "")
 	purl := "pkg:github/org/owner"
 	pkg := &models.PackageInsights{
@@ -426,7 +430,9 @@ func TestFindings(t *testing.T) {
 }
 
 func TestSkipRule(t *testing.T) {
-	o, _ := opa.NewOpa()
+	o, _ := opa.NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
 	i := NewInventory(o, nil, "", "")
 	ctx := context.TODO()
 	purl := "pkg:github/org/owner"
@@ -470,7 +476,9 @@ func TestSkipRule(t *testing.T) {
 }
 
 func TestRulesConfig(t *testing.T) {
-	o, _ := opa.NewOpa()
+	o, _ := opa.NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
 	i := NewInventory(o, nil, "", "")
 	ctx := context.TODO()
 	purl := "pkg:github/org/owner"
