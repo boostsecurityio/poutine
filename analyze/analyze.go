@@ -91,13 +91,23 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 	log.Debug().Msgf("Starting repository analysis for organization: %s on %s", org, provider)
 	bar := a.progressBar(0, "Analyzing repositories")
 
-	var wg sync.WaitGroup
+	var reposWg sync.WaitGroup
 	errChan := make(chan error, 1)
 	maxGoroutines := 2
 	if numberOfGoroutines != nil {
 		maxGoroutines = *numberOfGoroutines
 	}
-	sem := semaphore.NewWeighted(int64(maxGoroutines))
+	goRoutineLimitSem := semaphore.NewWeighted(int64(maxGoroutines))
+
+	pkgChan := make(chan *models.PackageInsights)
+	pkgWg := sync.WaitGroup{}
+	pkgWg.Add(1)
+	go func() {
+		defer pkgWg.Done()
+		for pkg := range pkgChan {
+			inventory.Packages = append(inventory.Packages, pkg)
+		}
+	}()
 
 	for repoBatch := range orgReposBatches {
 		if repoBatch.Err != nil {
@@ -112,15 +122,15 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 				bar.ChangeMax(repoBatch.TotalCount - 1)
 				continue
 			}
-			if err := sem.Acquire(ctx, 1); err != nil {
+			if err := goRoutineLimitSem.Acquire(ctx, 1); err != nil {
 				close(errChan)
 				return fmt.Errorf("failed to acquire semaphore: %w", err)
 			}
 
-			wg.Add(1)
+			reposWg.Add(1)
 			go func(repo Repository) {
-				defer sem.Release(1)
-				defer wg.Done()
+				defer goRoutineLimitSem.Release(1)
+				defer reposWg.Done()
 				repoNameWithOwner := repo.GetRepoIdentifier()
 				tempDir, err := a.cloneRepoToTemp(ctx, repo.BuildGitURL(a.ScmClient.GetProviderBaseURL()), a.ScmClient.GetToken(), "HEAD")
 				if err != nil {
@@ -135,9 +145,16 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 					return
 				}
 
-				err = inventory.AddPackage(ctx, pkg, tempDir)
+				scannedPkg, err := inventory.ScanPackage(ctx, pkg, tempDir)
 				if err != nil {
-					log.Error().Err(err).Str("repo", repoNameWithOwner).Msg("failed to add package to inventory")
+					log.Error().Err(err).Str("repo", repoNameWithOwner).Msg("failed to scan package")
+					return
+				}
+
+				select {
+				case pkgChan <- scannedPkg:
+				case <-ctx.Done():
+					log.Error().Msg("Context canceled while sending package to channel")
 					return
 				}
 				_ = bar.Add(1)
@@ -146,9 +163,12 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 	}
 
 	go func() {
-		wg.Wait()
+		reposWg.Wait()
+		close(pkgChan)
 		close(errChan)
 	}()
+
+	pkgWg.Wait()
 
 	for err := range errChan {
 		if err != nil {

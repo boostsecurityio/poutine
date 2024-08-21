@@ -32,16 +32,25 @@ func NewInventory(opa *opa.Opa, pkgsupplyClient ReputationClient, provider strin
 }
 
 func (i *Inventory) AddPackage(ctx context.Context, pkg *models.PackageInsights, workdir string) error {
+	scannedPackage, err := i.ScanPackage(ctx, pkg, workdir)
+	if err != nil {
+		return err
+	}
+
+	i.Packages = append(i.Packages, scannedPackage)
+	return nil
+}
+
+func (i *Inventory) ScanPackage(ctx context.Context, pkg *models.PackageInsights, workdir string) (*models.PackageInsights, error) {
 	s := NewScanner(workdir)
 	s.Package = pkg
 
 	err := s.Run(ctx, i.opa)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	i.Packages = append(i.Packages, s.Package)
-	return nil
+	return s.Package, nil
 }
 
 func (i *Inventory) Purls() []string {
