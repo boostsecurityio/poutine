@@ -185,12 +185,11 @@ func GetAnalyzer(ctx context.Context, command string) (*analyze.Analyzer, error)
 }
 
 func newOpa(ctx context.Context) (*opa.Opa, error) {
-	opaClient, err := opa.NewOpa()
+	opaClient, err := opa.NewOpa(ctx, config)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create OPA client")
 		return nil, err
 	}
-	_ = opaClient.WithConfig(ctx, config)
 
 	return opaClient, nil
 }

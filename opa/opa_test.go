@@ -42,7 +42,9 @@ func TestOpaBuiltins(t *testing.T) {
 		},
 	}
 
-	opa, err := NewOpa()
+	opa, err := NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
 	noOpaErrors(t, err)
 
 	for _, c := range cases {
@@ -77,7 +79,9 @@ func TestSemverConstraintCheck(t *testing.T) {
 		},
 	}
 
-	opa, err := NewOpa()
+	opa, err := NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
 	noOpaErrors(t, err)
 
 	for _, c := range cases {
@@ -114,7 +118,9 @@ func TestJobUsesSelfHostedRunner(t *testing.T) {
 		"random-name":         true,
 	}
 
-	opa, err := NewOpa()
+	opa, err := NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
 	noOpaErrors(t, err)
 
 	for runner, expected := range cases {
@@ -136,7 +142,9 @@ func TestJobUsesSelfHostedRunner(t *testing.T) {
 }
 
 func TestWithConfig(t *testing.T) {
-	o, err := NewOpa()
+	o, err := NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
 	noOpaErrors(t, err)
 	ctx := context.TODO()
 
@@ -181,7 +189,9 @@ func TestCapabilities(t *testing.T) {
 }
 
 func TestRulesMetadataLevel(t *testing.T) {
-	opa, err := NewOpa()
+	opa, err := NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
 	noOpaErrors(t, err)
 
 	query := `{rule_id: rule.level |
@@ -202,7 +212,9 @@ func TestRulesMetadataLevel(t *testing.T) {
 }
 
 func TestWithRulesConfig(t *testing.T) {
-	o, err := NewOpa()
+	o, err := NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
 	noOpaErrors(t, err)
 	ctx := context.TODO()
 
