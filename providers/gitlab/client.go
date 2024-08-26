@@ -8,13 +8,14 @@ import (
 	"strings"
 
 	"github.com/boostsecurityio/poutine/analyze"
+	"github.com/boostsecurityio/poutine/providers/scm/domain"
 	"github.com/xanzy/go-gitlab"
 )
 
 const GitLab string = "gitlab"
 
 func NewGitlabSCMClient(ctx context.Context, baseURL string, token string) (*ScmClient, error) {
-	domain := "gitlab.com"
+	domain := scm_domain.DefaultGitLabDomain
 	if baseURL != "" {
 		domain = baseURL
 	}

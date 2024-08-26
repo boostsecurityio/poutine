@@ -11,6 +11,7 @@ import (
 	"github.com/boostsecurityio/poutine/opa"
 	"github.com/boostsecurityio/poutine/providers/gitops"
 	"github.com/boostsecurityio/poutine/providers/scm"
+	"github.com/boostsecurityio/poutine/providers/scm/domain"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
@@ -26,7 +27,7 @@ import (
 var Format string
 var Verbose bool
 var ScmProvider string
-var ScmBaseURL scm.ScmBaseDomain
+var ScmBaseURL scm_domain.ScmBaseDomain
 var (
 	Version string
 	Commit  string

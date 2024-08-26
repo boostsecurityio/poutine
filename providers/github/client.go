@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/boostsecurityio/poutine/analyze"
+	"github.com/boostsecurityio/poutine/providers/scm/domain"
 	"github.com/rs/zerolog/log"
 
 	"github.com/gofri/go-github-ratelimit/github_ratelimit"
@@ -19,10 +20,9 @@ import (
 )
 
 const GitHub string = "github"
-const defaultDomain string = "github.com"
 
 func NewGithubSCMClient(ctx context.Context, baseURL string, token string) (*ScmClient, error) {
-	domain := defaultDomain
+	domain := scm_domain.DefaultGitHubDomain
 	if baseURL != "" {
 		domain = baseURL
 	}
@@ -150,7 +150,7 @@ func NewClient(ctx context.Context, token string, domain string) (*Client, error
 		graphQLClient *githubv4.Client
 	)
 
-	if domain == defaultDomain {
+	if domain == scm_domain.DefaultGitHubDomain {
 		graphQLClient = githubv4.NewClient(httpClient)
 	} else {
 		baseURL := fmt.Sprintf("https://%s/", domain)
