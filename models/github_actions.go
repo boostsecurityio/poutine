@@ -162,7 +162,7 @@ type GithubActionsJob struct {
 	Uses              string                       `json:"uses,omitempty"`
 	Secrets           GithubActionsJobSecrets      `json:"secrets,omitempty"`
 	With              GithubActionsWith            `json:"with,omitempty"`
-	Permissions       GithubActionsPermissions     `json:"permissions,omitempty"`
+	Permissions       GithubActionsPermissions     `json:"permissions"`
 	Needs             StringList                   `json:"needs,omitempty"`
 	If                string                       `json:"if,omitempty"`
 	RunsOn            GithubActionsJobRunsOn       `json:"runs_on" yaml:"runs-on"`
@@ -181,7 +181,7 @@ type GithubActionsWorkflow struct {
 	Path        string                   `json:"path" yaml:"-"`
 	Name        string                   `json:"name"`
 	Events      GithubActionsEvents      `json:"events" yaml:"on"`
-	Permissions GithubActionsPermissions `json:"permissions,omitempty"`
+	Permissions GithubActionsPermissions `json:"permissions"`
 	Env         GithubActionsEnvs        `json:"env,omitempty"`
 	Jobs        GithubActionsJobs        `json:"jobs"`
 }
