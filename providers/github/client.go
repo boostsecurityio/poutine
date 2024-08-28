@@ -221,6 +221,11 @@ func NewClient(ctx context.Context, token string, domain string) (*Client, error
 		return nil, err
 	}
 
+	oauth2Client := http.Client{
+		Transport: &retryTransport{},
+	}
+	oauth2Context := context.WithValue(ctx, oauth2.HTTPClient, &oauth2Client)
+
 	var (
 		// REST client
 		restClient = github.NewClient(rateLimiter).WithAuthToken(token)
@@ -228,7 +233,7 @@ func NewClient(ctx context.Context, token string, domain string) (*Client, error
 		src = oauth2.StaticTokenSource(
 			&oauth2.Token{AccessToken: token},
 		)
-		httpClient    = oauth2.NewClient(ctx, src)
+		httpClient    = oauth2.NewClient(oauth2Context, src)
 		graphQLClient *githubv4.Client
 	)
 
