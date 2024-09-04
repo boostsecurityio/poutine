@@ -133,7 +133,7 @@ type Client struct {
 func NewClient(ctx context.Context, baseUrl string, token string) (*Client, error) {
 	gitlabClient, err := gitlab.NewClient(token, gitlab.WithBaseURL(fmt.Sprintf("https://%s", baseUrl)))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create gitlab client: %v", err)
+		return nil, fmt.Errorf("failed to create gitlab client: %w", err)
 	}
 	return &Client{
 		Token:  token,

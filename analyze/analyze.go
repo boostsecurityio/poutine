@@ -368,7 +368,7 @@ func (a *Analyzer) cloneRepoToTemp(ctx context.Context, gitURL string, token str
 	err = a.GitClient.Clone(ctx, tempDir, gitURL, token, ref)
 	if err != nil {
 		os.RemoveAll(tempDir) // Clean up if cloning fails
-		return "", fmt.Errorf("failed to clone repo: %s", err)
+		return "", fmt.Errorf("failed to clone repo: %w", err)
 	}
 	return tempDir, nil
 }
