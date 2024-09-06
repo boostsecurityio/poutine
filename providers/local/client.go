@@ -129,6 +129,62 @@ func (gl Repo) GetIsFork() bool {
 	return false
 }
 
+func (gl Repo) GetHasIssues() bool {
+	return false
+}
+
+func (gl Repo) GetHasWiki() bool {
+	return false
+}
+
+func (gl Repo) GetHasDiscussion() bool {
+	return false
+}
+
+func (gl Repo) GetPrimaryLanguage() string {
+	return ""
+}
+
+func (gl Repo) GetSize() int {
+	return 1337
+}
+
+func (gl Repo) GetDefaultBranch() string {
+	return ""
+}
+
+func (gl Repo) GetLicense() string {
+	return ""
+}
+
+func (gl Repo) GetIsTemplate() bool {
+	return false
+}
+
+func (gl Repo) GetOrganizationID() int {
+	return 1337
+}
+
+func (gl Repo) GetRepositoryID() int {
+	return 1337
+}
+
+func (gl Repo) GetForksCount() int {
+	return 0
+}
+
+func (gl Repo) GetStarsCount() int {
+	return 0
+}
+
+func (gl Repo) GetOpenIssuesCount() int {
+	return 0
+}
+
+func (gl Repo) GetIsEmpty() bool {
+	return false
+}
+
 func extractHostnameFromSSHURL(sshURL string) string {
 	parts := strings.Split(sshURL, "@")
 	if len(parts) != 2 {

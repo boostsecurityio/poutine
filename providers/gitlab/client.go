@@ -80,6 +80,13 @@ type GitLabRepo struct {
 	IsArchived        bool
 	StarCount         int
 	ForksCount        int
+	ID                int
+	IsEmpty           bool
+	IssuesCount       int
+	HasIssues         bool
+	HasWiki           bool
+	License           string
+	DefaultBranch     string
 }
 
 func (gl GitLabRepo) GetProviderName() string {
@@ -128,6 +135,62 @@ func (gl GitLabRepo) BuildGitURL(baseURL string) string {
 type Client struct {
 	Token  string
 	client *gitlab.Client
+}
+
+func (gl GitLabRepo) GetHasIssues() bool {
+	return gl.HasIssues
+}
+
+func (gl GitLabRepo) GetHasWiki() bool {
+	return gl.HasWiki
+}
+
+func (gl GitLabRepo) GetHasDiscussion() bool {
+	return false
+}
+
+func (gl GitLabRepo) GetPrimaryLanguage() string {
+	return ""
+}
+
+func (gl GitLabRepo) GetSize() int {
+	return 1337
+}
+
+func (gl GitLabRepo) GetDefaultBranch() string {
+	return gl.DefaultBranch
+}
+
+func (gl GitLabRepo) GetLicense() string {
+	return gl.License
+}
+
+func (gl GitLabRepo) GetIsTemplate() bool {
+	return false
+}
+
+func (gl GitLabRepo) GetOrganizationID() int {
+	return 1337
+}
+
+func (gl GitLabRepo) GetRepositoryID() int {
+	return gl.ID
+}
+
+func (gl GitLabRepo) GetForksCount() int {
+	return gl.ForksCount
+}
+
+func (gl GitLabRepo) GetStarsCount() int {
+	return gl.StarCount
+}
+
+func (gl GitLabRepo) GetOpenIssuesCount() int {
+	return gl.IssuesCount
+}
+
+func (gl GitLabRepo) GetIsEmpty() bool {
+	return gl.IsEmpty
 }
 
 func NewClient(ctx context.Context, baseUrl string, token string) (*Client, error) {
@@ -199,6 +262,10 @@ func projectToRepo(project *gitlab.Project) *GitLabRepo {
 	if project.ForkedFromProject != nil {
 		isFork = true
 	}
+	license := ""
+	if project.License != nil {
+		license = project.License.Name
+	}
 	return &GitLabRepo{
 		NameWithNamespace: project.PathWithNamespace,
 		IsPrivate:         !(project.Visibility == gitlab.PublicVisibility),
@@ -207,6 +274,13 @@ func projectToRepo(project *gitlab.Project) *GitLabRepo {
 		StarCount:         project.StarCount,
 		ForksCount:        project.ForksCount,
 		IsFork:            isFork,
+		IsEmpty:           project.EmptyRepo,
+		HasIssues:         project.IssuesEnabled,
+		ID:                project.ID,
+		IssuesCount:       project.OpenIssuesCount,
+		HasWiki:           project.WikiEnabled,
+		License:           license,
+		DefaultBranch:     project.DefaultBranch,
 	}
 }
 
