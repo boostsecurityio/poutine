@@ -78,8 +78,34 @@ type GithubRepository struct {
 	IsDisabled     bool   `graphql:"isDisabled"`
 	IsEmpty        bool   `graphql:"isEmpty"`
 	IsTemplate     bool   `graphql:"isTemplate"`
+	IsArchived     bool   `graphql:"isArchived"`
 	StargazerCount int    `graphql:"stargazerCount"`
 	ForkCount      int    `graphql:"forkCount"`
+	Owner          struct {
+		Organization struct {
+			DatabaseId int `graphql:"databaseId"`
+		} `graphql:"... on Organization"`
+		User struct {
+			DatabaseId int `graphql:"databaseId"`
+		} `graphql:"... on User"`
+	} `graphql:"owner"`
+	DatabaseId       int `graphql:"databaseId"`
+	RepoSize         int `graphql:"diskUsage"` // kilobytes
+	DefaultBranchRef struct {
+		Name string `graphql:"name"`
+	} `graphql:"defaultBranchRef"`
+	HasIssues       bool `graphql:"hasIssuesEnabled"`
+	HasWiki         bool `graphql:"hasWikiEnabled"`
+	HasDiscussions  bool `graphql:"hasDiscussionsEnabled"`
+	PrimaryLanguage struct {
+		Name string `graphql:"name"`
+	} `graphql:"primaryLanguage"`
+	License struct {
+		Name string `graphql:"name"`
+	} `graphql:"licenseInfo"`
+	Issues struct {
+		TotalCount int `graphql:"totalCount"`
+	} `graphql:"issues"`
 }
 
 func (gh GithubRepository) GetProviderName() string {
@@ -127,6 +153,62 @@ func (gh GithubRepository) GetIsFork() bool {
 	return gh.IsFork
 }
 
+func (gh GithubRepository) GetHasIssues() bool {
+	return gh.HasIssues
+}
+
+func (gh GithubRepository) GetHasWiki() bool {
+	return gh.HasWiki
+}
+
+func (gh GithubRepository) GetHasDiscussion() bool {
+	return gh.HasDiscussions
+}
+
+func (gh GithubRepository) GetPrimaryLanguage() string {
+	return gh.PrimaryLanguage.Name
+}
+
+func (gh GithubRepository) GetSize() int {
+	return gh.RepoSize
+}
+
+func (gh GithubRepository) GetDefaultBranch() string {
+	return gh.DefaultBranchRef.Name
+}
+
+func (gh GithubRepository) GetLicense() string {
+	return gh.License.Name
+}
+
+func (gh GithubRepository) GetIsTemplate() bool {
+	return gh.IsTemplate
+}
+
+func (gh GithubRepository) GetOrganizationID() int {
+	return gh.Owner.Organization.DatabaseId // even if it's a user, the organization will be filled with the same id
+}
+
+func (gh GithubRepository) GetRepositoryID() int {
+	return gh.DatabaseId
+}
+
+func (gh GithubRepository) GetForksCount() int {
+	return gh.ForkCount
+}
+
+func (gh GithubRepository) GetStarsCount() int {
+	return gh.StargazerCount
+}
+
+func (gh GithubRepository) GetOpenIssuesCount() int {
+	return gh.Issues.TotalCount
+}
+
+func (gh GithubRepository) GetIsEmpty() bool {
+	return gh.IsEmpty
+}
+
 type Client struct {
 	restClient    *github.Client
 	graphQLClient *githubv4.Client
@@ -139,6 +221,11 @@ func NewClient(ctx context.Context, token string, domain string) (*Client, error
 		return nil, err
 	}
 
+	oauth2Client := http.Client{
+		Transport: &retryTransport{},
+	}
+	oauth2Context := context.WithValue(ctx, oauth2.HTTPClient, &oauth2Client)
+
 	var (
 		// REST client
 		restClient = github.NewClient(rateLimiter).WithAuthToken(token)
@@ -146,7 +233,7 @@ func NewClient(ctx context.Context, token string, domain string) (*Client, error
 		src = oauth2.StaticTokenSource(
 			&oauth2.Token{AccessToken: token},
 		)
-		httpClient    = oauth2.NewClient(ctx, src)
+		httpClient    = oauth2.NewClient(oauth2Context, src)
 		graphQLClient *githubv4.Client
 	)
 

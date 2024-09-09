@@ -22,6 +22,22 @@ type PackageInsights struct {
 	SourceGitRef       string `json:"source_git_ref"`
 	SourceGitCommitSha string `json:"source_git_commit_sha"`
 
+	OrgID           int    `json:"org_id"`
+	RepoID          int    `json:"repo_id"`
+	RepoSize        int    `json:"repo_size"`
+	DefaultBranch   string `json:"default_branch"`
+	IsFork          bool   `json:"is_fork"`
+	IsEmpty         bool   `json:"is_empty"`
+	ForksCount      int    `json:"forks_count"`
+	StarsCount      int    `json:"stars_count"`
+	IsTemplate      bool   `json:"is_template"`
+	HasIssues       bool   `json:"has_issues"`
+	OpenIssuesCount int    `json:"open_issues_count"`
+	HasWiki         bool   `json:"has_wiki"`
+	HasDiscussions  bool   `json:"has_discussions"`
+	PrimaryLanguage string `json:"primary_language"`
+	License         string `json:"license"`
+
 	PackageDependencies []string `json:"package_dependencies"`
 	BuildDependencies   []string `json:"build_dependencies"`
 
