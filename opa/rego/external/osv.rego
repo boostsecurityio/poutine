@@ -264,7 +264,7 @@ advisories = {
 	},
 	"GHSA-cxww-7g56-2vh6": {
 		"osv_id": "GHSA-cxww-7g56-2vh6",
-		"package_name": "fish-shop/syntax-check",
+		"package_name": "actions/download-artifact",
 		"published": "2024-09-03T20:55:34Z",
 		"aliases": ["CVE-2024-42471"],
 		"summary": "@actions/download-artifact has an Arbitrary File Write via artifact extraction",
