@@ -137,6 +137,11 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 				bar.ChangeMax(repoBatch.TotalCount - 1)
 				continue
 			}
+			if repo.GetSize() == 0 {
+				bar.ChangeMax(repoBatch.TotalCount - 1)
+				log.Info().Str("repo", repo.GetRepoIdentifier()).Msg("Skipping empty repository")
+				continue
+			}
 			if err := goRoutineLimitSem.Acquire(ctx, 1); err != nil {
 				close(errChan)
 				return fmt.Errorf("failed to acquire semaphore: %w", err)
