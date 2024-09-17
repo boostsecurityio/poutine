@@ -48,9 +48,10 @@ type CVEData struct {
 				Vendor   string `json:"vendor"`
 				Product  string `json:"product"`
 				Versions []struct {
-					LessThan    string `json:"lessThan"`
-					Version     string `json:"version"`
-					VersionType string `json:"versionType"`
+					LessThan        string `json:"lessThan"`
+					LessThanOrEqual string `json:"lessThanOrEqual"`
+					Version         string `json:"version"`
+					VersionType     string `json:"versionType"`
 				}
 			} `json:"affected"`
 			Descriptions []struct {
@@ -65,6 +66,9 @@ type CVEData struct {
 				CvssV31 struct {
 					VectorString string `json:"vectorString"`
 				} `json:"cvssV3_1"`
+				CvssV40 struct {
+					VectorString string `json:"vectorString"`
+				} `json:"cvssV4_0"`
 			} `json:"metrics"`
 		} `json:"cna"`
 	} `json:"containers"`
@@ -99,17 +103,27 @@ func TransformCVEDataToAdvisories(cveData []CVEData) PlatformAdvisories {
 			}
 
 			for _, metric := range data.Containers.CNA.Metrics {
-				cveItem.Severity = append(cveItem.Severity, Severity{
-					Type:  "CVSS_V3",
-					Score: metric.CvssV31.VectorString,
-				})
+				if metric.CvssV31.VectorString != "" {
+					cveItem.Severity = append(cveItem.Severity, Severity{
+						Type:  "CVSS_V3",
+						Score: metric.CvssV31.VectorString,
+					})
+				} else if metric.CvssV40.VectorString != "" {
+					cveItem.Severity = append(cveItem.Severity, Severity{
+						Type:  "CVSS_V4",
+						Score: metric.CvssV40.VectorString,
+					})
+				}
 			}
 
 			var versionRanges []string
 
 			for _, version := range affected.Versions {
 				if version.VersionType == "custom" || version.VersionType == "semver" {
-					if version.LessThan != "" && version.Version != "" {
+					if version.LessThanOrEqual != "" {
+						versionRange := fmt.Sprintf("<=%s", version.LessThanOrEqual)
+						versionRanges = append(versionRanges, versionRange)
+					} else if version.LessThan != "" && version.Version != "" {
 						versionRange := fmt.Sprintf(">=%s,<%s", version.Version, version.LessThan)
 						versionRanges = append(versionRanges, versionRange)
 					}
