@@ -68,6 +68,16 @@ func TestSemverConstraintCheck(t *testing.T) {
 			expected:   true,
 		},
 		{
+			constraint: "<=3.11.13",
+			version:    "3.11.13",
+			expected:   true,
+		},
+		{
+			constraint: "<=3.11.13",
+			version:    "3.11.14",
+			expected:   false,
+		},
+		{
 			constraint: ">=4.0.0,<4.4.1",
 			version:    "4",
 			expected:   true,
