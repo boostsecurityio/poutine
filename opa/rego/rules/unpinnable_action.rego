@@ -20,7 +20,9 @@ results contains poutine.finding(rule, pkg.purl, {
 }) if {
 	pkg := input.packages[_]
 	action := pkg.github_actions_metadata[_]
-	purls := data.poutine.inventory.package_dependencies with input.packages as [{"github_actions_metadata": [action]}]
+	source_git_repo := pkg.source_git_repo
+	source_git_ref := pkg.source_git_ref
+	purls := data.poutine.inventory.package_dependencies with input.packages as [{"github_actions_metadata": [action], "source_git_repo": source_git_repo, "source_git_ref": source_git_ref}]
 
 	unpinned_purls := [p |
 		p := purls[_]
