@@ -16,7 +16,9 @@ func TestPurls(t *testing.T) {
 	})
 	i := NewInventory(o, nil, "", "")
 	pkg := &models.PackageInsights{
-		Purl: "pkg:github/org/owner",
+		Purl:          "pkg:github/org/owner",
+		SourceGitRepo: "org/owner",
+		SourceGitRef:  "main",
 	}
 	_ = pkg.NormalizePurl()
 	scannedPackage, err := i.ScanPackage(context.Background(), *pkg, "testdata")
@@ -39,17 +41,16 @@ func TestPurls(t *testing.T) {
 		"pkg:gitlabci/include/project?file_name=%2Ftemplates%2F.gitlab-ci-template.yml&project=my-group%2Fmy-project&ref=main",
 		"pkg:gitlabci/include/remote?download_url=https%3A%2F%2Fexample.com%2F.gitlab-ci.yml",
 		"pkg:gitlabci/include/component?project=my-org%2Fsecurity-components%2Fsecret-detection&ref=1.0&repository_url=gitlab.example.com",
-		// "pkg:gitlabci/include/local?file_name=%2F.local-ci-template.yml",
-		// "pkg:gitlabci/include/local?file_name=.gitlab-ci.yml",
 		"pkg:githubactions/org/repo@main",
 		"pkg:docker/debian%3Avuln",
 		"pkg:githubactions/bridgecrewio/checkov-action@main",
 		"pkg:githubactions/org/repo@main#.github/workflows/Reusable.yml",
 		"pkg:azurepipelinestask/DownloadPipelineArtifact@2",
 		"pkg:azurepipelinestask/Cache@2",
+		"pkg:githubactions/org/owner@main#.github/workflows/ci.yml",
 	}
 	assert.ElementsMatch(t, i.Purls(*scannedPackage), purls)
-	assert.Equal(t, 18, len(scannedPackage.BuildDependencies))
+	assert.Equal(t, 19, len(scannedPackage.BuildDependencies))
 	assert.Equal(t, 4, len(scannedPackage.PackageDependencies))
 }
 
@@ -60,7 +61,9 @@ func TestFindings(t *testing.T) {
 	i := NewInventory(o, nil, "gitlab", "")
 	purl := "pkg:github/org/owner"
 	pkg := &models.PackageInsights{
-		Purl: purl,
+		Purl:          purl,
+		SourceGitRepo: "org/owner",
+		SourceGitRef:  "main",
 	}
 	_ = pkg.NormalizePurl()
 
@@ -436,7 +439,9 @@ func TestSkipRule(t *testing.T) {
 	purl := "pkg:github/org/owner"
 	rule_id := "known_vulnerability_in_build_component"
 	pkg := &models.PackageInsights{
-		Purl: purl,
+		Purl:          purl,
+		SourceGitRepo: "org/owner",
+		SourceGitRef:  "main",
 	}
 	_ = pkg.NormalizePurl()
 
@@ -484,7 +489,9 @@ func TestRulesConfig(t *testing.T) {
 	rule_id := "pr_runs_on_self_hosted"
 	path := ".github/workflows/allowed_pr_runner.yml"
 	pkg := &models.PackageInsights{
-		Purl: purl,
+		Purl:          purl,
+		SourceGitRepo: "org/owner",
+		SourceGitRef:  "main",
 	}
 	_ = pkg.NormalizePurl()
 
