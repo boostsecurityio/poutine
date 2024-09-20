@@ -82,6 +82,9 @@ func PurlFromGithubActions(uses string, sourceGitRepo string, sourceGitRef strin
 
 	isLocal := uses[0] == '.'
 	if isLocal {
+		if strings.Contains(uses, "..") {
+			return purl, fmt.Errorf("invalid uses string")
+		}
 		subPath := uses[2:]
 		purl.Subpath = subPath
 		purl.Type = "githubactions"
