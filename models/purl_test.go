@@ -77,6 +77,10 @@ func TestPurlFromGithubActions(t *testing.T) {
 			sourceGitRef:  "2.18",
 			expected:      "pkg:githubactions/fasterxml/jackson-databind@2.18#.github/workflows/trigger_dep_builds.yml",
 		},
+		{
+			uses:  "./../action/init",
+			error: true,
+		},
 	}
 
 	for _, c := range cases {
