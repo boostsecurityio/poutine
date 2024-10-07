@@ -29,18 +29,28 @@ func registerBuiltinFunctions() {
 		},
 	)
 
-	rego.RegisterBuiltin1(
+	rego.RegisterBuiltin3(
 		&rego.Function{
 			Name: "purl.parse_github_actions",
-			Decl: types.NewFunction(types.Args(types.S), types.S),
+			Decl: types.NewFunction(types.Args(types.S, types.S, types.S), types.S),
 		},
-		func(_ rego.BuiltinContext, a *ast.Term) (*ast.Term, error) {
+		func(_ rego.BuiltinContext, a *ast.Term, b *ast.Term, c *ast.Term) (*ast.Term, error) {
 			var uses string
 			if err := ast.As(a.Value, &uses); err != nil {
 				return nil, err
 			}
 
-			purl, err := models.PurlFromGithubActions(uses)
+			var sourceGitRepo string
+			if err := ast.As(b.Value, &sourceGitRepo); err != nil {
+				return nil, err
+			}
+
+			var sourceGitRef string
+			if err := ast.As(c.Value, &sourceGitRef); err != nil {
+				return nil, err
+			}
+
+			purl, err := models.PurlFromGithubActions(uses, sourceGitRepo, sourceGitRef)
 			if err != nil {
 				return nil, err
 			}
