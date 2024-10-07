@@ -669,6 +669,46 @@ advisories = {
 			],
 			"vulnerable_commit_shas": [],
 		},
+		"CVE-2024-8263": {
+			"osv_id": "CVE-2024-8263",
+			"published": "2024-09-23T20:12:51.005Z",
+			"aliases": [],
+			"summary": "An improper privilege management vulnerability allowed arbitrary workflows to be committed using an improperly scoped PAT through the use of nested tags. This vulnerability affected all versions of GitHub Enterprise Server and was fixed in version 3.10.17, 3.11.15, 3.12.9, 3.13.4, and 3.14.1.\u00a0This vulnerability was reported via the GitHub Bug Bounty program.",
+			"severity": [{
+				"type": "CVSS_V4",
+				"score": "CVSS:4.0/AV:N/AC:L/AT:N/PR:H/UI:N/VC:N/VI:L/VA:N/SC:L/SI:H/SA:N",
+			}],
+			"cwe_ids": ["CWE-269"],
+			"vulnerable_versions": [],
+			"vulnerable_version_ranges": [
+				"<=3.14.0",
+				"<=3.13.3",
+				"<=3.12.8",
+				"<=3.11.14",
+				"<=3.10.16",
+			],
+			"vulnerable_commit_shas": [],
+		},
+		"CVE-2024-8770": {
+			"osv_id": "CVE-2024-8770",
+			"published": "2024-09-23T20:09:01.746Z",
+			"aliases": [],
+			"summary": "A Cross-Site Scripting (XSS) vulnerability was identified in the repository transfer feature of GitHub Enterprise Server, which allows attackers to steal sensitive user information via social engineering.\u00a0This vulnerability affected all versions of GitHub Enterprise Server and was fixed in version 3.10.17, 3.11.15, 3.12.9, 3.13.4, and 3.14.1.\u00a0This vulnerability was reported via the GitHub Bug Bounty program.",
+			"severity": [{
+				"type": "CVSS_V4",
+				"score": "CVSS:4.0/AV:N/AC:L/AT:P/PR:L/UI:A/VC:H/VI:L/VA:N/SC:L/SI:N/SA:N",
+			}],
+			"cwe_ids": ["CWE-79"],
+			"vulnerable_versions": [],
+			"vulnerable_version_ranges": [
+				"<=3.14.0",
+				"<=3.13.3",
+				"<=3.12.8",
+				"<=3.11.14",
+				"<=3.10.16",
+			],
+			"vulnerable_commit_shas": [],
+		},
 	},
 	"gitlab": {
 		"CVE-2020-13261": {
@@ -8234,7 +8274,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:U/C:N/I:L/A:N",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-863"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=10.0,<16.1.5",
@@ -8252,7 +8292,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
 			}],
-			"cwe_ids": [""],
+			"cwe_ids": ["CWE-770"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=13.2.4, <15.10.8",
@@ -8378,7 +8418,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:N/I:L/A:N",
 			}],
-			"cwe_ids": [""],
+			"cwe_ids": ["CWE-113"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=12.9, <15.10.8",
@@ -8432,7 +8472,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
 			}],
-			"cwe_ids": ["CWE-400"],
+			"cwe_ids": ["CWE-1333"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=15.2,<16.0.8",
@@ -8504,7 +8544,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:L",
 			}],
-			"cwe_ids": [""],
+			"cwe_ids": ["CWE-770"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=8.3, <15.10.8",
@@ -8522,7 +8562,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:N",
 			}],
-			"cwe_ids": ["CWE-200"],
+			"cwe_ids": ["CWE-282"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=0,<16.2.8",
@@ -8663,7 +8703,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:N/A:N",
 			}],
-			"cwe_ids": ["CWE-200"],
+			"cwe_ids": ["CWE-209"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=12.9,<16.0.8",
@@ -8699,7 +8739,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N",
 			}],
-			"cwe_ids": ["CWE-138"],
+			"cwe_ids": ["CWE-601"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=4.1,<16.1.5",
@@ -8717,7 +8757,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:L/I:N/A:N",
 			}],
-			"cwe_ids": ["CWE-200"],
+			"cwe_ids": ["CWE-201"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [">=3.0.29,<4.0.5"],
 			"vulnerable_commit_shas": [],
@@ -8748,7 +8788,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:N/I:L/A:N",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-262"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=15.2,<16.1.5",
@@ -8854,7 +8894,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:N/A:N",
 			}],
-			"cwe_ids": [""],
+			"cwe_ids": ["CWE-201"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=15.7, <15.10.8",
@@ -8890,7 +8930,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:U/C:L/I:N/A:N",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-359"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=13.7,<15.11.10",
@@ -8980,7 +9020,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:N",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-262"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=0,<16.0.8",
@@ -8998,7 +9038,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:U/C:N/I:L/A:N",
 			}],
-			"cwe_ids": ["CWE-345"],
+			"cwe_ids": ["CWE-347"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=12.2,<16.5.6",
@@ -9159,7 +9199,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:C/C:N/I:L/A:N",
 			}],
-			"cwe_ids": ["CWE-99"],
+			"cwe_ids": ["CWE-116"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=7.14,<15.11.10",
@@ -9191,7 +9231,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:N/A:N",
 			}],
-			"cwe_ids": ["CWE-285"],
+			"cwe_ids": ["CWE-862"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=11.8,<16.2.8",
@@ -9244,7 +9284,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:H/UI:N/S:U/C:N/I:H/A:N",
 			}],
-			"cwe_ids": [""],
+			"cwe_ids": ["CWE-266"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=14.1, <15.10.8",
@@ -9262,7 +9302,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:N",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-863"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=13.7,<15.11.10",
@@ -9298,7 +9338,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:C/C:L/I:L/A:N",
 			}],
-			"cwe_ids": ["CWE-200"],
+			"cwe_ids": ["CWE-201"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=15.1,<15.11.10",
@@ -9330,7 +9370,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
 			}],
-			"cwe_ids": ["CWE-200"],
+			"cwe_ids": ["CWE-201"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=16.0,<16.0.6",
@@ -9347,7 +9387,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:N",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-286"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=11.11,<16.2.8",
@@ -9365,7 +9405,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
 			}],
-			"cwe_ids": ["CWE-400"],
+			"cwe_ids": ["CWE-1333"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=15.11,<16.1.5",
@@ -9383,7 +9423,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
 			}],
-			"cwe_ids": ["CWE-400"],
+			"cwe_ids": ["CWE-1333"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=15.11,<16.1.5",
@@ -9401,7 +9441,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:L",
 			}],
-			"cwe_ids": ["CWE-400"],
+			"cwe_ids": ["CWE-770"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=10.3,<16.3.6",
@@ -9419,7 +9459,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
 			}],
-			"cwe_ids": ["CWE-200"],
+			"cwe_ids": ["CWE-209"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=16.0,<16.0.6",
@@ -9454,7 +9494,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
 			}],
-			"cwe_ids": ["CWE-400"],
+			"cwe_ids": ["CWE-1333"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=8.14,<16.0.8",
@@ -9490,7 +9530,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:L/A:N",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-201"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=11.6,<16.3.6",
@@ -9526,7 +9566,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
 			}],
-			"cwe_ids": ["CWE-200"],
+			"cwe_ids": ["CWE-201"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=16.2,<16.2.8",
@@ -9544,13 +9584,27 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
 			}],
-			"cwe_ids": ["CWE-400"],
+			"cwe_ids": ["CWE-1333"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=10.3,<15.11.10",
 				">=16.0,<16.0.6",
 				">=16.1,<16.1.1",
 			],
+			"vulnerable_commit_shas": [],
+		},
+		"CVE-2023-3441": {
+			"osv_id": "CVE-2023-3441",
+			"published": "2024-10-01T09:47:16.444Z",
+			"aliases": [],
+			"summary": "An issue has been discovered in GitLab EE/CE affecting all versions starting from 8.0 before 16.4. The product did not sufficiently warn about security implications of granting merge rights to protected branches.",
+			"severity": [{
+				"type": "CVSS_V3",
+				"score": "CVSS:3.1/AV:N/AC:H/PR:H/UI:N/S:C/C:H/I:L/A:N",
+			}],
+			"cwe_ids": ["CWE-213"],
+			"vulnerable_versions": [],
+			"vulnerable_version_ranges": [">=8.0,<16.4"],
 			"vulnerable_commit_shas": [],
 		},
 		"CVE-2023-3443": {
@@ -9562,7 +9616,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:L/A:N",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-863"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=12.1,<16.4.3",
@@ -9580,7 +9634,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:U/C:N/I:H/A:N",
 			}],
-			"cwe_ids": ["CWE-99"],
+			"cwe_ids": ["CWE-863"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=15.3,<15.11.10",
@@ -9598,7 +9652,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:C/C:H/I:H/A:H",
 			}],
-			"cwe_ids": ["CWE-840"],
+			"cwe_ids": ["CWE-863"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=12.8,<15.11.11",
@@ -9634,7 +9688,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:L/A:N",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-863"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=0,<16.7.6",
@@ -9652,7 +9706,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:L/A:N",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-863"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=8.17,<16.4.4",
@@ -9670,7 +9724,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:L",
 			}],
-			"cwe_ids": ["CWE-20"],
+			"cwe_ids": ["CWE-1287"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=16.1,<16.1.3",
@@ -9687,7 +9741,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:L",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-1287"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				"<=16.4.3",
@@ -9705,7 +9759,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:U/C:L/I:N/A:N",
 			}],
-			"cwe_ids": ["CWE-20"],
+			"cwe_ids": ["CWE-1287"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=12.3,<16.2.8",
@@ -9723,7 +9777,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:N/I:H/A:N",
 			}],
-			"cwe_ids": ["CWE-269"],
+			"cwe_ids": ["CWE-286"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=16.0,<16.4.4",
@@ -9741,7 +9795,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:L",
 			}],
-			"cwe_ids": ["CWE-400"],
+			"cwe_ids": ["CWE-1333"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=12.3,<16.3.6",
@@ -9759,7 +9813,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:N",
 			}],
-			"cwe_ids": ["CWE-840"],
+			"cwe_ids": ["CWE-286"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=0,<16.2.8",
@@ -9795,7 +9849,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:L",
 			}],
-			"cwe_ids": ["CWE-20"],
+			"cwe_ids": ["CWE-1287"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=0,<16.2.8",
@@ -9813,7 +9867,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:N",
 			}],
-			"cwe_ids": ["CWE-345"],
+			"cwe_ids": ["CWE-863"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=11.2,<16.2.8",
@@ -9831,7 +9885,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:C/C:N/I:N/A:L",
 			}],
-			"cwe_ids": ["CWE-74"],
+			"cwe_ids": ["CWE-601"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=16.2,<16.2.8",
@@ -9849,7 +9903,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:C/C:H/I:H/A:N",
 			}],
-			"cwe_ids": ["CWE-862"],
+			"cwe_ids": ["CWE-286"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=13.12,<16.0.8",
@@ -9867,7 +9921,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
 			}],
-			"cwe_ids": ["CWE-200"],
+			"cwe_ids": ["CWE-201"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=11.3,<16.4.3",
@@ -9902,7 +9956,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:N",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-863"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=13.2,<16.4.3",
@@ -9920,7 +9974,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:L/A:N",
 			}],
-			"cwe_ids": ["CWE-200"],
+			"cwe_ids": ["CWE-863"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=10.6,<16.2.8",
@@ -9938,7 +9992,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:H/I:N/A:N",
 			}],
-			"cwe_ids": ["CWE-200"],
+			"cwe_ids": ["CWE-532"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=14.3,<16.0.8",
@@ -9956,7 +10010,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
 			}],
-			"cwe_ids": ["CWE-400"],
+			"cwe_ids": ["CWE-1333"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=9.3,<16.0.8",
@@ -9974,7 +10028,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:H/I:N/A:N",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-201"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=14.1,<16.0.8",
@@ -9992,7 +10046,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
 			}],
-			"cwe_ids": ["CWE-367"],
+			"cwe_ids": ["CWE-708"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=15.9,<16.0.8",
@@ -10010,7 +10064,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:L",
 			}],
-			"cwe_ids": ["CWE-400"],
+			"cwe_ids": ["CWE-770"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [">=15.11,<16.2.2"],
 			"vulnerable_commit_shas": [],
@@ -10024,7 +10078,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:N",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-425"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=16.2,<16.2.5",
@@ -10041,7 +10095,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:N",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-863"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=9.2,<16.4.3",
@@ -10059,7 +10113,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:C/C:L/I:L/A:N",
 			}],
-			"cwe_ids": ["CWE-200"],
+			"cwe_ids": ["CWE-201"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=11.8,<16.1.5",
@@ -10077,7 +10131,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:H/UI:R/S:C/C:H/I:H/A:N",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-863"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=15.3,<16.2.8",
@@ -10095,7 +10149,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:L",
 			}],
-			"cwe_ids": ["CWE-138"],
+			"cwe_ids": ["CWE-1287"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [">=0,<16.2.0"],
 			"vulnerable_commit_shas": [],
@@ -10109,7 +10163,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:N",
 			}],
-			"cwe_ids": ["CWE-200"],
+			"cwe_ids": ["CWE-863"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=16.2,<16.2.8",
@@ -10127,7 +10181,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:L/I:N/A:N",
 			}],
-			"cwe_ids": ["CWE-200"],
+			"cwe_ids": ["CWE-862"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=10.6,<16.1.5",
@@ -10145,7 +10199,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:H",
 			}],
-			"cwe_ids": ["CWE-400"],
+			"cwe_ids": ["CWE-770"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=15.2,<16.1.5",
@@ -10163,7 +10217,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:L/A:N",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-863"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=8.13,<16.4.3",
@@ -10181,7 +10235,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:C/C:L/I:N/A:N",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-862"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=14.7,<16.3.6",
@@ -10199,7 +10253,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:C/C:L/I:H/A:N",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-863"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=15.3,<16.5.6",
@@ -10217,7 +10271,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:N",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-862"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=12.0,<16.7.6",
@@ -10235,7 +10289,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L",
 			}],
-			"cwe_ids": ["CWE-400"],
+			"cwe_ids": ["CWE-770"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=10.5,<16.4.3",
@@ -10253,7 +10307,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:C/C:H/I:H/A:N",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-863"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=13.12,<16.2.7",
@@ -10270,7 +10324,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:N",
 			}],
-			"cwe_ids": ["CWE-285"],
+			"cwe_ids": ["CWE-862"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=9.3,<16.4.4",
@@ -10288,7 +10342,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:C/C:H/I:H/A:N",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-863"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=13.12,<16.2.8",
@@ -10306,7 +10360,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:N",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-863"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				"<=16.2.7",
@@ -10324,7 +10378,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:C/C:H/I:H/A:N",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-250"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=16.4,<16.4.1",
@@ -10360,7 +10414,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:H/UI:N/S:U/C:H/I:H/A:N",
 			}],
-			"cwe_ids": ["CWE-16"],
+			"cwe_ids": ["CWE-1395"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=9.5.0,<16.2.8",
@@ -10414,7 +10468,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
 			}],
-			"cwe_ids": ["CWE-200"],
+			"cwe_ids": ["CWE-862"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=0,<16.6.6",
@@ -10432,7 +10486,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
 			}],
-			"cwe_ids": ["CWE-400"],
+			"cwe_ids": ["CWE-835"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=16.2,<16.3.6",
@@ -10450,7 +10504,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:N/A:N",
 			}],
-			"cwe_ids": ["CWE-200"],
+			"cwe_ids": ["CWE-201"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=16.0,<16.3.6",
@@ -10486,7 +10540,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:L",
 			}],
-			"cwe_ids": ["CWE-20"],
+			"cwe_ids": ["CWE-770"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=13.9,<16.3.6",
@@ -10504,7 +10558,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:H/UI:N/S:U/C:H/I:N/A:N",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-863"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=16.2,<16.4.3",
@@ -10594,7 +10648,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:H/I:H/A:L",
 			}],
-			"cwe_ids": ["CWE-269"],
+			"cwe_ids": ["CWE-266"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=16.5,<16.7.6",
@@ -10612,7 +10666,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:L",
 			}],
-			"cwe_ids": ["CWE-400"],
+			"cwe_ids": ["CWE-1333"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=16.7.7,<16.8.6",
@@ -10630,7 +10684,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:L",
 			}],
-			"cwe_ids": ["CWE-400"],
+			"cwe_ids": ["CWE-1333"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=0,<16.10.6",
@@ -10648,7 +10702,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:H/A:N",
 			}],
-			"cwe_ids": ["CWE-285"],
+			"cwe_ids": ["CWE-863"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=16.4.3,<16.4.4",
@@ -10666,7 +10720,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:L",
 			}],
-			"cwe_ids": ["CWE-400"],
+			"cwe_ids": ["CWE-1333"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=0,<16.8.6",
@@ -10702,7 +10756,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
 			}],
-			"cwe_ids": ["CWE-400"],
+			"cwe_ids": ["CWE-1333"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=16.9,<16.9.7",
@@ -10720,7 +10774,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
 			}],
-			"cwe_ids": ["CWE-400"],
+			"cwe_ids": ["CWE-1333"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [">=16.11,<16.11.2"],
 			"vulnerable_commit_shas": [],
@@ -10734,7 +10788,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
 			}],
-			"cwe_ids": ["CWE-400"],
+			"cwe_ids": ["CWE-1333"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=11.3,<16.7.6",
@@ -10752,7 +10806,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:L/I:H/A:H",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-862"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=16.4,<16.6.7",
@@ -10765,12 +10819,12 @@ advisories = {
 			"osv_id": "CVE-2023-6955",
 			"published": "2024-01-12T13:56:31.881Z",
 			"aliases": [],
-			"summary": "An improper access control vulnerability exists in GitLab Remote Development affecting all versions prior to 16.5.6, 16.6 prior to 16.6.4 and 16.7 prior to 16.7.2. This condition allows an attacker to create a workspace in one group that is associated with an agent from another group.",
+			"summary": "A missing authorization check vulnerability exists in GitLab Remote Development affecting all versions prior to 16.5.6, 16.6 prior to 16.6.4 and 16.7 prior to 16.7.2. This condition allows an attacker to create a workspace in one group that is associated with an agent from another group.",
 			"severity": [{
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:H/UI:N/S:C/C:H/I:L/A:N",
 			}],
-			"cwe_ids": ["CWE-863"],
+			"cwe_ids": ["CWE-862"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=0,<16.5.6",
@@ -10828,7 +10882,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:C/C:H/I:H/A:N",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-863"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=11.3,<16.7.7",
@@ -10883,7 +10937,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:C/C:H/I:H/A:N",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-841"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=15.1,<16.7.6",
@@ -10901,7 +10955,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:N",
 			}],
-			"cwe_ids": ["CWE-285"],
+			"cwe_ids": ["CWE-425"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=14.0,<16.6.6",
@@ -10919,7 +10973,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:N",
 			}],
-			"cwe_ids": ["CWE-285"],
+			"cwe_ids": ["CWE-425"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=16.9,<16.9.1",
@@ -10937,7 +10991,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
 			}],
-			"cwe_ids": ["CWE-400"],
+			"cwe_ids": ["CWE-770"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=13.3.3,<16.6.7",
@@ -10955,7 +11009,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:H/I:H/A:N",
 			}],
-			"cwe_ids": ["CWE-269"],
+			"cwe_ids": ["CWE-268"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [">=16.8,<16.8.2"],
 			"vulnerable_commit_shas": [],
@@ -10969,7 +11023,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:H/I:H/A:N",
 			}],
-			"cwe_ids": ["CWE-863"],
+			"cwe_ids": ["CWE-268"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=16.8,<16.8.4",
@@ -10986,7 +11040,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:N",
 			}],
-			"cwe_ids": ["CWE-287"],
+			"cwe_ids": ["CWE-290"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=0.0,<16.9.6",
@@ -11054,7 +11108,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:H/A:N",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-288"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=16.1,<16.7.6",
@@ -11108,7 +11162,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:L",
 			}],
-			"cwe_ids": ["CWE-400"],
+			"cwe_ids": ["CWE-409"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=13.2.4,<16.10.6",
@@ -11216,7 +11270,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
 			}],
-			"cwe_ids": ["CWE-400"],
+			"cwe_ids": ["CWE-770"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=15.11,<16.9.7",
@@ -11234,7 +11288,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
 			}],
-			"cwe_ids": ["CWE-400"],
+			"cwe_ids": ["CWE-1333"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=0.0,<16.9.7",
@@ -11288,7 +11342,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:L",
 			}],
-			"cwe_ids": ["CWE-400"],
+			"cwe_ids": ["CWE-770"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=0,<16.8.5",
@@ -11306,7 +11360,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
 			}],
-			"cwe_ids": ["CWE-400"],
+			"cwe_ids": ["CWE-1333"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=12.5,<16.9.6",
@@ -11324,7 +11378,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
 			}],
-			"cwe_ids": ["CWE-400"],
+			"cwe_ids": ["CWE-770"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=0,<16.10.6",
@@ -11521,12 +11575,30 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:U/C:H/I:H/A:N",
 			}],
-			"cwe_ids": ["CWE-287"],
+			"cwe_ids": ["CWE-302"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=7.8,<16.9.6",
 				">=16.10,<16.10.4",
 				">=16.11,<16.11.1",
+			],
+			"vulnerable_commit_shas": [],
+		},
+		"CVE-2024-4099": {
+			"osv_id": "CVE-2024-4099",
+			"published": "2024-09-26T23:02:15.810Z",
+			"aliases": [],
+			"summary": "An issue has been discovered in GitLab EE affecting all versions starting from 16.0 prior to 17.2.8, from 17.3 prior to 17.3.4, and from 17.4 prior to 17.4.1. An AI feature was found to read unsanitized content in a way that could have allowed an attacker to hide prompt injection.",
+			"severity": [{
+				"type": "CVSS_V3",
+				"score": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:N/I:L/A:N",
+			}],
+			"cwe_ids": ["CWE-116"],
+			"vulnerable_versions": [],
+			"vulnerable_version_ranges": [
+				">=16.0,<17.2.8",
+				">=17.3,<17.3.4",
+				">=17.4,<17.4.1",
 			],
 			"vulnerable_commit_shas": [],
 		},
@@ -11584,6 +11656,24 @@ advisories = {
 			],
 			"vulnerable_commit_shas": [],
 		},
+		"CVE-2024-4278": {
+			"osv_id": "CVE-2024-4278",
+			"published": "2024-09-26T06:30:59.796Z",
+			"aliases": [],
+			"summary": "An information disclosure issue has been discovered in GitLab EE affecting all versions starting from 16.5 prior to 17.2.8, from 17.3 prior to 17.3.4, and from 17.4 prior to 17.4.1. A maintainer could obtain a Dependency Proxy password by editing a certain Dependency Proxy setting.",
+			"severity": [{
+				"type": "CVSS_V3",
+				"score": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:C/C:L/I:L/A:N",
+			}],
+			"cwe_ids": ["CWE-821"],
+			"vulnerable_versions": [],
+			"vulnerable_version_ranges": [
+				">=16.5,<17.2.8",
+				">=17.3,<17.3.4",
+				">=17.4,<17.4.1",
+			],
+			"vulnerable_commit_shas": [],
+		},
 		"CVE-2024-4283": {
 			"osv_id": "CVE-2024-4283",
 			"published": "2024-09-16T21:34:08.579Z",
@@ -11629,7 +11719,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:L",
 			}],
-			"cwe_ids": ["CWE-400"],
+			"cwe_ids": ["CWE-770"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=15.4,<16.9.7",
@@ -11826,7 +11916,7 @@ advisories = {
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
 			}],
-			"cwe_ids": ["CWE-284"],
+			"cwe_ids": ["CWE-862"],
 			"vulnerable_versions": [],
 			"vulnerable_version_ranges": [
 				">=11.11,<16.10.6",
@@ -12369,6 +12459,24 @@ advisories = {
 				">=16.9.7,<17.1.7",
 				">=17.2,<17.2.5",
 				">=17.3,<17.3.2",
+			],
+			"vulnerable_commit_shas": [],
+		},
+		"CVE-2024-8974": {
+			"osv_id": "CVE-2024-8974",
+			"published": "2024-09-26T23:02:00.153Z",
+			"aliases": [],
+			"summary": "Information disclosure in Gitlab EE/CE affecting all versions from 15.6 prior to 17.2.8, 17.3 prior to 17.3.4, and 17.4 prior to 17.4.1 in specific conditions it was possible to disclose to an unauthorised user the path of a private project.\"",
+			"severity": [{
+				"type": "CVSS_V3",
+				"score": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N",
+			}],
+			"cwe_ids": ["CWE-684"],
+			"vulnerable_versions": [],
+			"vulnerable_version_ranges": [
+				">=15.6,<17.2.8",
+				">=17.3,<17.3.4",
+				">=17.4,<17.4.1",
 			],
 			"vulnerable_commit_shas": [],
 		},
