@@ -119,7 +119,7 @@ See [.poutine.sample.yml](.poutine.sample.yml) for an example configuration file
 
 ## Building from source
 
-Building `poutine` requires Go 1.22.
+Building `poutine` requires Go 1.23.
 
 ```bash
 git clone https://github.com/boostsecurityio/poutine.git

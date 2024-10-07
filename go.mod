@@ -1,6 +1,6 @@
 module github.com/boostsecurityio/poutine
 
-go 1.22.0
+go 1.23.0
 
 require (
 	github.com/gofri/go-github-ratelimit v1.1.0
