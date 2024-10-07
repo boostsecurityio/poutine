@@ -74,9 +74,7 @@ type CVEData struct {
 	} `json:"containers"`
 }
 
-func TransformCVEDataToAdvisories(cveData []CVEData) PlatformAdvisories {
-	advisories := PlatformAdvisories{}
-
+func TransformCVEDataToAdvisories(advisories PlatformAdvisories, cveData []CVEData) PlatformAdvisories {
 	for _, data := range cveData {
 		for _, affected := range data.Containers.CNA.Affected {
 			vendor := strings.ToLower(affected.Vendor)
@@ -217,7 +215,13 @@ func TestPopulateDatabase(t *testing.T) {
 		return nil
 	})
 
-	advisories := TransformCVEDataToAdvisories(cves)
+	poutineAdvisories, err := GetPoutineAdvisories()
+	assert.NoError(t, err)
+
+	assert.NotNil(t, poutineAdvisories)
+	assert.NotEmpty(t, poutineAdvisories)
+
+	advisories := TransformCVEDataToAdvisories(poutineAdvisories, cves)
 
 	advisoriesJson, err := AdvisoriesToJSON(advisories)
 	assert.NoError(t, err)
@@ -238,4 +242,21 @@ func TestPopulateDatabase(t *testing.T) {
 	if err != nil {
 		log.Fatalf("Failed to write updated content to file: %v", err)
 	}
+}
+
+func GetPoutineAdvisories() (PlatformAdvisories, error) {
+	advisories := PlatformAdvisories{}
+
+	advisoriesPath := "poutine_build_platform_advisories.json"
+
+	content, err := os.ReadFile(advisoriesPath)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(content, &advisories)
+	if err != nil {
+		return nil, err
+	}
+	return advisories, nil
 }
