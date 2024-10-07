@@ -1,0 +1,26 @@
+{
+  "gitlab": {
+    "PVE-2024-00001": {
+      "osv_id": "PVE-2024-00001",
+      "published": "2024-09-10T18:50:12.965Z",
+      "aliases": [],
+      "summary": "Dependencies omniauth-saml and ruby-saml through CVE-2024-45409 do not properly verify the signature of the SAML Response. An unauthenticated attacker with access to any signed saml document (by the IdP) can thus forge a SAML Response/Assertion with arbitrary contents. This would allow the attacker to log in as arbitrary user within the vulnerable system",
+      "severity": [{
+        "type": "CVSS_V3",
+        "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:N"
+      }],
+      "cwe_ids": [
+        "CWE-347"
+      ],
+      "vulnerable_versions": [],
+      "vulnerable_version_ranges": [
+        ">=17.3, <17.3.3",
+        ">=17.2, <17.2.7",
+        ">=17.1, <17.1.8",
+        ">=17.0, <17.0.8",
+        ">=16.11, <16.11.10"
+      ],
+      "vulnerable_commit_shas": []
+    }
+  }
+}
