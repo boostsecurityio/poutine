@@ -14,14 +14,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type GitCloneError struct {
-	msg string
-}
-
-func (e *GitCloneError) Error() string {
-	return e.msg
-}
-
 type GitClient struct {
 	Command GitCommand
 }
@@ -38,19 +30,68 @@ type GitCommand interface {
 	ReadFile(path string) ([]byte, error)
 }
 
+type GitCommandError struct {
+	Command string
+	Err     error
+}
+
+func (e *GitCommandError) Error() string {
+	return fmt.Sprintf("error running command `%s`: %v", e.Command, e.Err)
+}
+
+func (e *GitCommandError) Unwrap() error {
+	return e.Err
+}
+
+type GitExitError struct {
+	Command  string
+	Stderr   string
+	ExitCode int
+	Err      error
+}
+
+func (e *GitExitError) Error() string {
+	return fmt.Sprintf("command `%s` failed: %v, stderr: %s", e.Command, e.Err, e.Stderr)
+}
+
+func (e *GitExitError) Unwrap() error {
+	return e.Err
+}
+
 type ExecGitCommand struct{}
 
 func (g *ExecGitCommand) Run(ctx context.Context, cmd string, args []string, dir string) ([]byte, error) {
 	command := exec.CommandContext(ctx, cmd, args...)
 	command.Dir = dir
-	stdout, err := command.Output()
+	var stdout, stderr strings.Builder
+	command.Stdout = &stdout
+	command.Stderr = &stderr
+
+	err := command.Run()
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			return nil, fmt.Errorf("command `%s` returned an error: %w stderr: %s", command.String(), err, string(bytes.TrimSpace(exitErr.Stderr)))
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			exitCode := exitErr.ExitCode()
+			stderrMsg := strings.TrimSpace(stderr.String())
+
+			if stderrMsg == "" {
+				stderrMsg = exitErr.Error()
+			}
+
+			return nil, &GitExitError{
+				Command:  command.String(),
+				Stderr:   stderrMsg,
+				ExitCode: exitCode,
+				Err:      exitErr,
+			}
 		}
-		return nil, fmt.Errorf("error running command: %w", err)
+		return nil, &GitCommandError{
+			Command: command.String(),
+			Err:     err,
+		}
 	}
-	return stdout, nil
+
+	return []byte(stdout.String()), nil
 }
 
 func (g *ExecGitCommand) ReadFile(path string) ([]byte, error) {
