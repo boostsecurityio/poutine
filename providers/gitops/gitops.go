@@ -58,6 +58,14 @@ func (e *GitExitError) Unwrap() error {
 	return e.Err
 }
 
+type GitNotFoundError struct {
+	Command string
+}
+
+func (e *GitNotFoundError) Error() string {
+	return fmt.Sprintf("git binary not found for command `%s`. Please ensure Git is installed and available in your PATH.", e.Command)
+}
+
 type ExecGitCommand struct{}
 
 func (g *ExecGitCommand) Run(ctx context.Context, cmd string, args []string, dir string) ([]byte, error) {
@@ -69,6 +77,13 @@ func (g *ExecGitCommand) Run(ctx context.Context, cmd string, args []string, dir
 
 	err := command.Run()
 	if err != nil {
+		var execErr *exec.Error
+		if errors.As(err, &execErr) && errors.Is(execErr.Err, exec.ErrNotFound) {
+			return nil, &GitNotFoundError{
+				Command: command.String(),
+			}
+		}
+
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
 			exitCode := exitErr.ExitCode()
