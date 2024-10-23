@@ -233,15 +233,42 @@ type LocalGitClient struct {
 }
 
 func (g *LocalGitClient) GetRemoteOriginURL(ctx context.Context, repoPath string) (string, error) {
-	return g.GitClient.GetRemoteOriginURL(ctx, repoPath)
+	remoteOriginURL, err := g.GitClient.GetRemoteOriginURL(ctx, repoPath)
+	if err != nil {
+		var gitErr GitError
+		if errors.As(err, &gitErr) {
+			log.Debug().Err(err).Msg("failed to get remote origin URL for local repo")
+			return repoPath, nil
+		}
+		return "", err
+	}
+	return remoteOriginURL, nil
 }
 
 func (g *LocalGitClient) LastCommitDate(ctx context.Context, clonePath string) (time.Time, error) {
-	return g.GitClient.LastCommitDate(ctx, clonePath)
+	lastCommitDate, err := g.GitClient.LastCommitDate(ctx, clonePath)
+	if err != nil {
+		var gitErr GitError
+		if errors.As(err, &gitErr) {
+			log.Debug().Err(err).Msg("failed to get last commit date for local repo")
+			return time.Now(), nil
+		}
+		return time.Time{}, err
+	}
+	return lastCommitDate, nil
 }
 
 func (g *LocalGitClient) CommitSHA(clonePath string) (string, error) {
-	return g.GitClient.CommitSHA(clonePath)
+	commitSHA, err := g.GitClient.CommitSHA(clonePath)
+	if err != nil {
+		var gitErr GitError
+		if errors.As(err, &gitErr) {
+			log.Debug().Err(err).Msg("failed to get commit SHA for local repo")
+			return "", nil
+		}
+		return "", err
+	}
+	return commitSHA, nil
 }
 
 func (g *LocalGitClient) Clone(ctx context.Context, clonePath string, url string, token string, ref string) error {
@@ -255,6 +282,11 @@ func (g *LocalGitClient) GetRepoHeadBranchName(ctx context.Context, repoPath str
 
 	output, err := g.GitClient.Command.Run(ctx, cmd, args, repoPath)
 	if err != nil {
+		var gitErr GitError
+		if errors.As(err, &gitErr) {
+			log.Debug().Err(err).Msg("failed to get repo head branch name for local repo")
+			return "local", nil
+		}
 		return "", err
 	}
 
