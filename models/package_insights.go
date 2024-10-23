@@ -63,7 +63,7 @@ func (p *PackageInsights) GetSourceGitRepoURI() string {
 func (p *PackageInsights) NormalizePurl() error {
 	purl, err := NewPurl(p.Purl)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating new purl for normalization: %w", err)
 	}
 
 	p.Purl = purl.String()
