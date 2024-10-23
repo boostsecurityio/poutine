@@ -30,40 +30,57 @@ type GitCommand interface {
 	ReadFile(path string) ([]byte, error)
 }
 
+type GitError interface {
+	error
+	Command() string
+}
+
 type GitCommandError struct {
-	Command string
-	Err     error
+	CommandStr string
+	Err        error
 }
 
 func (e *GitCommandError) Error() string {
-	return fmt.Sprintf("error running command `%s`: %v", e.Command, e.Err)
+	return fmt.Sprintf("error running command `%s`: %v", e.CommandStr, e.Err)
 }
 
 func (e *GitCommandError) Unwrap() error {
 	return e.Err
 }
 
+func (e *GitCommandError) Command() string {
+	return e.CommandStr
+}
+
 type GitExitError struct {
-	Command  string
-	Stderr   string
-	ExitCode int
-	Err      error
+	CommandStr string
+	Stderr     string
+	ExitCode   int
+	Err        error
 }
 
 func (e *GitExitError) Error() string {
-	return fmt.Sprintf("command `%s` failed: %v, stderr: %s", e.Command, e.Err, e.Stderr)
+	return fmt.Sprintf("command `%s` failed with exit code %d: %v, stderr: %s", e.CommandStr, e.ExitCode, e.Err, e.Stderr)
 }
 
 func (e *GitExitError) Unwrap() error {
 	return e.Err
 }
 
+func (e *GitExitError) Command() string {
+	return e.CommandStr
+}
+
 type GitNotFoundError struct {
-	Command string
+	CommandStr string
 }
 
 func (e *GitNotFoundError) Error() string {
-	return fmt.Sprintf("git binary not found for command `%s`. Please ensure Git is installed and available in your PATH.", e.Command)
+	return fmt.Sprintf("git binary not found for command `%s`. Please ensure Git is installed and available in your PATH.", e.CommandStr)
+}
+
+func (e *GitNotFoundError) Command() string {
+	return e.CommandStr
 }
 
 type ExecGitCommand struct{}
@@ -80,7 +97,7 @@ func (g *ExecGitCommand) Run(ctx context.Context, cmd string, args []string, dir
 		var execErr *exec.Error
 		if errors.As(err, &execErr) && errors.Is(execErr.Err, exec.ErrNotFound) {
 			return nil, &GitNotFoundError{
-				Command: command.String(),
+				CommandStr: command.String(),
 			}
 		}
 
@@ -94,15 +111,15 @@ func (g *ExecGitCommand) Run(ctx context.Context, cmd string, args []string, dir
 			}
 
 			return nil, &GitExitError{
-				Command:  command.String(),
-				Stderr:   stderrMsg,
-				ExitCode: exitCode,
-				Err:      exitErr,
+				CommandStr: command.String(),
+				Stderr:     stderrMsg,
+				ExitCode:   exitCode,
+				Err:        exitErr,
 			}
 		}
 		return nil, &GitCommandError{
-			Command: command.String(),
-			Err:     err,
+			CommandStr: command.String(),
+			Err:        err,
 		}
 	}
 
