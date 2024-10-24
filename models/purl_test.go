@@ -36,9 +36,11 @@ func TestNewPurl(t *testing.T) {
 
 func TestPurlFromGithubActions(t *testing.T) {
 	cases := []struct {
-		uses     string
-		expected string
-		error    bool
+		uses          string
+		sourceGitRepo string
+		sourceGitRef  string
+		expected      string
+		error         bool
 	}{
 
 		{
@@ -48,11 +50,6 @@ func TestPurlFromGithubActions(t *testing.T) {
 		{
 			uses:     "github/codeql-action/Analyze@v4",
 			expected: "pkg:githubactions/github/codeql-action@v4#Analyze",
-		},
-		{
-			uses:     "./.github/actions/custom",
-			expected: "",
-			error:    true,
 		},
 		{
 			uses:     "docker://alpine:latest",
@@ -74,10 +71,20 @@ func TestPurlFromGithubActions(t *testing.T) {
 			uses:  "invalid",
 			error: true,
 		},
+		{
+			uses:          "./.github/workflows/trigger_dep_builds.yml",
+			sourceGitRepo: "FasterXML/jackson-databind",
+			sourceGitRef:  "2.18",
+			expected:      "pkg:githubactions/fasterxml/jackson-databind@2.18#.github/workflows/trigger_dep_builds.yml",
+		},
+		{
+			uses:  "./../action/init",
+			error: true,
+		},
 	}
 
 	for _, c := range cases {
-		p, err := PurlFromGithubActions(c.uses)
+		p, err := PurlFromGithubActions(c.uses, c.sourceGitRepo, c.sourceGitRef)
 
 		if !c.error {
 			assert.Nil(t, err)

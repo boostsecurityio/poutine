@@ -27,8 +27,10 @@ func (p *Purl) Normalize() {
 			ns += "/"
 		}
 		parts := strings.SplitN(ns+p.Name, "/", 3)
-		p.Namespace = strings.ToLower(parts[0])
-		p.Name = strings.ToLower(parts[1])
+		if len(parts) >= 2 {
+			p.Namespace = strings.ToLower(parts[0])
+			p.Name = strings.ToLower(parts[1])
+		}
 
 		if len(parts) == 3 {
 			p.Subpath = parts[2]
@@ -71,16 +73,27 @@ func PurlFromDockerImage(image string) (Purl, error) {
 	return Purl{PackageURL: purl}, err
 }
 
-func PurlFromGithubActions(uses string) (Purl, error) {
+func PurlFromGithubActions(uses string, sourceGitRepo string, sourceGitRef string) (Purl, error) {
 	purl := Purl{}
 
 	if len(uses) == 0 {
 		return purl, fmt.Errorf("invalid uses string")
 	}
 
-	is_local := uses[0] == '.'
-	if is_local {
-		return purl, fmt.Errorf("local actions are not supported")
+	isLocal := uses[0] == '.'
+	if isLocal {
+		if strings.Contains(uses, "..") {
+			return purl, fmt.Errorf("invalid uses string")
+		}
+		subPath := uses[2:]
+		purl.Subpath = subPath
+		purl.Type = "githubactions"
+
+		purl.Name = sourceGitRepo
+		purl.Version = sourceGitRef
+
+		purl.Normalize()
+		return purl, nil
 	}
 
 	if strings.HasPrefix(uses, "docker://") {
@@ -94,12 +107,12 @@ func PurlFromGithubActions(uses string) (Purl, error) {
 		return purl, fmt.Errorf("invalid uses string")
 	}
 
-	action_name := parts[0]
-	action_version := parts[1]
+	actionName := parts[0]
+	actionVersion := parts[1]
 
 	purl.Type = "githubactions"
-	purl.Name = action_name
-	purl.Version = action_version
+	purl.Name = actionName
+	purl.Version = actionVersion
 
 	purl.Normalize()
 	return purl, nil
