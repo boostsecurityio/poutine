@@ -359,7 +359,7 @@ func (a *Analyzer) generatePackageInsights(ctx context.Context, tempDir string, 
 	}
 	err = pkg.NormalizePurl()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to normalize purl: %w", err)
 	}
 	return pkg, nil
 }

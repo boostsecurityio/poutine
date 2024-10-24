@@ -14,14 +14,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type GitCloneError struct {
-	msg string
-}
-
-func (e *GitCloneError) Error() string {
-	return e.msg
-}
-
 type GitClient struct {
 	Command GitCommand
 }
@@ -38,19 +30,100 @@ type GitCommand interface {
 	ReadFile(path string) ([]byte, error)
 }
 
+type GitError interface {
+	error
+	Command() string
+}
+
+type GitCommandError struct {
+	CommandStr string
+	Err        error
+}
+
+func (e *GitCommandError) Error() string {
+	return fmt.Sprintf("error running command `%s`: %v", e.CommandStr, e.Err)
+}
+
+func (e *GitCommandError) Unwrap() error {
+	return e.Err
+}
+
+func (e *GitCommandError) Command() string {
+	return e.CommandStr
+}
+
+type GitExitError struct {
+	CommandStr string
+	Stderr     string
+	ExitCode   int
+	Err        error
+}
+
+func (e *GitExitError) Error() string {
+	return fmt.Sprintf("command `%s` failed with exit code %d: %v, stderr: %s", e.CommandStr, e.ExitCode, e.Err, e.Stderr)
+}
+
+func (e *GitExitError) Unwrap() error {
+	return e.Err
+}
+
+func (e *GitExitError) Command() string {
+	return e.CommandStr
+}
+
+type GitNotFoundError struct {
+	CommandStr string
+}
+
+func (e *GitNotFoundError) Error() string {
+	return fmt.Sprintf("git binary not found for command `%s`. Please ensure Git is installed and available in your PATH.", e.CommandStr)
+}
+
+func (e *GitNotFoundError) Command() string {
+	return e.CommandStr
+}
+
 type ExecGitCommand struct{}
 
 func (g *ExecGitCommand) Run(ctx context.Context, cmd string, args []string, dir string) ([]byte, error) {
 	command := exec.CommandContext(ctx, cmd, args...)
 	command.Dir = dir
-	stdout, err := command.Output()
+	var stdout, stderr strings.Builder
+	command.Stdout = &stdout
+	command.Stderr = &stderr
+
+	err := command.Run()
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			return nil, fmt.Errorf("command `%s` returned an error: %w stderr: %s", command.String(), err, string(bytes.TrimSpace(exitErr.Stderr)))
+		var execErr *exec.Error
+		if errors.As(err, &execErr) && errors.Is(execErr.Err, exec.ErrNotFound) {
+			return nil, &GitNotFoundError{
+				CommandStr: command.String(),
+			}
 		}
-		return nil, fmt.Errorf("error running command: %w", err)
+
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			exitCode := exitErr.ExitCode()
+			stderrMsg := strings.TrimSpace(stderr.String())
+
+			if stderrMsg == "" {
+				stderrMsg = exitErr.Error()
+			}
+
+			return nil, &GitExitError{
+				CommandStr: command.String(),
+				Stderr:     stderrMsg,
+				ExitCode:   exitCode,
+				Err:        exitErr,
+			}
+		}
+		return nil, &GitCommandError{
+			CommandStr: command.String(),
+			Err:        err,
+		}
 	}
-	return stdout, nil
+
+	return []byte(stdout.String()), nil
 }
 
 func (g *ExecGitCommand) ReadFile(path string) ([]byte, error) {
@@ -160,15 +233,42 @@ type LocalGitClient struct {
 }
 
 func (g *LocalGitClient) GetRemoteOriginURL(ctx context.Context, repoPath string) (string, error) {
-	return g.GitClient.GetRemoteOriginURL(ctx, repoPath)
+	remoteOriginURL, err := g.GitClient.GetRemoteOriginURL(ctx, repoPath)
+	if err != nil {
+		var gitErr GitError
+		if errors.As(err, &gitErr) {
+			log.Debug().Err(err).Msg("failed to get remote origin URL for local repo")
+			return repoPath, nil
+		}
+		return "", err
+	}
+	return remoteOriginURL, nil
 }
 
 func (g *LocalGitClient) LastCommitDate(ctx context.Context, clonePath string) (time.Time, error) {
-	return g.GitClient.LastCommitDate(ctx, clonePath)
+	lastCommitDate, err := g.GitClient.LastCommitDate(ctx, clonePath)
+	if err != nil {
+		var gitErr GitError
+		if errors.As(err, &gitErr) {
+			log.Debug().Err(err).Msg("failed to get last commit date for local repo")
+			return time.Now(), nil
+		}
+		return time.Time{}, err
+	}
+	return lastCommitDate, nil
 }
 
 func (g *LocalGitClient) CommitSHA(clonePath string) (string, error) {
-	return g.GitClient.CommitSHA(clonePath)
+	commitSHA, err := g.GitClient.CommitSHA(clonePath)
+	if err != nil {
+		var gitErr GitError
+		if errors.As(err, &gitErr) {
+			log.Debug().Err(err).Msg("failed to get commit SHA for local repo")
+			return "", nil
+		}
+		return "", err
+	}
+	return commitSHA, nil
 }
 
 func (g *LocalGitClient) Clone(ctx context.Context, clonePath string, url string, token string, ref string) error {
@@ -182,6 +282,11 @@ func (g *LocalGitClient) GetRepoHeadBranchName(ctx context.Context, repoPath str
 
 	output, err := g.GitClient.Command.Run(ctx, cmd, args, repoPath)
 	if err != nil {
+		var gitErr GitError
+		if errors.As(err, &gitErr) {
+			log.Debug().Err(err).Msg("failed to get repo head branch name for local repo")
+			return "local", nil
+		}
 		return "", err
 	}
 

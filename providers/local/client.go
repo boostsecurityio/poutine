@@ -34,7 +34,13 @@ func (s *ScmClient) GetRepo(ctx context.Context, org string, name string) (analy
 	if err != nil {
 		return nil, err
 	}
-	baseUrl := s.GetProviderBaseURL()
+	baseUrl, err := s.GetBaseURL()
+	if err != nil {
+		var gitErr gitops.GitError
+		if errors.As(err, &gitErr) {
+			baseUrl = "localrepo"
+		}
+	}
 	return Repo{
 		BaseUrl: baseUrl,
 		Org:     org,
@@ -45,39 +51,64 @@ func (s *ScmClient) GetToken() string {
 	return ""
 }
 func (s *ScmClient) GetProviderName() string {
-	return s.GetProviderBaseURL()
+	providerBaseURL, err := s.GetBaseURL()
+	if err != nil {
+		var gitErr gitops.GitError
+		if errors.As(err, &gitErr) {
+			return "provider"
+		}
+		return ""
+	}
+
+	return providerBaseURL
 }
 func (s *ScmClient) GetProviderVersion(ctx context.Context) (string, error) {
 	return "", nil
 }
 func (s *ScmClient) GetProviderBaseURL() string {
+	baseURL, err := s.GetBaseURL()
+	if err != nil {
+		var gitErr gitops.GitError
+		if errors.As(err, &gitErr) {
+			return s.repoPath
+		}
+		return ""
+	}
+	return baseURL
+}
+
+func (s *ScmClient) GetBaseURL() (string, error) {
 	remote, err := s.gitClient.GetRemoteOriginURL(context.Background(), s.repoPath)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to get remote url for repo")
-		return ""
+		log.Debug().Err(err).Msg("failed to get remote url for local repo")
+		return "", err
 	}
 
 	if strings.HasPrefix(remote, "git@") {
-		return extractHostnameFromSSHURL(remote)
+		return extractHostnameFromSSHURL(remote), nil
 	}
 
 	parsedURL, err := url.Parse(remote)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to parse remote url")
-		return ""
+		log.Error().Err(err).Msg("failed to parse remote url of local repo")
+		return "", err
 	}
 
 	if parsedURL.Hostname() == "" {
 		log.Error().Msg("repo remote url does not have a hostname")
-		return ""
+		return "", errors.New("repo remote url does not have a hostname")
 	}
 
-	return parsedURL.Hostname()
+	return parsedURL.Hostname(), nil
 }
 
 func (s *ScmClient) ParseRepoAndOrg(repoString string) (string, string, error) {
 	remoteURL, err := s.gitClient.GetRemoteOriginURL(context.Background(), s.repoPath)
 	if err != nil {
+		var gitErr gitops.GitError
+		if errors.As(err, &gitErr) {
+			return "", "local", nil
+		}
 		return "", "", err
 	}
 	if strings.Contains(remoteURL, "git@") {
