@@ -163,8 +163,8 @@ github.com/sagikazarmark/locafero v0.6.0 h1:ON7AQg37yzcRPU69mt7gwhFEBwxI6P9T4Qu3
 github.com/sagikazarmark/locafero v0.6.0/go.mod h1:77OmuIc6VTraTXKXIs/uvUxKGUXjE1GbemJYHqdNjX0=
 github.com/sagikazarmark/slog-shim v0.1.0 h1:diDBnUNK9N/354PgrxMywXnAwEr1QZcOr6gto+ugjYE=
 github.com/sagikazarmark/slog-shim v0.1.0/go.mod h1:SrcSrq8aKtyuqEI1uvTDTK1arOWRIczQRv+GVI1AkeQ=
-github.com/schollz/progressbar/v3 v3.16.1 h1:RnF1neWZFzLCoGx8yp1yF7SDl4AzNDI5y4I0aUJRrZQ=
-github.com/schollz/progressbar/v3 v3.16.1/go.mod h1:I2ILR76gz5VXqYMIY/LdLecvMHDPVcQm3W/MSKi1TME=
+github.com/schollz/progressbar/v3 v3.17.0 h1:Fv+vG6O6jnJwdjCelvfyYO7sF2jaUGQVmdH4CxcZdsQ=
+github.com/schollz/progressbar/v3 v3.17.0/go.mod h1:5H4fLgifX+KeQCsEJnZTOepgZLe1jFF1lpPXb68IJTA=
 github.com/shurcooL/githubv4 v0.0.0-20240727222349-48295856cce7 h1:cYCy18SHPKRkvclm+pWm1Lk4YrREb4IOIb/YdFO0p2M=
 github.com/shurcooL/githubv4 v0.0.0-20240727222349-48295856cce7/go.mod h1:zqMwyHmnN/eDOZOdiTohqIUKUrTFX62PNlu7IJdu0q8=
 github.com/shurcooL/graphql v0.0.0-20230722043721-ed46e5a46466 h1:17JxqqJY66GmZVHkmAsGEkcIu0oCe3AM420QDgGwZx0=
