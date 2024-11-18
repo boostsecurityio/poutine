@@ -43,11 +43,11 @@ func (i *Inventory) AddScanPackage(ctx context.Context, pkgInsights models.Packa
 
 func (i *Inventory) ScanPackage(ctx context.Context, pkgInsights models.PackageInsights, workdir string) (*models.PackageInsights, error) {
 	parsers := []Parser{
-		NewGithubActionsMetadataParser(workdir),
-		NewGithubActionWorkflowParser(workdir),
-		NewAzurePipelinesParser(workdir),
-		NewGitlabCiParser(workdir),
-		NewPipelineAsCodeTektonParser(workdir),
+		NewGithubActionsMetadataParser(),
+		NewGithubActionWorkflowParser(),
+		NewAzurePipelinesParser(),
+		NewGitlabCiParser(),
+		NewPipelineAsCodeTektonParser(),
 	}
 	inventoryScanner := NewInventoryScanner(workdir, parsers)
 

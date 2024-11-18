@@ -10,7 +10,7 @@ import (
 
 func TestGithubWorkflows(t *testing.T) {
 	s := NewInventoryScanner("testdata", []Parser{
-		NewGithubActionWorkflowParser("testdata"),
+		NewGithubActionWorkflowParser(),
 	})
 	pkgInsights := &models.PackageInsights{}
 	err := s.Run(pkgInsights)
@@ -35,7 +35,7 @@ func TestGithubWorkflows(t *testing.T) {
 
 func TestGithubWorkflowsNotFound(t *testing.T) {
 	s := NewInventoryScanner("testdata/.github", []Parser{
-		NewGithubActionWorkflowParser("testdata"),
+		NewGithubActionWorkflowParser(),
 	})
 	pkgInsights := &models.PackageInsights{}
 	err := s.Run(pkgInsights)
@@ -47,7 +47,7 @@ func TestGithubWorkflowsNotFound(t *testing.T) {
 
 func TestGithubActionsMetadata(t *testing.T) {
 	s := NewInventoryScanner("testdata", []Parser{
-		NewGithubActionsMetadataParser("testdata"),
+		NewGithubActionsMetadataParser(),
 	})
 	pkgInsights := &models.PackageInsights{}
 	err := s.Run(pkgInsights)
@@ -86,7 +86,7 @@ func TestRun(t *testing.T) {
 
 func TestPipelineAsCodeTekton(t *testing.T) {
 	s := NewInventoryScanner("testdata", []Parser{
-		NewPipelineAsCodeTektonParser("testdata"),
+		NewPipelineAsCodeTektonParser(),
 	})
 	pkgInsights := &models.PackageInsights{}
 	err := s.Run(pkgInsights)

@@ -4,7 +4,6 @@ import (
 	"github.com/boostsecurityio/poutine/models"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -12,14 +11,12 @@ import (
 )
 
 type GithubActionsMetadataParser struct {
-	pattern      *regexp.Regexp
-	scanningPath string
+	pattern *regexp.Regexp
 }
 
-func NewGithubActionsMetadataParser(scanningPath string) *GithubActionsMetadataParser {
+func NewGithubActionsMetadataParser() *GithubActionsMetadataParser {
 	return &GithubActionsMetadataParser{
-		pattern:      regexp.MustCompile(`(\b|/)action\.ya?ml$`),
-		scanningPath: scanningPath,
+		pattern: regexp.MustCompile(`(\b|/)action\.ya?ml$`),
 	}
 }
 
@@ -27,8 +24,8 @@ func (p *GithubActionsMetadataParser) MatchPattern() *regexp.Regexp {
 	return p.pattern
 }
 
-func (p *GithubActionsMetadataParser) Parse(filePath string, info fs.FileInfo, pkgInsights *models.PackageInsights) error {
-	relPath, err := filepath.Rel(p.scanningPath, filePath)
+func (p *GithubActionsMetadataParser) Parse(filePath string, scanningPath string, pkgInsights *models.PackageInsights) error {
+	relPath, err := filepath.Rel(scanningPath, filePath)
 	if err != nil {
 		return err
 	}
@@ -56,14 +53,12 @@ func (p *GithubActionsMetadataParser) Parse(filePath string, info fs.FileInfo, p
 }
 
 type GithubActionWorkflowParser struct {
-	pattern      *regexp.Regexp
-	scanningPath string
+	pattern *regexp.Regexp
 }
 
-func NewGithubActionWorkflowParser(scanningPath string) *GithubActionWorkflowParser {
+func NewGithubActionWorkflowParser() *GithubActionWorkflowParser {
 	return &GithubActionWorkflowParser{
-		pattern:      regexp.MustCompile(`^\.github/workflows/[^/]+\.ya?ml$`),
-		scanningPath: scanningPath,
+		pattern: regexp.MustCompile(`^\.github/workflows/[^/]+\.ya?ml$`),
 	}
 }
 
@@ -71,8 +66,8 @@ func (p *GithubActionWorkflowParser) MatchPattern() *regexp.Regexp {
 	return p.pattern
 }
 
-func (p *GithubActionWorkflowParser) Parse(filePath string, info fs.FileInfo, pkgInsights *models.PackageInsights) error {
-	relPath, err := filepath.Rel(p.scanningPath, filePath)
+func (p *GithubActionWorkflowParser) Parse(filePath string, scanningPath string, pkgInsights *models.PackageInsights) error {
+	relPath, err := filepath.Rel(scanningPath, filePath)
 	if err != nil {
 		return err
 	}
@@ -99,14 +94,12 @@ func (p *GithubActionWorkflowParser) Parse(filePath string, info fs.FileInfo, pk
 }
 
 type AzurePipelinesParser struct {
-	pattern      *regexp.Regexp
-	scanningPath string
+	pattern *regexp.Regexp
 }
 
-func NewAzurePipelinesParser(scanningPath string) *AzurePipelinesParser {
+func NewAzurePipelinesParser() *AzurePipelinesParser {
 	return &AzurePipelinesParser{
-		pattern:      regexp.MustCompile(`\.?azure-pipelines(-.+)?\.ya?ml$`),
-		scanningPath: scanningPath,
+		pattern: regexp.MustCompile(`\.?azure-pipelines(-.+)?\.ya?ml$`),
 	}
 }
 
@@ -114,8 +107,8 @@ func (p *AzurePipelinesParser) MatchPattern() *regexp.Regexp {
 	return p.pattern
 }
 
-func (p *AzurePipelinesParser) Parse(filePath string, info fs.FileInfo, pkgInsights *models.PackageInsights) error {
-	relPath, err := filepath.Rel(p.scanningPath, filePath)
+func (p *AzurePipelinesParser) Parse(filePath string, scanningPath string, pkgInsights *models.PackageInsights) error {
+	relPath, err := filepath.Rel(scanningPath, filePath)
 	if err != nil {
 		return err
 	}
@@ -145,14 +138,12 @@ func (p *AzurePipelinesParser) Parse(filePath string, info fs.FileInfo, pkgInsig
 const MAX_DEPTH = 150
 
 type GitlabCiParser struct {
-	pattern      *regexp.Regexp
-	scanningPath string
+	pattern *regexp.Regexp
 }
 
-func NewGitlabCiParser(scanningPath string) *GitlabCiParser {
+func NewGitlabCiParser() *GitlabCiParser {
 	return &GitlabCiParser{
-		pattern:      regexp.MustCompile(`\.?gitlab-ci(-.+)?\.ya?ml$`),
-		scanningPath: scanningPath,
+		pattern: regexp.MustCompile(`\.?gitlab-ci(-.+)?\.ya?ml$`),
 	}
 }
 
@@ -160,14 +151,14 @@ func (p *GitlabCiParser) MatchPattern() *regexp.Regexp {
 	return p.pattern
 }
 
-func (p *GitlabCiParser) Parse(filePath string, info fs.FileInfo, pkgInsights *models.PackageInsights) error {
+func (p *GitlabCiParser) Parse(filePath string, scanningPath string, pkgInsights *models.PackageInsights) error {
 	files := map[string]bool{}
 	queue := []string{"/.gitlab-ci.yml"}
 	configs := []models.GitlabciConfig{}
 
 	for len(queue) > 0 && len(configs) < MAX_DEPTH {
 		repoPath := filepath.Join("/", queue[0])
-		configPath := filepath.Join(p.scanningPath, repoPath)
+		configPath := filepath.Join(scanningPath, repoPath)
 		queue = queue[1:]
 
 		if files[repoPath] {
@@ -209,14 +200,12 @@ func (p *GitlabCiParser) Parse(filePath string, info fs.FileInfo, pkgInsights *m
 }
 
 type PipelineAsCodeTektonParser struct {
-	pattern      *regexp.Regexp
-	scanningPath string
+	pattern *regexp.Regexp
 }
 
-func NewPipelineAsCodeTektonParser(scanningPath string) *PipelineAsCodeTektonParser {
+func NewPipelineAsCodeTektonParser() *PipelineAsCodeTektonParser {
 	return &PipelineAsCodeTektonParser{
-		pattern:      regexp.MustCompile(`^\.tekton/[^/]+\.ya?ml$`),
-		scanningPath: scanningPath,
+		pattern: regexp.MustCompile(`^\.tekton/[^/]+\.ya?ml$`),
 	}
 }
 
@@ -224,8 +213,8 @@ func (p *PipelineAsCodeTektonParser) MatchPattern() *regexp.Regexp {
 	return p.pattern
 }
 
-func (p *PipelineAsCodeTektonParser) Parse(filePath string, info fs.FileInfo, pkgInsights *models.PackageInsights) error {
-	relPath, err := filepath.Rel(p.scanningPath, filePath)
+func (p *PipelineAsCodeTektonParser) Parse(filePath string, scanningPath string, pkgInsights *models.PackageInsights) error {
+	relPath, err := filepath.Rel(scanningPath, filePath)
 	if err != nil {
 		return err
 	}

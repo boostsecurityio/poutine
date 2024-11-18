@@ -10,7 +10,7 @@ import (
 
 type Parser interface {
 	MatchPattern() *regexp.Regexp
-	Parse(filePath string, info fs.FileInfo, pkgInsights *models.PackageInsights) error
+	Parse(filePath string, scanningPath string, pkgInsights *models.PackageInsights) error
 }
 
 type InventoryScanner struct {
@@ -43,7 +43,7 @@ func (s *InventoryScanner) Run(pkgInsights *models.PackageInsights) error {
 		}
 		for _, parser := range s.Parsers {
 			if parser.MatchPattern().MatchString(relativePath) {
-				if err := parser.Parse(filePath, info, pkgInsights); err != nil {
+				if err := parser.Parse(filePath, s.Path, pkgInsights); err != nil {
 					log.Error().Str("file", filePath).Err(err).Msg("error parsing matched file")
 					continue
 				}
