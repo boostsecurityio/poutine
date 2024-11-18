@@ -18,7 +18,7 @@ func TestPurls(t *testing.T) {
 		Purl: "pkg:github/org/owner",
 	}
 	_ = pkg.NormalizePurl()
-	err := i.AddPackage(context.Background(), pkg, "testdata")
+	err := i.AddScanPackage(context.Background(), *pkg, "testdata")
 
 	assert.Nil(t, err)
 
@@ -65,7 +65,7 @@ func TestFindings(t *testing.T) {
 	}
 	_ = pkg.NormalizePurl()
 
-	err := i.AddPackage(context.Background(), pkg, "testdata")
+	err := i.AddScanPackage(context.Background(), *pkg, "testdata")
 	assert.Nil(t, err)
 
 	results, err := i.Findings(context.Background())
@@ -442,7 +442,7 @@ func TestSkipRule(t *testing.T) {
 	}
 	_ = pkg.NormalizePurl()
 
-	err := i.AddPackage(ctx, pkg, "testdata")
+	err := i.AddScanPackage(ctx, *pkg, "testdata")
 	assert.Nil(t, err)
 
 	results, err := i.Findings(context.Background())
@@ -489,7 +489,7 @@ func TestRulesConfig(t *testing.T) {
 	}
 	_ = pkg.NormalizePurl()
 
-	err := i.AddPackage(ctx, pkg, "testdata")
+	err := i.AddScanPackage(ctx, *pkg, "testdata")
 	assert.NoError(t, err)
 
 	results, err := i.Findings(ctx)

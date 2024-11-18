@@ -9,12 +9,12 @@ import (
 )
 
 func TestGithubWorkflows(t *testing.T) {
-	s := NewScanner("testdata")
-	o, _ := opa.NewOpa(context.TODO(), &models.Config{
-		Include: []models.ConfigInclude{},
+	s := NewInventoryScanner("testdata", []Parser{
+		NewGithubActionWorkflowParser("testdata"),
 	})
-	err := s.Run(context.TODO(), o)
-	workflows := s.Package.GithubActionsWorkflows
+	pkgInsights := &models.PackageInsights{}
+	err := s.Run(pkgInsights)
+	workflows := pkgInsights.GithubActionsWorkflows
 
 	assert.Nil(t, err)
 
@@ -34,25 +34,25 @@ func TestGithubWorkflows(t *testing.T) {
 }
 
 func TestGithubWorkflowsNotFound(t *testing.T) {
-	s := NewScanner("testdata/.github")
-	o, _ := opa.NewOpa(context.TODO(), &models.Config{
-		Include: []models.ConfigInclude{},
+	s := NewInventoryScanner("testdata/.github", []Parser{
+		NewGithubActionWorkflowParser("testdata"),
 	})
-	err := s.Run(context.TODO(), o)
-	workflows := s.Package.GithubActionsWorkflows
+	pkgInsights := &models.PackageInsights{}
+	err := s.Run(pkgInsights)
+	workflows := pkgInsights.GithubActionsWorkflows
 
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(workflows))
 }
 
 func TestGithubActionsMetadata(t *testing.T) {
-	s := NewScanner("testdata")
-	o, _ := opa.NewOpa(context.TODO(), &models.Config{
-		Include: []models.ConfigInclude{},
+	s := NewInventoryScanner("testdata", []Parser{
+		NewGithubActionsMetadataParser("testdata"),
 	})
-	err := s.Run(context.TODO(), o)
+	pkgInsights := &models.PackageInsights{}
+	err := s.Run(pkgInsights)
 
-	metadata := s.Package.GithubActionsMetadata
+	metadata := pkgInsights.GithubActionsMetadata
 
 	assert.Nil(t, err)
 
@@ -63,31 +63,36 @@ func TestGithubActionsMetadata(t *testing.T) {
 }
 
 func TestRun(t *testing.T) {
-	s := NewScanner("testdata")
+	workdir := "testdata"
+
 	o, _ := opa.NewOpa(context.TODO(), &models.Config{
 		Include: []models.ConfigInclude{},
 	})
-	s.Package.Purl = "pkg:github/org/owner"
 
-	err := s.Run(context.TODO(), o)
+	pkgInsights := &models.PackageInsights{}
+	pkgInsights.Purl = "pkg:github/org/owner"
+
+	i := NewInventory(o, nil, "github", "")
+
+	err := i.AddScanPackage(context.TODO(), *pkgInsights, workdir)
 
 	assert.Nil(t, err)
 
-	assert.Contains(t, s.Package.BuildDependencies, "pkg:githubactions/actions/checkout@v4")
-	assert.Contains(t, s.Package.PackageDependencies, "pkg:githubactions/actions/github-script@main")
-	assert.Contains(t, s.Package.PackageDependencies, "pkg:docker/alpine%3Alatest")
-	assert.Equal(t, 3, len(s.Package.GitlabciConfigs))
+	assert.Contains(t, i.Packages[0].BuildDependencies, "pkg:githubactions/actions/checkout@v4")
+	assert.Contains(t, i.Packages[0].PackageDependencies, "pkg:githubactions/actions/github-script@main")
+	assert.Contains(t, i.Packages[0].PackageDependencies, "pkg:docker/alpine%3Alatest")
+	assert.Equal(t, 3, len(i.Packages[0].GitlabciConfigs))
 }
 
 func TestPipelineAsCodeTekton(t *testing.T) {
-	s := NewScanner("testdata")
-	o, _ := opa.NewOpa(context.TODO(), &models.Config{
-		Include: []models.ConfigInclude{},
+	s := NewInventoryScanner("testdata", []Parser{
+		NewPipelineAsCodeTektonParser("testdata"),
 	})
-	err := s.Run(context.TODO(), o)
+	pkgInsights := &models.PackageInsights{}
+	err := s.Run(pkgInsights)
 	assert.NoError(t, err)
 
-	pipelines := s.Package.PipelineAsCodeTekton
+	pipelines := pkgInsights.PipelineAsCodeTekton
 
 	assert.Len(t, pipelines, 1)
 	expectedAnnotations := map[string]string{

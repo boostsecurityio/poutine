@@ -165,7 +165,7 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 					return
 				}
 
-				scannedPkg, err := inventory.ScanPackage(ctx, pkg, tempDir)
+				scannedPkg, err := inventory.ScanPackage(ctx, *pkg, tempDir)
 				if err != nil {
 					log.Error().Err(err).Str("repo", repoNameWithOwner).Msg("failed to scan package")
 					return
@@ -240,7 +240,7 @@ func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref strin
 		return err
 	}
 
-	err = inventory.AddPackage(ctx, pkg, tempDir)
+	err = inventory.AddScanPackage(ctx, *pkg, tempDir)
 	if err != nil {
 		return err
 	}
@@ -277,7 +277,7 @@ func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) error 
 		return err
 	}
 
-	err = inventory.AddPackage(ctx, pkg, repoPath)
+	err = inventory.AddScanPackage(ctx, *pkg, repoPath)
 	if err != nil {
 		return err
 	}

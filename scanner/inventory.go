@@ -31,26 +31,55 @@ func NewInventory(opa *opa.Opa, pkgsupplyClient ReputationClient, provider strin
 	}
 }
 
-func (i *Inventory) AddPackage(ctx context.Context, pkg *models.PackageInsights, workdir string) error {
-	scannedPackage, err := i.ScanPackage(ctx, pkg, workdir)
+func (i *Inventory) AddScanPackage(ctx context.Context, pkgInsights models.PackageInsights, workdir string) error {
+	refPkgInsights, err := i.ScanPackage(ctx, pkgInsights, workdir)
 	if err != nil {
 		return err
 	}
 
-	i.Packages = append(i.Packages, scannedPackage)
+	i.Packages = append(i.Packages, refPkgInsights)
 	return nil
 }
 
-func (i *Inventory) ScanPackage(ctx context.Context, pkg *models.PackageInsights, workdir string) (*models.PackageInsights, error) {
-	s := NewScanner(workdir)
-	s.Package = pkg
+func (i *Inventory) ScanPackage(ctx context.Context, pkgInsights models.PackageInsights, workdir string) (*models.PackageInsights, error) {
+	parsers := []Parser{
+		NewGithubActionsMetadataParser(workdir),
+		NewGithubActionWorkflowParser(workdir),
+		NewAzurePipelinesParser(workdir),
+		NewGitlabCiParser(workdir),
+		NewPipelineAsCodeTektonParser(workdir),
+	}
+	inventoryScanner := NewInventoryScanner(workdir, parsers)
 
-	err := s.Run(ctx, i.opa)
-	if err != nil {
+	refPkgInsights := &pkgInsights
+
+	if err := inventoryScanner.Run(refPkgInsights); err != nil {
 		return nil, err
 	}
 
-	return s.Package, nil
+	if err := i.performDependenciesInventory(ctx, refPkgInsights); err != nil {
+		return nil, err
+	}
+	return refPkgInsights, nil
+}
+
+func (i *Inventory) performDependenciesInventory(ctx context.Context, pkg *models.PackageInsights) error {
+	result := opa.InventoryResult{}
+	err := i.opa.Eval(ctx,
+		"data.poutine.queries.inventory.result",
+		map[string]interface{}{
+			"packages": []interface{}{pkg},
+		},
+		&result,
+	)
+	if err != nil {
+		return err
+	}
+
+	pkg.BuildDependencies = result.BuildDependencies
+	pkg.PackageDependencies = result.PackageDependencies
+
+	return nil
 }
 
 func (i *Inventory) Purls() []string {
@@ -74,7 +103,7 @@ func (i *Inventory) Purls() []string {
 
 func (i *Inventory) Findings(ctx context.Context) (*opa.FindingsResult, error) {
 	results := &opa.FindingsResult{}
-	reputation, err := i.Reputation(ctx)
+	reputation, err := i.reputation(ctx)
 	if err != nil && i.pkgsupplyClient != nil {
 		return nil, err
 	}
@@ -97,7 +126,7 @@ func (i *Inventory) Findings(ctx context.Context) (*opa.FindingsResult, error) {
 	return results, nil
 }
 
-func (i *Inventory) Reputation(ctx context.Context) (*pkgsupply.ReputationResponse, error) {
+func (i *Inventory) reputation(ctx context.Context) (*pkgsupply.ReputationResponse, error) {
 	if i.pkgsupplyClient == nil {
 		return nil, fmt.Errorf("no pkgsupply client")
 	}
