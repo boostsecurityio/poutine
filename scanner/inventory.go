@@ -86,15 +86,13 @@ func (i *Inventory) performDependenciesInventory(ctx context.Context, pkg *model
 	return nil
 }
 
-func (i *Inventory) Purls() []string {
+func (i *Inventory) Purls(pkgInsights models.PackageInsights) []string {
 	set := make(map[string]bool)
-	for _, pkg := range i.Packages {
-		for _, dep := range pkg.BuildDependencies {
-			set[dep] = true
-		}
-		for _, dep := range pkg.PackageDependencies {
-			set[dep] = true
-		}
+	for _, dep := range pkgInsights.BuildDependencies {
+		set[dep] = true
+	}
+	for _, dep := range pkgInsights.PackageDependencies {
+		set[dep] = true
 	}
 
 	purls := make([]string, 0, len(set))
@@ -107,7 +105,7 @@ func (i *Inventory) Purls() []string {
 
 func (i *Inventory) analyzePackageForFindings(ctx context.Context, pkgInsights models.PackageInsights) (*results.FindingsResult, error) {
 	analysisResults := &results.FindingsResult{}
-	reputation, err := i.reputation(ctx)
+	reputation, err := i.reputation(ctx, pkgInsights)
 	if err != nil && i.pkgsupplyClient != nil {
 		return nil, err
 	}
@@ -132,10 +130,10 @@ func (i *Inventory) analyzePackageForFindings(ctx context.Context, pkgInsights m
 	return analysisResults, nil
 }
 
-func (i *Inventory) reputation(ctx context.Context) (*pkgsupply.ReputationResponse, error) {
+func (i *Inventory) reputation(ctx context.Context, pkgInsights models.PackageInsights) (*pkgsupply.ReputationResponse, error) {
 	if i.pkgsupplyClient == nil {
 		return nil, fmt.Errorf("no pkgsupply client")
 	}
 
-	return i.pkgsupplyClient.GetReputation(ctx, i.Purls())
+	return i.pkgsupplyClient.GetReputation(ctx, i.Purls(pkgInsights))
 }

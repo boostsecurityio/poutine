@@ -19,9 +19,8 @@ func TestPurls(t *testing.T) {
 		Purl: "pkg:github/org/owner",
 	}
 	_ = pkg.NormalizePurl()
-	err := i.AddScanPackage(context.Background(), *pkg, "testdata")
-
-	assert.Nil(t, err)
+	scannedPackage, err := i.ScanPackage(context.Background(), *pkg, "testdata")
+	assert.NoError(t, err)
 
 	purls := []string{
 		"pkg:docker/node%3Alatest",
@@ -49,10 +48,9 @@ func TestPurls(t *testing.T) {
 		"pkg:azurepipelinestask/DownloadPipelineArtifact@2",
 		"pkg:azurepipelinestask/Cache@2",
 	}
-	assert.ElementsMatch(t, i.Purls(), purls)
-	assert.Equal(t, 1, len(i.Packages))
-	assert.Equal(t, 18, len(i.Packages[0].BuildDependencies))
-	assert.Equal(t, 4, len(i.Packages[0].PackageDependencies))
+	assert.ElementsMatch(t, i.Purls(*scannedPackage), purls)
+	assert.Equal(t, 18, len(scannedPackage.BuildDependencies))
+	assert.Equal(t, 4, len(scannedPackage.PackageDependencies))
 }
 
 func TestFindings(t *testing.T) {
