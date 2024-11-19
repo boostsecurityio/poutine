@@ -18,10 +18,16 @@ type InventoryScanner struct {
 	Parsers []Parser
 }
 
-func NewInventoryScanner(path string, parsers []Parser) *InventoryScanner {
+func NewInventoryScanner(path string) *InventoryScanner {
 	return &InventoryScanner{
-		Path:    path,
-		Parsers: parsers,
+		Path: path,
+		Parsers: []Parser{
+			NewGithubActionsMetadataParser(),
+			NewGithubActionWorkflowParser(),
+			NewAzurePipelinesParser(),
+			NewGitlabCiParser(),
+			NewPipelineAsCodeTektonParser(),
+		},
 	}
 }
 
