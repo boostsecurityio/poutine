@@ -3,6 +3,7 @@ package pretty
 import (
 	"context"
 	"fmt"
+	"github.com/boostsecurityio/poutine/results"
 	"io"
 	"os"
 	"sort"
@@ -10,16 +11,15 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/boostsecurityio/poutine/models"
-	"github.com/boostsecurityio/poutine/opa"
 	"github.com/olekukonko/tablewriter"
 )
 
 type Format struct {
 }
 
-func (f *Format) Format(ctx context.Context, report *opa.FindingsResult, packages []*models.PackageInsights) error {
+func (f *Format) Format(ctx context.Context, report *results.FindingsResult, packages []*models.PackageInsights) error {
 	failures := map[string]int{}
-	findings := map[string][]opa.Finding{}
+	findings := map[string][]results.Finding{}
 
 	if len(report.Findings) == 0 {
 		log.Info().Msg("No results returned by analysis")
@@ -37,7 +37,7 @@ func (f *Format) Format(ctx context.Context, report *opa.FindingsResult, package
 	return nil
 }
 
-func printFindingsPerRule(out io.Writer, results map[string][]opa.Finding, rules map[string]opa.Rule) {
+func printFindingsPerRule(out io.Writer, results map[string][]results.Finding, rules map[string]results.Rule) {
 
 	var sortedRuleIDs []string
 	for ruleID := range rules {
@@ -106,7 +106,7 @@ func printFindingsPerRule(out io.Writer, results map[string][]opa.Finding, rules
 	}
 }
 
-func printSummaryTable(out io.Writer, failures map[string]int, rules map[string]opa.Rule) {
+func printSummaryTable(out io.Writer, failures map[string]int, rules map[string]results.Rule) {
 	table := tablewriter.NewWriter(out)
 	table.SetHeader([]string{"Rule ID", "Rule Name", "Failures", "Status"})
 	table.SetColWidth(80)

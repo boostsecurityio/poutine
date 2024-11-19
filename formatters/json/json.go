@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/boostsecurityio/poutine/models"
 	"github.com/boostsecurityio/poutine/opa"
+	"github.com/boostsecurityio/poutine/results"
 	"io"
 )
 
@@ -22,7 +23,7 @@ type Format struct {
 	format string
 }
 
-func (f *Format) Format(ctx context.Context, report *opa.FindingsResult, packages []*models.PackageInsights) error {
+func (f *Format) Format(ctx context.Context, report *results.FindingsResult, packages []*models.PackageInsights) error {
 	var result struct {
 		Output string `json:"output"`
 		Error  string `json:"error"`

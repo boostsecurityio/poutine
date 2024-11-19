@@ -3,12 +3,12 @@ package sarif
 import (
 	"context"
 	"fmt"
+	"github.com/boostsecurityio/poutine/results"
 	"io"
 	"strings"
 
 	"github.com/boostsecurityio/poutine/docs"
 	"github.com/boostsecurityio/poutine/models"
-	"github.com/boostsecurityio/poutine/opa"
 	"github.com/owenrumney/go-sarif/v2/sarif"
 )
 
@@ -24,7 +24,7 @@ type Format struct {
 	version string
 }
 
-func (f *Format) Format(ctx context.Context, report *opa.FindingsResult, packages []*models.PackageInsights) error {
+func (f *Format) Format(ctx context.Context, report *results.FindingsResult, packages []*models.PackageInsights) error {
 	sarifReport, err := sarif.New(sarif.Version210)
 	if err != nil {
 		return err
@@ -35,7 +35,7 @@ func (f *Format) Format(ctx context.Context, report *opa.FindingsResult, package
 		return parts[0]
 	}
 
-	findingsByPurl := make(map[string][]opa.Finding)
+	findingsByPurl := make(map[string][]results.Finding)
 	for _, finding := range report.Findings {
 		findingsByPurl[finding.Purl] = append(findingsByPurl[finding.Purl], finding)
 	}

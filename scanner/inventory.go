@@ -6,6 +6,7 @@ import (
 	"github.com/boostsecurityio/poutine/models"
 	"github.com/boostsecurityio/poutine/opa"
 	"github.com/boostsecurityio/poutine/providers/pkgsupply"
+	"github.com/boostsecurityio/poutine/results"
 )
 
 type ReputationClient interface {
@@ -21,11 +22,11 @@ type Inventory struct {
 	pkgsupplyClient ReputationClient
 }
 
-func NewInventory(opa *opa.Opa, pkgsupplyClient ReputationClient, provider string, providerVersion string) *Inventory {
+func NewInventory(opa *opa.Opa, pkgSupplyClient ReputationClient, provider string, providerVersion string) *Inventory {
 	return &Inventory{
 		Packages:        make([]*models.PackageInsights, 0),
 		opa:             opa,
-		pkgsupplyClient: pkgsupplyClient,
+		pkgsupplyClient: pkgSupplyClient,
 		provider:        provider,
 		providerVersion: providerVersion,
 	}
@@ -53,6 +54,16 @@ func (i *Inventory) ScanPackage(ctx context.Context, pkgInsights models.PackageI
 	if err := i.performDependenciesInventory(ctx, refPkgInsights); err != nil {
 		return nil, err
 	}
+
+	findingsResults, err := i.Findings(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to analyze for findings: %w", err)
+	}
+
+	if findingsResults != nil {
+		refPkgInsights.FindingsResults = *findingsResults
+	}
+
 	return refPkgInsights, nil
 }
 
@@ -94,8 +105,8 @@ func (i *Inventory) Purls() []string {
 	return purls
 }
 
-func (i *Inventory) Findings(ctx context.Context) (*opa.FindingsResult, error) {
-	results := &opa.FindingsResult{}
+func (i *Inventory) Findings(ctx context.Context) (*results.FindingsResult, error) {
+	analysisResults := &results.FindingsResult{}
 	reputation, err := i.reputation(ctx)
 	if err != nil && i.pkgsupplyClient != nil {
 		return nil, err
@@ -109,14 +120,14 @@ func (i *Inventory) Findings(ctx context.Context) (*opa.FindingsResult, error) {
 			"provider":   i.provider,
 			"version":    i.providerVersion,
 		},
-		results,
+		analysisResults,
 	)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return results, nil
+	return analysisResults, nil
 }
 
 func (i *Inventory) reputation(ctx context.Context) (*pkgsupply.ReputationResponse, error) {

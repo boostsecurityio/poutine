@@ -1,6 +1,9 @@
 package models
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/boostsecurityio/poutine/results"
+)
 
 type PackageInsights struct {
 	Version string `json:"version"`
@@ -46,6 +49,8 @@ type PackageInsights struct {
 	GitlabciConfigs        []GitlabciConfig        `json:"gitlabci_configs"`
 	AzurePipelines         []AzurePipeline         `json:"azure_pipelines"`
 	PipelineAsCodeTekton   []PipelineAsCodeTekton  `json:"pipeline_as_code_tekton"`
+
+	FindingsResults results.FindingsResult `json:"-"`
 }
 
 func (p *PackageInsights) GetSourceGitRepoURI() string {
