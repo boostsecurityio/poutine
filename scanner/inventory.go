@@ -55,7 +55,7 @@ func (i *Inventory) ScanPackage(ctx context.Context, pkgInsights models.PackageI
 		return nil, err
 	}
 
-	findingsResults, err := i.Findings(ctx)
+	findingsResults, err := i.analyzePackageForFindings(ctx, pkgInsights)
 	if err != nil {
 		return nil, fmt.Errorf("failed to analyze for findings: %w", err)
 	}
@@ -105,7 +105,7 @@ func (i *Inventory) Purls() []string {
 	return purls
 }
 
-func (i *Inventory) Findings(ctx context.Context) (*results.FindingsResult, error) {
+func (i *Inventory) analyzePackageForFindings(ctx context.Context, pkgInsights models.PackageInsights) (*results.FindingsResult, error) {
 	analysisResults := &results.FindingsResult{}
 	reputation, err := i.reputation(ctx)
 	if err != nil && i.pkgsupplyClient != nil {
@@ -115,7 +115,9 @@ func (i *Inventory) Findings(ctx context.Context) (*results.FindingsResult, erro
 	err = i.opa.Eval(ctx,
 		"data.poutine.queries.findings.result",
 		map[string]interface{}{
-			"packages":   i.Packages,
+			"packages": []models.PackageInsights{
+				pkgInsights,
+			},
 			"reputation": reputation,
 			"provider":   i.provider,
 			"version":    i.providerVersion,

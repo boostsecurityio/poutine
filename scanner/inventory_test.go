@@ -69,8 +69,7 @@ func TestFindings(t *testing.T) {
 	err := i.AddScanPackage(context.Background(), *pkg, "testdata")
 	assert.Nil(t, err)
 
-	analysisResults, err := i.Findings(context.Background())
-	assert.Nil(t, err)
+	analysisResults := i.Packages[0].FindingsResults
 
 	rule_ids := []string{}
 	for _, r := range analysisResults.Rules {
@@ -443,11 +442,10 @@ func TestSkipRule(t *testing.T) {
 	}
 	_ = pkg.NormalizePurl()
 
-	err := i.AddScanPackage(ctx, *pkg, "testdata")
-	assert.Nil(t, err)
+	updatedPkg, err := i.ScanPackage(ctx, *pkg, "testdata")
+	assert.NoError(t, err)
 
-	analysisResults, err := i.Findings(context.Background())
-	assert.Nil(t, err)
+	analysisResults := updatedPkg.FindingsResults
 
 	rule_ids := []string{}
 	for _, r := range analysisResults.Findings {
@@ -465,8 +463,10 @@ func TestSkipRule(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	analysisResults, err = i.Findings(context.Background())
-	assert.Nil(t, err)
+	secondUpdatedPkg, err := i.ScanPackage(context.Background(), *pkg, "testdata")
+	assert.NoError(t, err)
+
+	analysisResults = secondUpdatedPkg.FindingsResults
 
 	rule_ids = []string{}
 	for _, r := range analysisResults.Findings {
@@ -490,14 +490,11 @@ func TestRulesConfig(t *testing.T) {
 	}
 	_ = pkg.NormalizePurl()
 
-	err := i.AddScanPackage(ctx, *pkg, "testdata")
-	assert.NoError(t, err)
-
-	results, err := i.Findings(ctx)
+	scannedPackage, err := i.ScanPackage(ctx, *pkg, "testdata")
 	assert.NoError(t, err)
 
 	labels := []string{}
-	for _, f := range results.Findings {
+	for _, f := range scannedPackage.FindingsResults.Findings {
 		if f.RuleId == rule_id && f.Meta.Path == path {
 			labels = append(labels, f.Meta.Details)
 		}
@@ -513,11 +510,11 @@ func TestRulesConfig(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	results, err = i.Findings(ctx)
+	reScannedPackage, err := i.ScanPackage(ctx, *pkg, "testdata")
 	assert.NoError(t, err)
 
 	labels = []string{}
-	for _, f := range results.Findings {
+	for _, f := range reScannedPackage.FindingsResults.Findings {
 		if f.RuleId == rule_id && f.Meta.Path == path {
 			labels = append(labels, f.Meta.Details)
 		}
