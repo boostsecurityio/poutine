@@ -4,7 +4,6 @@ package analyze
 import (
 	"context"
 	"fmt"
-	"github.com/boostsecurityio/poutine/results"
 	"os"
 	"sync"
 	"time"
@@ -287,16 +286,11 @@ func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) error 
 }
 
 type Formatter interface {
-	Format(ctx context.Context, report *results.FindingsResult, packages []*models.PackageInsights) error
+	Format(ctx context.Context, packages []models.PackageInsights) error
 }
 
 func (a *Analyzer) finalizeAnalysis(ctx context.Context, inventory *scanner.Inventory) error {
-	report, err := inventory.Findings(ctx)
-	if err != nil {
-		return err
-	}
-
-	err = a.Formatter.Format(ctx, report, inventory.Packages)
+	err := a.Formatter.Format(ctx, inventory.Packages)
 	if err != nil {
 		return err
 	}
