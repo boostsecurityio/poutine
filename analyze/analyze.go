@@ -286,7 +286,7 @@ func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) error 
 }
 
 type Formatter interface {
-	Format(ctx context.Context, packages []models.PackageInsights) error
+	Format(ctx context.Context, packages []*models.PackageInsights) error
 }
 
 func (a *Analyzer) finalizeAnalysis(ctx context.Context, inventory *scanner.Inventory) error {

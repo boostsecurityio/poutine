@@ -24,7 +24,7 @@ type Format struct {
 	version string
 }
 
-func (f *Format) Format(ctx context.Context, packages []models.PackageInsights) error {
+func (f *Format) Format(ctx context.Context, packages []*models.PackageInsights) error {
 	sarifReport, err := sarif.New(sarif.Version210)
 	if err != nil {
 		return err

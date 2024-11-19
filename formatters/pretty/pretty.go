@@ -17,7 +17,7 @@ import (
 type Format struct {
 }
 
-func (f *Format) Format(ctx context.Context, packages []models.PackageInsights) error {
+func (f *Format) Format(ctx context.Context, packages []*models.PackageInsights) error {
 	failures := map[string]int{}
 	findings := map[string][]results.Finding{}
 	rules := map[string]results.Rule{}

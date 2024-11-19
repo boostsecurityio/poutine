@@ -23,7 +23,7 @@ type Format struct {
 	format string
 }
 
-func (f *Format) Format(ctx context.Context, packages []models.PackageInsights) error {
+func (f *Format) Format(ctx context.Context, packages []*models.PackageInsights) error {
 	var result struct {
 		Output string `json:"output"`
 		Error  string `json:"error"`
