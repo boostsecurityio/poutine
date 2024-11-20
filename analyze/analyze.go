@@ -114,13 +114,15 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 	}
 	goRoutineLimitSem := semaphore.NewWeighted(int64(maxGoroutines))
 
+	scannedPackages := make([]*models.PackageInsights, 0)
+
 	pkgChan := make(chan *models.PackageInsights)
 	pkgWg := sync.WaitGroup{}
 	pkgWg.Add(1)
 	go func() {
 		defer pkgWg.Done()
 		for pkg := range pkgChan {
-			inventory.Packages = append(inventory.Packages, pkg)
+			scannedPackages = append(scannedPackages, pkg)
 		}
 	}()
 
@@ -198,7 +200,7 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 
 	_ = bar.Finish()
 
-	return a.finalizeAnalysis(ctx, inventory)
+	return a.finalizeAnalysis(ctx, scannedPackages)
 }
 
 func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref string) error {
@@ -240,13 +242,13 @@ func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref strin
 		return err
 	}
 
-	err = inventory.AddScanPackage(ctx, *pkg, tempDir)
+	scannedPackage, err := inventory.ScanPackage(ctx, *pkg, tempDir)
 	if err != nil {
 		return err
 	}
 	_ = bar.Finish()
 
-	return a.finalizeAnalysis(ctx, inventory)
+	return a.finalizeAnalysis(ctx, []*models.PackageInsights{scannedPackage})
 }
 
 func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) error {
@@ -277,20 +279,20 @@ func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) error 
 		return err
 	}
 
-	err = inventory.AddScanPackage(ctx, *pkg, repoPath)
+	scannedPackage, err := inventory.ScanPackage(ctx, *pkg, repoPath)
 	if err != nil {
 		return err
 	}
 
-	return a.finalizeAnalysis(ctx, inventory)
+	return a.finalizeAnalysis(ctx, []*models.PackageInsights{scannedPackage})
 }
 
 type Formatter interface {
 	Format(ctx context.Context, packages []*models.PackageInsights) error
 }
 
-func (a *Analyzer) finalizeAnalysis(ctx context.Context, inventory *scanner.Inventory) error {
-	err := a.Formatter.Format(ctx, inventory.Packages)
+func (a *Analyzer) finalizeAnalysis(ctx context.Context, scannedPackages []*models.PackageInsights) error {
+	err := a.Formatter.Format(ctx, scannedPackages)
 	if err != nil {
 		return err
 	}

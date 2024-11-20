@@ -64,10 +64,10 @@ func TestFindings(t *testing.T) {
 	}
 	_ = pkg.NormalizePurl()
 
-	err := i.AddScanPackage(context.Background(), *pkg, "testdata")
-	assert.Nil(t, err)
+	scannedPackage, err := i.ScanPackage(context.Background(), *pkg, "testdata")
+	assert.NoError(t, err)
 
-	analysisResults := i.Packages[0].FindingsResults
+	analysisResults := scannedPackage.FindingsResults
 
 	rule_ids := []string{}
 	for _, r := range analysisResults.Rules {

@@ -68,14 +68,13 @@ func TestRun(t *testing.T) {
 
 	i := NewInventory(o, nil, "github", "")
 
-	err := i.AddScanPackage(context.TODO(), *pkgInsights, workdir)
+	scannedPackage, err := i.ScanPackage(context.TODO(), *pkgInsights, workdir)
+	assert.NoError(t, err)
 
-	assert.Nil(t, err)
-
-	assert.Contains(t, i.Packages[0].BuildDependencies, "pkg:githubactions/actions/checkout@v4")
-	assert.Contains(t, i.Packages[0].PackageDependencies, "pkg:githubactions/actions/github-script@main")
-	assert.Contains(t, i.Packages[0].PackageDependencies, "pkg:docker/alpine%3Alatest")
-	assert.Equal(t, 3, len(i.Packages[0].GitlabciConfigs))
+	assert.Contains(t, scannedPackage.BuildDependencies, "pkg:githubactions/actions/checkout@v4")
+	assert.Contains(t, scannedPackage.PackageDependencies, "pkg:githubactions/actions/github-script@main")
+	assert.Contains(t, scannedPackage.PackageDependencies, "pkg:docker/alpine%3Alatest")
+	assert.Equal(t, 3, len(scannedPackage.GitlabciConfigs))
 }
 
 func TestPipelineAsCodeTekton(t *testing.T) {

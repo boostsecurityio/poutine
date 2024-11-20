@@ -14,32 +14,19 @@ type ReputationClient interface {
 }
 
 type Inventory struct {
-	Packages        []*models.PackageInsights
-	providerVersion string
-	provider        string
-
 	opa             *opa.Opa
 	pkgsupplyClient ReputationClient
+	providerVersion string
+	provider        string
 }
 
 func NewInventory(opa *opa.Opa, pkgSupplyClient ReputationClient, provider string, providerVersion string) *Inventory {
 	return &Inventory{
-		Packages:        make([]*models.PackageInsights, 0),
 		opa:             opa,
 		pkgsupplyClient: pkgSupplyClient,
 		provider:        provider,
 		providerVersion: providerVersion,
 	}
-}
-
-func (i *Inventory) AddScanPackage(ctx context.Context, pkgInsights models.PackageInsights, workdir string) error {
-	refPkgInsights, err := i.ScanPackage(ctx, pkgInsights, workdir)
-	if err != nil {
-		return err
-	}
-
-	i.Packages = append(i.Packages, refPkgInsights)
-	return nil
 }
 
 func (i *Inventory) ScanPackage(ctx context.Context, pkgInsights models.PackageInsights, workdir string) (*models.PackageInsights, error) {
