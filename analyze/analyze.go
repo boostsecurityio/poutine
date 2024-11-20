@@ -87,7 +87,7 @@ type Analyzer struct {
 	Opa       *opa.Opa
 }
 
-func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutines *int) error {
+func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutines *int) ([]*models.PackageInsights, error) {
 	provider := a.ScmClient.GetProviderName()
 
 	providerVersion, err := a.ScmClient.GetProviderVersion(ctx)
@@ -128,7 +128,7 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 
 	for repoBatch := range orgReposBatches {
 		if repoBatch.Err != nil {
-			return fmt.Errorf("failed to get batch of repos: %w", repoBatch.Err)
+			return scannedPackages, fmt.Errorf("failed to get batch of repos: %w", repoBatch.Err)
 		}
 		if repoBatch.TotalCount != 0 {
 			bar.ChangeMax(repoBatch.TotalCount)
@@ -146,7 +146,7 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 			}
 			if err := goRoutineLimitSem.Acquire(ctx, 1); err != nil {
 				close(errChan)
-				return fmt.Errorf("failed to acquire semaphore: %w", err)
+				return scannedPackages, fmt.Errorf("failed to acquire semaphore: %w", err)
 			}
 
 			reposWg.Add(1)
@@ -194,23 +194,28 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 
 	for err := range errChan {
 		if err != nil {
-			return err
+			return scannedPackages, err
 		}
 	}
 
 	_ = bar.Finish()
 
-	return a.finalizeAnalysis(ctx, scannedPackages)
+	err = a.finalizeAnalysis(ctx, scannedPackages)
+	if err != nil {
+		return scannedPackages, err
+	}
+
+	return scannedPackages, nil
 }
 
-func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref string) error {
+func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref string) (*models.PackageInsights, error) {
 	org, repoName, err := a.ScmClient.ParseRepoAndOrg(repoString)
 	if err != nil {
-		return fmt.Errorf("failed to parse repository: %w", err)
+		return nil, fmt.Errorf("failed to parse repository: %w", err)
 	}
 	repo, err := a.ScmClient.GetRepo(ctx, org, repoName)
 	if err != nil {
-		return fmt.Errorf("failed to get repo: %w", err)
+		return nil, fmt.Errorf("failed to get repo: %w", err)
 	}
 	provider := repo.GetProviderName()
 
@@ -230,7 +235,7 @@ func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref strin
 
 	tempDir, err := a.cloneRepoToTemp(ctx, repo.BuildGitURL(a.ScmClient.GetProviderBaseURL()), a.ScmClient.GetToken(), ref)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -239,26 +244,31 @@ func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref strin
 
 	pkg, err := a.generatePackageInsights(ctx, tempDir, repo, ref)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	scannedPackage, err := inventory.ScanPackage(ctx, *pkg, tempDir)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	_ = bar.Finish()
 
-	return a.finalizeAnalysis(ctx, []*models.PackageInsights{scannedPackage})
+	err = a.finalizeAnalysis(ctx, []*models.PackageInsights{scannedPackage})
+	if err != nil {
+		return nil, err
+	}
+
+	return scannedPackage, nil
 }
 
-func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) error {
+func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) (*models.PackageInsights, error) {
 	org, repoName, err := a.ScmClient.ParseRepoAndOrg(repoPath)
 	if err != nil {
-		return fmt.Errorf("failed to parse repository: %w", err)
+		return nil, fmt.Errorf("failed to parse repository: %w", err)
 	}
 	repo, err := a.ScmClient.GetRepo(ctx, org, repoName)
 	if err != nil {
-		return fmt.Errorf("failed to get repo: %w", err)
+		return nil, fmt.Errorf("failed to get repo: %w", err)
 	}
 	provider := repo.GetProviderName()
 
@@ -276,15 +286,20 @@ func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) error 
 
 	pkg, err := a.generatePackageInsights(ctx, repoPath, repo, "")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	scannedPackage, err := inventory.ScanPackage(ctx, *pkg, repoPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return a.finalizeAnalysis(ctx, []*models.PackageInsights{scannedPackage})
+	err = a.finalizeAnalysis(ctx, []*models.PackageInsights{scannedPackage})
+	if err != nil {
+		return nil, err
+	}
+
+	return scannedPackage, nil
 }
 
 type Formatter interface {
