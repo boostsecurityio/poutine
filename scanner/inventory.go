@@ -35,16 +35,16 @@ func (i *Inventory) ScanPackage(ctx context.Context, pkgInsights models.PackageI
 	refPkgInsights := &pkgInsights
 
 	if err := inventoryScanner.Run(refPkgInsights); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to run inventory scanner on package: %w", err)
 	}
 
 	if err := i.performDependenciesInventory(ctx, refPkgInsights); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to perform dependencies inventory on package: %w", err)
 	}
 
 	findingsResults, err := i.analyzePackageForFindings(ctx, pkgInsights)
 	if err != nil {
-		return nil, fmt.Errorf("failed to analyze for findings: %w", err)
+		return nil, fmt.Errorf("failed to analyze package for findings: %w", err)
 	}
 
 	if findingsResults != nil {
