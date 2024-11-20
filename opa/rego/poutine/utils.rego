@@ -68,3 +68,9 @@ workflow_run_parents(pkg, workflow) = parents if {
 		glob.match(parent_names[_], ["/"], parent.name)
 	}
 }
+
+to_set(xs) = xs if {
+	is_set(xs)
+} else := {v | v := xs[_]} if {
+	is_array(xs)
+} else := {xs}

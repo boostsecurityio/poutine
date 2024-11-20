@@ -30,15 +30,27 @@ type Opa struct {
 	LoadPaths []string
 }
 
-func NewOpa() (*Opa, error) {
+func NewOpa(ctx context.Context, config *models.Config) (*Opa, error) {
 	registerBuiltinFunctions()
 
-	return &Opa{
+	newOpa := &Opa{
 		Store: inmem.NewFromObject(map[string]interface {
 		}{
 			"config": models.DefaultConfig(),
 		}),
-	}, nil
+	}
+
+	err := newOpa.WithConfig(ctx, config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set opa with config: %w", err)
+	}
+
+	err = newOpa.Compile(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize opa compiler: %w", err)
+	}
+
+	return newOpa, nil
 }
 
 func (o *Opa) Print(ctx print.Context, s string) error {
@@ -117,14 +129,7 @@ func (o *Opa) Compile(ctx context.Context) error {
 }
 
 func (o *Opa) Eval(ctx context.Context, query string, input map[string]interface{}, result interface{}) error {
-	if o.Compiler == nil {
-		if err := o.Compile(ctx); err != nil {
-			log.Debug().Msg(err.Error())
-			return err
-		}
-	}
-
-	rego := rego.New(
+	regoInstance := rego.New(
 		rego.Query(query),
 		rego.Compiler(o.Compiler),
 		rego.PrintHook(o),
@@ -133,7 +138,7 @@ func (o *Opa) Eval(ctx context.Context, query string, input map[string]interface
 		rego.Store(o.Store),
 	)
 
-	rs, err := rego.Eval(ctx)
+	rs, err := regoInstance.Eval(ctx)
 	if err != nil {
 		return err
 	}

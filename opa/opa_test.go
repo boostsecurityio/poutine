@@ -42,7 +42,9 @@ func TestOpaBuiltins(t *testing.T) {
 		},
 	}
 
-	opa, err := NewOpa()
+	opa, err := NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
 	noOpaErrors(t, err)
 
 	for _, c := range cases {
@@ -66,6 +68,16 @@ func TestSemverConstraintCheck(t *testing.T) {
 			expected:   true,
 		},
 		{
+			constraint: "<=3.11.13",
+			version:    "3.11.13",
+			expected:   true,
+		},
+		{
+			constraint: "<=3.11.13",
+			version:    "3.11.14",
+			expected:   false,
+		},
+		{
 			constraint: ">=4.0.0,<4.4.1",
 			version:    "4",
 			expected:   true,
@@ -77,7 +89,9 @@ func TestSemverConstraintCheck(t *testing.T) {
 		},
 	}
 
-	opa, err := NewOpa()
+	opa, err := NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
 	noOpaErrors(t, err)
 
 	for _, c := range cases {
@@ -114,7 +128,9 @@ func TestJobUsesSelfHostedRunner(t *testing.T) {
 		"random-name":         true,
 	}
 
-	opa, err := NewOpa()
+	opa, err := NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
 	noOpaErrors(t, err)
 
 	for runner, expected := range cases {
@@ -136,7 +152,9 @@ func TestJobUsesSelfHostedRunner(t *testing.T) {
 }
 
 func TestWithConfig(t *testing.T) {
-	o, err := NewOpa()
+	o, err := NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
 	noOpaErrors(t, err)
 	ctx := context.TODO()
 
@@ -181,7 +199,9 @@ func TestCapabilities(t *testing.T) {
 }
 
 func TestRulesMetadataLevel(t *testing.T) {
-	opa, err := NewOpa()
+	opa, err := NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
 	noOpaErrors(t, err)
 
 	query := `{rule_id: rule.level |
@@ -199,4 +219,32 @@ func TestRulesMetadataLevel(t *testing.T) {
 	noOpaErrors(t, err)
 
 	assert.Empty(t, result, fmt.Sprintf("rules with invalid levels: %v", result))
+}
+
+func TestWithRulesConfig(t *testing.T) {
+	o, err := NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
+	noOpaErrors(t, err)
+	ctx := context.TODO()
+
+	var rule *Rule
+	err = o.Eval(ctx, "data.rules.pr_runs_on_self_hosted.rule", nil, &rule)
+	noOpaErrors(t, err)
+	assert.Equal(t, []interface{}{}, rule.Config["allowed_runners"].Default)
+	assert.Equal(t, []interface{}{}, rule.Config["allowed_runners"].Value)
+
+	err = o.WithConfig(ctx, &models.Config{
+		RulesConfig: map[string]map[string]interface{}{
+			"pr_runs_on_self_hosted": {
+				"allowed_runners": []string{"self-hosted"},
+			},
+		},
+	})
+	assert.NoError(t, err)
+
+	err = o.Eval(ctx, "data.rules.pr_runs_on_self_hosted.rule", nil, &rule)
+	noOpaErrors(t, err)
+	assert.Equal(t, []interface{}{}, rule.Config["allowed_runners"].Default)
+	assert.Equal(t, []interface{}{"self-hosted"}, rule.Config["allowed_runners"].Value)
 }

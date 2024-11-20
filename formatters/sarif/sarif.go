@@ -12,14 +12,16 @@ import (
 	"github.com/owenrumney/go-sarif/v2/sarif"
 )
 
-func NewFormat(out io.Writer) *Format {
+func NewFormat(out io.Writer, version string) *Format {
 	return &Format{
-		out: out,
+		out:     out,
+		version: version,
 	}
 }
 
 type Format struct {
-	out io.Writer
+	out     io.Writer
+	version string
 }
 
 func (f *Format) Format(ctx context.Context, report *opa.FindingsResult, packages []*models.PackageInsights) error {
@@ -42,7 +44,7 @@ func (f *Format) Format(ctx context.Context, report *opa.FindingsResult, package
 
 	for _, pkg := range packages {
 		run := sarif.NewRunWithInformationURI("poutine", "https://github.com/boostsecurityio/poutine")
-		run.Tool.Driver.WithSemanticVersion("0.9.0")
+		run.Tool.Driver.WithSemanticVersion(f.version)
 		run.Properties = map[string]interface{}{
 			"purl": pkg.Purl,
 		}

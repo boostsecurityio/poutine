@@ -1,0 +1,21 @@
+name: allowed_pr_runner.yml
+on:
+  pull_request:
+
+jobs:
+  hosted:
+    runs-on: [macos-latest, ubuntu-latest]
+    steps:
+    - uses: actions/checkout@v4
+
+  group:
+    runs-on:
+      group: prdeploy
+    steps:
+    - uses: actions/checkout@v4
+
+  labels:
+    runs-on:
+      labels: linux
+    steps:
+    - uses: actions/checkout@v4

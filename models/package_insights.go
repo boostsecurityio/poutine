@@ -11,8 +11,6 @@ type PackageInsights struct {
 
 	Purl string `json:"purl"`
 
-	AnalysisResult   string `json:"analysis_result"`
-	AnalysisDetails  string `json:"analysis_details"`
 	PackageEcosystem string `json:"package_ecosystem"`
 	PackageName      string `json:"package_name"`
 	PackageNamespace string `json:"package_namespace"`
@@ -24,13 +22,30 @@ type PackageInsights struct {
 	SourceGitRef       string `json:"source_git_ref"`
 	SourceGitCommitSha string `json:"source_git_commit_sha"`
 
+	OrgID           int    `json:"org_id"`
+	RepoID          int    `json:"repo_id"`
+	RepoSize        int    `json:"repo_size"`
+	DefaultBranch   string `json:"default_branch"`
+	IsFork          bool   `json:"is_fork"`
+	IsEmpty         bool   `json:"is_empty"`
+	ForksCount      int    `json:"forks_count"`
+	StarsCount      int    `json:"stars_count"`
+	IsTemplate      bool   `json:"is_template"`
+	HasIssues       bool   `json:"has_issues"`
+	OpenIssuesCount int    `json:"open_issues_count"`
+	HasWiki         bool   `json:"has_wiki"`
+	HasDiscussions  bool   `json:"has_discussions"`
+	PrimaryLanguage string `json:"primary_language"`
+	License         string `json:"license"`
+
 	PackageDependencies []string `json:"package_dependencies"`
 	BuildDependencies   []string `json:"build_dependencies"`
 
 	GithubActionsWorkflows []GithubActionsWorkflow `json:"github_actions_workflows"`
 	GithubActionsMetadata  []GithubActionsMetadata `json:"github_actions_metadata"`
-
-	GitlabciConfigs []GitlabciConfig `json:"gitlabci_configs"`
+	GitlabciConfigs        []GitlabciConfig        `json:"gitlabci_configs"`
+	AzurePipelines         []AzurePipeline         `json:"azure_pipelines"`
+	PipelineAsCodeTekton   []PipelineAsCodeTekton  `json:"pipeline_as_code_tekton"`
 }
 
 func (p *PackageInsights) GetSourceGitRepoURI() string {
@@ -48,7 +63,7 @@ func (p *PackageInsights) GetSourceGitRepoURI() string {
 func (p *PackageInsights) NormalizePurl() error {
 	purl, err := NewPurl(p.Purl)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating new purl for normalization: %w", err)
 	}
 
 	p.Purl = purl.String()

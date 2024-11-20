@@ -11,6 +11,7 @@ import (
 	"github.com/boostsecurityio/poutine/opa"
 	"github.com/boostsecurityio/poutine/providers/gitops"
 	"github.com/boostsecurityio/poutine/providers/scm"
+	"github.com/boostsecurityio/poutine/providers/scm/domain"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
@@ -26,7 +27,7 @@ import (
 var Format string
 var Verbose bool
 var ScmProvider string
-var ScmBaseURL scm.ScmBaseDomain
+var ScmBaseURL scm_domain.ScmBaseDomain
 var (
 	Version string
 	Commit  string
@@ -159,7 +160,7 @@ func GetFormatter(opaClient *opa.Opa) analyze.Formatter {
 	case "pretty":
 		return &pretty.Format{}
 	case "sarif":
-		return sarif.NewFormat(os.Stdout)
+		return sarif.NewFormat(os.Stdout, Version)
 	}
 
 	return json.NewFormat(opaClient, Format, os.Stdout)
@@ -185,12 +186,11 @@ func GetAnalyzer(ctx context.Context, command string) (*analyze.Analyzer, error)
 }
 
 func newOpa(ctx context.Context) (*opa.Opa, error) {
-	opaClient, err := opa.NewOpa()
+	opaClient, err := opa.NewOpa(ctx, config)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create OPA client")
 		return nil, err
 	}
-	_ = opaClient.WithConfig(ctx, config)
 
 	return opaClient, nil
 }

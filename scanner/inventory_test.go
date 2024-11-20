@@ -10,7 +10,9 @@ import (
 )
 
 func TestPurls(t *testing.T) {
-	o, _ := opa.NewOpa()
+	o, _ := opa.NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
 	i := NewInventory(o, nil, "", "")
 	pkg := &models.PackageInsights{
 		Purl: "pkg:github/org/owner",
@@ -43,16 +45,20 @@ func TestPurls(t *testing.T) {
 		"pkg:docker/debian%3Avuln",
 		"pkg:githubactions/bridgecrewio/checkov-action@main",
 		"pkg:githubactions/org/repo@main#.github/workflows/Reusable.yml",
+		"pkg:azurepipelinestask/DownloadPipelineArtifact@2",
+		"pkg:azurepipelinestask/Cache@2",
 	}
 	assert.ElementsMatch(t, i.Purls(), purls)
 	assert.Equal(t, 1, len(i.Packages))
-	assert.Equal(t, 16, len(i.Packages[0].BuildDependencies))
+	assert.Equal(t, 18, len(i.Packages[0].BuildDependencies))
 	assert.Equal(t, 4, len(i.Packages[0].PackageDependencies))
 }
 
 func TestFindings(t *testing.T) {
-	o, _ := opa.NewOpa()
-	i := NewInventory(o, nil, "gitlab", "16.9.6")
+	o, _ := opa.NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
+	i := NewInventory(o, nil, "gitlab", "")
 	purl := "pkg:github/org/owner"
 	pkg := &models.PackageInsights{
 		Purl: purl,
@@ -239,18 +245,28 @@ func TestFindings(t *testing.T) {
 				Details: "runs-on: self-hosted"},
 		},
 		{
+			RuleId: "pr_runs_on_self_hosted",
+			Purl:   purl,
+			Meta: opa.FindingMeta{
+				Path:    ".github/workflows/allowed_pr_runner.yml",
+				Job:     "group",
+				Line:    13,
+				Details: "runs-on: group:prdeploy"},
+		},
+		{
+			RuleId: "pr_runs_on_self_hosted",
+			Purl:   purl,
+			Meta: opa.FindingMeta{
+				Path:    ".github/workflows/allowed_pr_runner.yml",
+				Job:     "labels",
+				Line:    19,
+				Details: "runs-on: label:linux"},
+		},
+		{
 			RuleId: "github_action_from_unverified_creator_used",
 			Purl:   "pkg:githubactions/kartverket/github-workflows",
 			Meta: opa.FindingMeta{
 				Details: "Used in 1 repo(s)",
-			},
-		},
-		{
-			RuleId: "known_vulnerability_in_build_platform",
-			Purl:   "gitlab",
-			Meta: opa.FindingMeta{
-				OsvId:   "CVE-2024-2651",
-				Details: "Provider: gitlab",
 			},
 		},
 		{
@@ -331,6 +347,82 @@ func TestFindings(t *testing.T) {
 				Details: "Command: curl https://raw.githubusercontent.com/org/repo/main/install.sh | bash",
 			},
 		},
+		{
+			RuleId: "unverified_script_exec",
+			Purl:   purl,
+			Meta: opa.FindingMeta{
+				Path:    "azure-pipelines-1.yml",
+				Line:    8,
+				Step:    "2",
+				Details: "Command: curl $(URL) | bash",
+			},
+		},
+		{
+			RuleId: "injection",
+			Purl:   purl,
+			Meta: opa.FindingMeta{
+				Path:    ".azure-pipelines.yml",
+				Line:    14,
+				Job:     "build",
+				Step:    "1",
+				Details: "Sources: Build.SourceBranch",
+			},
+		},
+		{
+			RuleId: "debug_enabled",
+			Purl:   purl,
+			Meta: opa.FindingMeta{
+				Path:    ".azure-pipelines.yml",
+				Line:    0,
+				Job:     "",
+				Step:    "1",
+				Details: "system.debug",
+			},
+		},
+		{
+			RuleId: "untrusted_checkout_exec",
+			Purl:   purl,
+			Meta: opa.FindingMeta{
+				Path:    "azure-pipelines-2.yml",
+				Line:    14,
+				Job:     "",
+				Step:    "2",
+				Details: "Detected usage of `npm`",
+			},
+		},
+		{
+			RuleId: "untrusted_checkout_exec",
+			Purl:   purl,
+			Meta: opa.FindingMeta{
+				Path:    "azure-pipelines-4.yml",
+				Line:    11,
+				Job:     "",
+				Step:    "2",
+				Details: "Detected usage of `npm`",
+			},
+		},
+		{
+			RuleId: "untrusted_checkout_exec",
+			Purl:   purl,
+			Meta: opa.FindingMeta{
+				Path:    ".tekton/pipeline-as-code-tekton.yml",
+				Line:    43,
+				Job:     "vale",
+				Step:    "0",
+				Details: "Detected usage of `vale`",
+			},
+		},
+		{
+			RuleId: "injection",
+			Purl:   purl,
+			Meta: opa.FindingMeta{
+				Path:    ".tekton/pipeline-as-code-tekton.yml",
+				Line:    45,
+				Job:     "vale",
+				Step:    "1",
+				Details: "Sources: body.pull_request.body",
+			},
+		},
 	}
 
 	assert.Equal(t, len(findings), len(results.Findings))
@@ -338,7 +430,9 @@ func TestFindings(t *testing.T) {
 }
 
 func TestSkipRule(t *testing.T) {
-	o, _ := opa.NewOpa()
+	o, _ := opa.NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
 	i := NewInventory(o, nil, "", "")
 	ctx := context.TODO()
 	purl := "pkg:github/org/owner"
@@ -379,4 +473,53 @@ func TestSkipRule(t *testing.T) {
 	}
 
 	assert.NotContains(t, rule_ids, rule_id)
+}
+
+func TestRulesConfig(t *testing.T) {
+	o, _ := opa.NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
+	i := NewInventory(o, nil, "", "")
+	ctx := context.TODO()
+	purl := "pkg:github/org/owner"
+	rule_id := "pr_runs_on_self_hosted"
+	path := ".github/workflows/allowed_pr_runner.yml"
+	pkg := &models.PackageInsights{
+		Purl: purl,
+	}
+	_ = pkg.NormalizePurl()
+
+	err := i.AddPackage(ctx, pkg, "testdata")
+	assert.NoError(t, err)
+
+	results, err := i.Findings(ctx)
+	assert.NoError(t, err)
+
+	labels := []string{}
+	for _, f := range results.Findings {
+		if f.RuleId == rule_id && f.Meta.Path == path {
+			labels = append(labels, f.Meta.Details)
+		}
+	}
+	assert.ElementsMatch(t, labels, []string{"runs-on: label:linux", "runs-on: group:prdeploy"})
+
+	err = o.WithConfig(ctx, &models.Config{
+		RulesConfig: map[string]map[string]interface{}{
+			rule_id: {
+				"allowed_runners": []string{"label:linux", "group:prdeploy"},
+			},
+		},
+	})
+	assert.NoError(t, err)
+
+	results, err = i.Findings(ctx)
+	assert.NoError(t, err)
+
+	labels = []string{}
+	for _, f := range results.Findings {
+		if f.RuleId == rule_id && f.Meta.Path == path {
+			labels = append(labels, f.Meta.Details)
+		}
+	}
+	assert.Empty(t, labels)
 }

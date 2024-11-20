@@ -1,0 +1,14 @@
+pr:
+  branches:
+    include:
+      - master
+
+variables:
+  system.debug: 'true'
+
+# implicit stage
+jobs:
+- job: build
+  steps:
+  - task: Cache@2
+  - powershell: echo "$(Build.SourceBranch)"

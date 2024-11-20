@@ -50,6 +50,13 @@ type Rule struct {
 		Ref         string `json:"ref"`
 		Description string `json:"description"`
 	} `json:"refs,omitempty"`
+	Config map[string]RuleConfig `json:"config,omitempty"`
+}
+
+type RuleConfig struct {
+	Default     interface{} `json:"default"`
+	Description string      `json:"description"`
+	Value       interface{} `json:"value"`
 }
 
 func (m *FindingMeta) UnmarshalJSON(data []byte) error {

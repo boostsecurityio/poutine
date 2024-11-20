@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -14,6 +13,7 @@ import (
 
 	"github.com/boostsecurityio/poutine/opa"
 	"github.com/boostsecurityio/poutine/providers/pkgsupply"
+	"github.com/boostsecurityio/poutine/providers/scm/domain"
 	"github.com/boostsecurityio/poutine/scanner"
 	"github.com/rs/zerolog/log"
 	"github.com/schollz/progressbar/v3"
@@ -26,6 +26,20 @@ type Repository interface {
 	GetRepoIdentifier() string
 	GetIsFork() bool
 	BuildGitURL(baseURL string) string
+	GetHasIssues() bool
+	GetHasWiki() bool
+	GetHasDiscussion() bool
+	GetOpenIssuesCount() int
+	GetForksCount() int
+	GetStarsCount() int
+	GetPrimaryLanguage() string
+	GetSize() int
+	GetDefaultBranch() string
+	GetLicense() string
+	GetIsTemplate() bool
+	GetOrganizationID() int
+	GetRepositoryID() int
+	GetIsEmpty() bool
 }
 
 type RepoBatch struct {
@@ -81,7 +95,7 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 		log.Debug().Err(err).Msgf("Failed to get provider version for %s", provider)
 	}
 
-	log.Debug().Msgf("Provider: %s, Version: %s", provider, providerVersion)
+	log.Debug().Msgf("Provider: %s, Version: %s, BaseURL: %s", provider, providerVersion, a.ScmClient.GetProviderBaseURL())
 
 	log.Debug().Msgf("Fetching list of repositories for organization: %s on %s", org, provider)
 	orgReposBatches := a.ScmClient.GetOrgRepos(ctx, org)
@@ -92,13 +106,23 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 	log.Debug().Msgf("Starting repository analysis for organization: %s on %s", org, provider)
 	bar := a.progressBar(0, "Analyzing repositories")
 
-	var wg sync.WaitGroup
+	var reposWg sync.WaitGroup
 	errChan := make(chan error, 1)
 	maxGoroutines := 2
 	if numberOfGoroutines != nil {
 		maxGoroutines = *numberOfGoroutines
 	}
-	sem := semaphore.NewWeighted(int64(maxGoroutines))
+	goRoutineLimitSem := semaphore.NewWeighted(int64(maxGoroutines))
+
+	pkgChan := make(chan *models.PackageInsights)
+	pkgWg := sync.WaitGroup{}
+	pkgWg.Add(1)
+	go func() {
+		defer pkgWg.Done()
+		for pkg := range pkgChan {
+			inventory.Packages = append(inventory.Packages, pkg)
+		}
+	}()
 
 	for repoBatch := range orgReposBatches {
 		if repoBatch.Err != nil {
@@ -113,15 +137,20 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 				bar.ChangeMax(repoBatch.TotalCount - 1)
 				continue
 			}
-			if err := sem.Acquire(ctx, 1); err != nil {
+			if repo.GetSize() == 0 {
+				bar.ChangeMax(repoBatch.TotalCount - 1)
+				log.Info().Str("repo", repo.GetRepoIdentifier()).Msg("Skipping empty repository")
+				continue
+			}
+			if err := goRoutineLimitSem.Acquire(ctx, 1); err != nil {
 				close(errChan)
 				return fmt.Errorf("failed to acquire semaphore: %w", err)
 			}
 
-			wg.Add(1)
+			reposWg.Add(1)
 			go func(repo Repository) {
-				defer sem.Release(1)
-				defer wg.Done()
+				defer goRoutineLimitSem.Release(1)
+				defer reposWg.Done()
 				repoNameWithOwner := repo.GetRepoIdentifier()
 				tempDir, err := a.cloneRepoToTemp(ctx, repo.BuildGitURL(a.ScmClient.GetProviderBaseURL()), a.ScmClient.GetToken(), "HEAD")
 				if err != nil {
@@ -136,9 +165,16 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 					return
 				}
 
-				err = inventory.AddPackage(ctx, pkg, tempDir)
+				scannedPkg, err := inventory.ScanPackage(ctx, pkg, tempDir)
 				if err != nil {
-					log.Error().Err(err).Str("repo", repoNameWithOwner).Msg("failed to add package to inventory")
+					log.Error().Err(err).Str("repo", repoNameWithOwner).Msg("failed to scan package")
+					return
+				}
+
+				select {
+				case pkgChan <- scannedPkg:
+				case <-ctx.Done():
+					log.Error().Msg("Context canceled while sending package to channel")
 					return
 				}
 				_ = bar.Add(1)
@@ -147,9 +183,12 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 	}
 
 	go func() {
-		wg.Wait()
+		reposWg.Wait()
+		close(pkgChan)
 		close(errChan)
 	}()
+
+	pkgWg.Wait()
 
 	for err := range errChan {
 		if err != nil {
@@ -178,7 +217,7 @@ func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref strin
 		log.Debug().Err(err).Msgf("Failed to get provider version for %s", provider)
 	}
 
-	log.Debug().Msgf("Provider: %s, Version: %s", provider, providerVersion)
+	log.Debug().Msgf("Provider: %s, Version: %s, BaseURL: %s", provider, providerVersion, a.ScmClient.GetProviderBaseURL())
 
 	pkgsupplyClient := pkgsupply.NewStaticClient()
 	inventory := scanner.NewInventory(a.Opa, pkgsupplyClient, provider, providerVersion)
@@ -226,7 +265,7 @@ func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) error 
 		log.Debug().Err(err).Msgf("Failed to get provider version for %s", provider)
 	}
 
-	log.Debug().Msgf("Provider: %s, Version: %s", provider, providerVersion)
+	log.Debug().Msgf("Provider: %s, Version: %s, BaseURL: %s", provider, providerVersion, a.ScmClient.GetProviderBaseURL())
 
 	pkgsupplyClient := pkgsupply.NewStaticClient()
 	inventory := scanner.NewInventory(a.Opa, pkgsupplyClient, provider, providerVersion)
@@ -275,26 +314,52 @@ func (a *Analyzer) generatePackageInsights(ctx context.Context, tempDir string, 
 		return nil, fmt.Errorf("failed to get commit SHA: %w", err)
 	}
 
+	var (
+		purl   models.Purl
+		domain = a.ScmClient.GetProviderBaseURL()
+	)
+	if domain != scm_domain.DefaultGitHubDomain && domain != scm_domain.DefaultGitLabDomain {
+		purl, _ = models.NewPurl(fmt.Sprintf("pkg:%s/%s?repository_url=%s", repo.GetProviderName(), repo.GetRepoIdentifier(), domain))
+	} else {
+		purl, _ = models.NewPurl(fmt.Sprintf("pkg:%s/%s", repo.GetProviderName(), repo.GetRepoIdentifier()))
+	}
+
 	switch ref {
 	case "HEAD", "":
 		ref, err = a.GitClient.GetRepoHeadBranchName(ctx, tempDir)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get head branch name: %w", err)
 		}
+	default:
+		purl.Version = ref
 	}
 
-	purl := fmt.Sprintf("pkg:%s/%s", repo.GetProviderName(), strings.ToLower(repo.GetRepoIdentifier()))
 	pkg := &models.PackageInsights{
-		Purl:               purl,
-		LastCommitedAt:     commitDate.String(),
-		SourceGitCommitSha: commitSha,
+		LastCommitedAt:     commitDate.Format(time.RFC3339),
+		Purl:               purl.String(),
 		SourceScmType:      repo.GetProviderName(),
 		SourceGitRepo:      repo.GetRepoIdentifier(),
 		SourceGitRef:       ref,
+		SourceGitCommitSha: commitSha,
+		OrgID:              repo.GetOrganizationID(),
+		RepoID:             repo.GetRepositoryID(),
+		RepoSize:           repo.GetSize(),
+		DefaultBranch:      repo.GetDefaultBranch(),
+		IsFork:             repo.GetIsFork(),
+		IsEmpty:            repo.GetIsEmpty(),
+		ForksCount:         repo.GetForksCount(),
+		StarsCount:         repo.GetStarsCount(),
+		IsTemplate:         repo.GetIsTemplate(),
+		HasIssues:          repo.GetHasIssues(),
+		OpenIssuesCount:    repo.GetOpenIssuesCount(),
+		HasWiki:            repo.GetHasWiki(),
+		HasDiscussions:     repo.GetHasDiscussion(),
+		PrimaryLanguage:    repo.GetPrimaryLanguage(),
+		License:            repo.GetLicense(),
 	}
 	err = pkg.NormalizePurl()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to normalize purl: %w", err)
 	}
 	return pkg, nil
 }
@@ -308,7 +373,7 @@ func (a *Analyzer) cloneRepoToTemp(ctx context.Context, gitURL string, token str
 	err = a.GitClient.Clone(ctx, tempDir, gitURL, token, ref)
 	if err != nil {
 		os.RemoveAll(tempDir) // Clean up if cloning fails
-		return "", fmt.Errorf("failed to clone repo: %s", err)
+		return "", fmt.Errorf("failed to clone repo: %w", err)
 	}
 	return tempDir, nil
 }

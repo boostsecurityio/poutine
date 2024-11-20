@@ -14,10 +14,11 @@ type ConfigInclude struct {
 }
 
 type Config struct {
-	Skip        []ConfigSkip    `json:"skip"`
-	Include     []ConfigInclude `json:"include"`
-	IgnoreForks bool            `json:"ignore_forks,omitempty"`
-	Quiet       bool            `json:"quiet,omitempty"`
+	Skip        []ConfigSkip                      `json:"skip"`
+	Include     []ConfigInclude                   `json:"include"`
+	IgnoreForks bool                              `json:"ignore_forks"`
+	Quiet       bool                              `json:"quiet,omitempty"`
+	RulesConfig map[string]map[string]interface{} `json:"rules_config"`
 }
 
 func DefaultConfig() *Config {

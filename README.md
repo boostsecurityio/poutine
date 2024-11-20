@@ -24,7 +24,14 @@ See the [documentation](docs/content/en/rules) for a list of rules currently sup
 
 ## Why `poutine`?
 
-In French, the word "poutine", when not referring to the [dish](https://en.wikipedia.org/wiki/Poutine), can be used to mean "messy". Inspired by the complexity and intertwined dependencies of modern open-source projects, `poutine` reflects both a nod to our Montreal roots and the often messy, complex nature of securing software supply chains. 
+In French, the word "poutine", when not referring to the [dish](https://en.wikipedia.org/wiki/Poutine), can be used to mean "messy". Inspired by the complexity and intertwined dependencies of modern open-source projects, `poutine` reflects both a nod to our Montreal roots and the often messy, complex nature of securing software supply chains.
+
+## Supported Platforms
+
+- GitHub Actions
+- Gitlab Pipelines
+- Azure DevOps
+- Pipelines As Code Tekton
 
 ## Getting Started
 
@@ -112,12 +119,19 @@ See [.poutine.sample.yml](.poutine.sample.yml) for an example configuration file
 
 ## Building from source
 
-Building `poutine` requires Go 1.22.
+Building `poutine` requires Go 1.23.
 
 ```bash
 git clone https://github.com/boostsecurityio/poutine.git
 cd poutine
 make build
+```
+
+## Development
+### Updating Build Platform CVE Database
+```bash
+go test -tags build_platform_vuln_database ./...
+opa fmt -w opa/rego/external/build_platform.rego
 ```
 
 ## See Also 

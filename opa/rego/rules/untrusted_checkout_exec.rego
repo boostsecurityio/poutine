@@ -44,6 +44,7 @@ build_commands[cmd] = {
 	"bundler": {"bundle install", "bundle exec "},
 	"ant": {"^ant "},
 	"mkdocs": {"mkdocs build"},
+	"vale": {"vale "},
 }[cmd]
 
 results contains poutine.finding(rule, pkg_purl, {
@@ -90,4 +91,70 @@ _workflows_runs_from_pr contains [pkg.purl, workflow] if {
 	parent := utils.workflow_run_parents(pkg, workflow)[_]
 
 	utils.filter_workflow_events(parent, github.workflow_run.parent.events)
+}
+
+# Azure Devops
+
+results contains poutine.finding(rule, pkg_purl, {
+	"path": pipeline_path,
+	"job": job,
+	"step": s.step_idx,
+	"line": s.step.lines[attr],
+	"details": sprintf("Detected usage of `%s`", [cmd]),
+}) if {
+	[pkg_purl, pipeline_path, s, job] := _steps_after_untrusted_checkout_ado[_]
+	regex.match(
+		sprintf("([^a-z]|^)(%v)", [concat("|", build_commands[cmd])]),
+		s.step[attr],
+	)
+}
+
+_steps_after_untrusted_checkout_ado contains [pkg.purl, pipeline.path, s, job] if {
+	pkg := input.packages[_]
+	pipeline := pkg.azure_pipelines[_]
+	pipeline.pr.disabled == false
+	stage := pipeline.stages[_]
+
+	checkout := find_ado_checkout(stage)[_]
+	s := steps_after(checkout)[_]
+	job := stage.jobs[s.job_idx].job
+}
+
+steps_after(checkout) := steps if {
+	steps := {{"step": s, "job_idx": checkout.job_idx, "step_idx": k} |
+		s := checkout.stage.jobs[checkout.job_idx].steps[k]
+		k > checkout.step_idx
+	}
+}
+
+find_ado_checkout(stage) := xs if {
+	xs := {{"job_idx": j, "step_idx": i, "stage": stage} |
+		s := stage.jobs[j].steps[i]
+		s[step_attr]
+		step_attr == "checkout"
+		s[step_attr] == "self"
+	}
+}
+
+# Pipeline As Code Tekton
+
+results contains poutine.finding(rule, pkg.purl, {
+	"path": pipeline.path,
+	"job": task.name,
+	"step": step_idx,
+	"line": step.lines["script"],
+	"details": sprintf("Detected usage of `%s`", [cmd]),
+}) if {
+    pkg := input.packages[_]
+    pipeline := pkg.pipeline_as_code_tekton[_]
+    contains(pipeline.api_version, "tekton.dev")
+    pipeline.kind == "PipelineRun"
+    contains(pipeline.metadata.annotations["pipelinesascode.tekton.dev/on-event"], "pull_request")
+    contains(pipeline.metadata.annotations["pipelinesascode.tekton.dev/task"], "git-clone")
+    task := pipeline.spec.pipeline_spec.tasks[_]
+    step := task.task_spec.steps[step_idx]
+	regex.match(
+		sprintf("([^a-z]|^)(%v)", [concat("|", build_commands[cmd])]),
+		step.script,
+	)
 }

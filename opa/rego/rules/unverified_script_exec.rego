@@ -73,3 +73,18 @@ _scripts[pkg.purl] contains {
 	script := job[attr][_]
 	details := _unverified_scripts(script.run)[_]
 }
+
+_scripts[pkg.purl] contains {
+	"path": pipeline.path,
+	"job": job.job,
+	"step": step_id,
+	"line": step.lines[attr],
+	"details": details,
+} if {
+	some attr in {"script", "powershell", "pwsh", "bash"}
+	pkg := input.packages[_]
+	pipeline := pkg.azure_pipelines[_]
+	job := pipeline.stages[_].jobs[_]
+	step := job.steps[step_id]
+	details := _unverified_scripts(step[attr])[_]
+}
