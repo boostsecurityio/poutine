@@ -51,8 +51,9 @@ results contains poutine.finding(rule, pkg_purl, {
 	"path": workflow_path,
 	"line": step.lines.run,
 	"details": sprintf("Detected usage of `%s`", [cmd]),
+	"event_triggers": workflow_events,
 }) if {
-	[pkg_purl, workflow_path, step] := _steps_after_untrusted_checkout[_]
+	[pkg_purl, workflow_path, workflow_events, step] := _steps_after_untrusted_checkout[_]
 	regex.match(
 		sprintf("([^a-z]|^)(%v)", [concat("|", build_commands[cmd])]),
 		step.run,
@@ -63,24 +64,27 @@ results contains poutine.finding(rule, pkg_purl, {
 	"path": workflow_path,
 	"line": step.lines.uses,
 	"details": sprintf("Detected usage the GitHub Action `%s`", [step.action]),
+	"event_triggers": workflow_events,
 }) if {
-	[pkg_purl, workflow_path, step] := _steps_after_untrusted_checkout[_]
+	[pkg_purl, workflow_path, workflow_events, step] := _steps_after_untrusted_checkout[_]
 	build_github_actions[step.action]
 }
 
-_steps_after_untrusted_checkout contains [pkg.purl, workflow.path, s.step] if {
+_steps_after_untrusted_checkout contains [pkg.purl, workflow.path, events, s.step] if {
 	pkg := input.packages[_]
 	workflow := pkg.github_actions_workflows[_]
 
 	utils.filter_workflow_events(workflow, github.events)
 
+	events := [event | event := workflow.events[i].name]
 	pr_checkout := utils.find_pr_checkouts(workflow)[_]
 	s := utils.workflow_steps_after(pr_checkout)[_]
 }
 
-_steps_after_untrusted_checkout contains [pkg_purl, workflow.path, s.step] if {
+_steps_after_untrusted_checkout contains [pkg_purl, workflow.path, events, s.step] if {
 	[pkg_purl, workflow] := _workflows_runs_from_pr[_]
 
+	events := [event | event := workflow.events[i].name]
 	pr_checkout := utils.find_pr_checkouts(workflow)[_]
 	s := utils.workflow_steps_after(pr_checkout)[_]
 }
@@ -142,17 +146,17 @@ results contains poutine.finding(rule, pkg.purl, {
 	"path": pipeline.path,
 	"job": task.name,
 	"step": step_idx,
-	"line": step.lines["script"],
+	"line": step.lines.script,
 	"details": sprintf("Detected usage of `%s`", [cmd]),
 }) if {
-    pkg := input.packages[_]
-    pipeline := pkg.pipeline_as_code_tekton[_]
-    contains(pipeline.api_version, "tekton.dev")
-    pipeline.kind == "PipelineRun"
-    contains(pipeline.metadata.annotations["pipelinesascode.tekton.dev/on-event"], "pull_request")
-    contains(pipeline.metadata.annotations["pipelinesascode.tekton.dev/task"], "git-clone")
-    task := pipeline.spec.pipeline_spec.tasks[_]
-    step := task.task_spec.steps[step_idx]
+	pkg := input.packages[_]
+	pipeline := pkg.pipeline_as_code_tekton[_]
+	contains(pipeline.api_version, "tekton.dev")
+	pipeline.kind == "PipelineRun"
+	contains(pipeline.metadata.annotations["pipelinesascode.tekton.dev/on-event"], "pull_request")
+	contains(pipeline.metadata.annotations["pipelinesascode.tekton.dev/task"], "git-clone")
+	task := pipeline.spec.pipeline_spec.tasks[_]
+	step := task.task_spec.steps[step_idx]
 	regex.match(
 		sprintf("([^a-z]|^)(%v)", [concat("|", build_commands[cmd])]),
 		step.script,

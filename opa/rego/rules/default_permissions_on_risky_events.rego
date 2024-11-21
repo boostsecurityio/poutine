@@ -20,7 +20,10 @@ github.events contains event if some event in {
 	"issue_comment",
 }
 
-results contains poutine.finding(rule, pkg.purl, {"path": workflow.path}) if {
+results contains poutine.finding(rule, pkg.purl, {
+    "path": workflow.path,
+    "event_triggers": [event | event := workflow.events[j].name],
+}) if {
 	pkg := input.packages[_]
 	workflow = pkg.github_actions_workflows[_]
 	job := workflow.jobs[_]
@@ -31,7 +34,10 @@ results contains poutine.finding(rule, pkg.purl, {"path": workflow.path}) if {
 	utils.empty(job.permissions)
 }
 
-results contains poutine.finding(rule, pkg.purl, {"path": workflow.path}) if {
+results contains poutine.finding(rule, pkg.purl, {
+    "path": workflow.path,
+    "event_triggers": [event | event := workflow.events[j].name],
+}) if {
 	pkg := input.packages[_]
 	workflow = pkg.github_actions_workflows[_]
 	job := workflow.jobs[_]

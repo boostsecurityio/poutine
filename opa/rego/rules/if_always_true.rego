@@ -33,6 +33,7 @@ if_conditions[pkg.purl] contains {
 	"path": workflow.path,
 	"line": object.get(job.lines, "if", 0),
 	"job": job.id,
+    "event_triggers": [event | event := workflow.events[j].name],
 } if {
 	pkg := input.packages[_]
 	workflow = pkg.github_actions_workflows[_]
@@ -47,6 +48,7 @@ if_conditions[pkg.purl] contains {
 	"line": object.get(step.lines, "if", 0),
 	"job": job.id,
 	"step": step_id,
+    "event_triggers": [event | event := workflow.events[j].name],
 } if {
 	pkg := input.packages[_]
 	workflow = pkg.github_actions_workflows[_]
