@@ -33,12 +33,12 @@ func TestOpaBuiltins(t *testing.T) {
 	}{
 		{
 			builtin:  "purl.parse_github_actions",
-			input:    "actions/checkout@v4",
+			input:    `"actions/checkout@v4","",""`,
 			expected: "pkg:githubactions/actions/checkout@v4",
 		},
 		{
 			builtin:  "purl.parse_docker_image",
-			input:    "alpine:latest",
+			input:    `"alpine:latest"`,
 			expected: "pkg:docker/alpine%3Alatest",
 		},
 	}
@@ -50,7 +50,8 @@ func TestOpaBuiltins(t *testing.T) {
 
 	for _, c := range cases {
 		var result interface{}
-		err := opa.Eval(context.TODO(), c.builtin+"(\""+c.input+"\")", nil, &result)
+		query := fmt.Sprintf(`%s(%s)`, c.builtin, c.input)
+		err := opa.Eval(context.TODO(), query, nil, &result)
 		noOpaErrors(t, err)
 
 		assert.Equal(t, c.expected, result)
