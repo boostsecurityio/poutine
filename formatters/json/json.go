@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/boostsecurityio/poutine/models"
 	"github.com/boostsecurityio/poutine/opa"
+	"github.com/boostsecurityio/poutine/results"
 	"io"
 )
 
@@ -22,10 +23,22 @@ type Format struct {
 	format string
 }
 
-func (f *Format) Format(ctx context.Context, report *opa.FindingsResult, packages []*models.PackageInsights) error {
+func (f *Format) Format(ctx context.Context, packages []*models.PackageInsights) error {
 	var result struct {
 		Output string `json:"output"`
 		Error  string `json:"error"`
+	}
+	report := &results.FindingsResult{
+		Findings: make([]results.Finding, 0),
+		Rules:    map[string]results.Rule{},
+	}
+	for _, pkg := range packages {
+		for _, finding := range pkg.FindingsResults.Findings {
+			report.Findings = append(report.Findings, finding)
+		}
+		for _, rule := range pkg.FindingsResults.Rules {
+			report.Rules[rule.Id] = rule
+		}
 	}
 	err := f.opa.Eval(ctx,
 		"data.poutine.queries.format.result",

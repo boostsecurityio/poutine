@@ -87,7 +87,7 @@ type Analyzer struct {
 	Opa       *opa.Opa
 }
 
-func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutines *int) error {
+func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutines *int) ([]*models.PackageInsights, error) {
 	provider := a.ScmClient.GetProviderName()
 
 	providerVersion, err := a.ScmClient.GetProviderVersion(ctx)
@@ -114,19 +114,21 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 	}
 	goRoutineLimitSem := semaphore.NewWeighted(int64(maxGoroutines))
 
+	scannedPackages := make([]*models.PackageInsights, 0)
+
 	pkgChan := make(chan *models.PackageInsights)
 	pkgWg := sync.WaitGroup{}
 	pkgWg.Add(1)
 	go func() {
 		defer pkgWg.Done()
 		for pkg := range pkgChan {
-			inventory.Packages = append(inventory.Packages, pkg)
+			scannedPackages = append(scannedPackages, pkg)
 		}
 	}()
 
 	for repoBatch := range orgReposBatches {
 		if repoBatch.Err != nil {
-			return fmt.Errorf("failed to get batch of repos: %w", repoBatch.Err)
+			return scannedPackages, fmt.Errorf("failed to get batch of repos: %w", repoBatch.Err)
 		}
 		if repoBatch.TotalCount != 0 {
 			bar.ChangeMax(repoBatch.TotalCount)
@@ -144,7 +146,7 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 			}
 			if err := goRoutineLimitSem.Acquire(ctx, 1); err != nil {
 				close(errChan)
-				return fmt.Errorf("failed to acquire semaphore: %w", err)
+				return scannedPackages, fmt.Errorf("failed to acquire semaphore: %w", err)
 			}
 
 			reposWg.Add(1)
@@ -165,7 +167,7 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 					return
 				}
 
-				scannedPkg, err := inventory.ScanPackage(ctx, pkg, tempDir)
+				scannedPkg, err := inventory.ScanPackage(ctx, *pkg, tempDir)
 				if err != nil {
 					log.Error().Err(err).Str("repo", repoNameWithOwner).Msg("failed to scan package")
 					return
@@ -192,23 +194,28 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 
 	for err := range errChan {
 		if err != nil {
-			return err
+			return scannedPackages, err
 		}
 	}
 
 	_ = bar.Finish()
 
-	return a.finalizeAnalysis(ctx, inventory)
+	err = a.finalizeAnalysis(ctx, scannedPackages)
+	if err != nil {
+		return scannedPackages, err
+	}
+
+	return scannedPackages, nil
 }
 
-func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref string) error {
+func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref string) (*models.PackageInsights, error) {
 	org, repoName, err := a.ScmClient.ParseRepoAndOrg(repoString)
 	if err != nil {
-		return fmt.Errorf("failed to parse repository: %w", err)
+		return nil, fmt.Errorf("failed to parse repository: %w", err)
 	}
 	repo, err := a.ScmClient.GetRepo(ctx, org, repoName)
 	if err != nil {
-		return fmt.Errorf("failed to get repo: %w", err)
+		return nil, fmt.Errorf("failed to get repo: %w", err)
 	}
 	provider := repo.GetProviderName()
 
@@ -228,7 +235,7 @@ func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref strin
 
 	tempDir, err := a.cloneRepoToTemp(ctx, repo.BuildGitURL(a.ScmClient.GetProviderBaseURL()), a.ScmClient.GetToken(), ref)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -237,26 +244,31 @@ func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref strin
 
 	pkg, err := a.generatePackageInsights(ctx, tempDir, repo, ref)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = inventory.AddPackage(ctx, pkg, tempDir)
+	scannedPackage, err := inventory.ScanPackage(ctx, *pkg, tempDir)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	_ = bar.Finish()
 
-	return a.finalizeAnalysis(ctx, inventory)
+	err = a.finalizeAnalysis(ctx, []*models.PackageInsights{scannedPackage})
+	if err != nil {
+		return nil, err
+	}
+
+	return scannedPackage, nil
 }
 
-func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) error {
+func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) (*models.PackageInsights, error) {
 	org, repoName, err := a.ScmClient.ParseRepoAndOrg(repoPath)
 	if err != nil {
-		return fmt.Errorf("failed to parse repository: %w", err)
+		return nil, fmt.Errorf("failed to parse repository: %w", err)
 	}
 	repo, err := a.ScmClient.GetRepo(ctx, org, repoName)
 	if err != nil {
-		return fmt.Errorf("failed to get repo: %w", err)
+		return nil, fmt.Errorf("failed to get repo: %w", err)
 	}
 	provider := repo.GetProviderName()
 
@@ -274,28 +286,28 @@ func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) error 
 
 	pkg, err := a.generatePackageInsights(ctx, repoPath, repo, "")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = inventory.AddPackage(ctx, pkg, repoPath)
+	scannedPackage, err := inventory.ScanPackage(ctx, *pkg, repoPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return a.finalizeAnalysis(ctx, inventory)
+	err = a.finalizeAnalysis(ctx, []*models.PackageInsights{scannedPackage})
+	if err != nil {
+		return nil, err
+	}
+
+	return scannedPackage, nil
 }
 
 type Formatter interface {
-	Format(ctx context.Context, report *opa.FindingsResult, packages []*models.PackageInsights) error
+	Format(ctx context.Context, packages []*models.PackageInsights) error
 }
 
-func (a *Analyzer) finalizeAnalysis(ctx context.Context, inventory *scanner.Inventory) error {
-	report, err := inventory.Findings(ctx)
-	if err != nil {
-		return err
-	}
-
-	err = a.Formatter.Format(ctx, report, inventory.Packages)
+func (a *Analyzer) finalizeAnalysis(ctx context.Context, scannedPackages []*models.PackageInsights) error {
+	err := a.Formatter.Format(ctx, scannedPackages)
 	if err != nil {
 		return err
 	}

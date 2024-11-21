@@ -26,7 +26,7 @@ Example Scanning a remote Github Repository: poutine analyze_repo org/repo --tok
 
 		repo := args[0]
 
-		err = analyzer.AnalyzeRepo(ctx, repo, ref)
+		_, err = analyzer.AnalyzeRepo(ctx, repo, ref)
 		if err != nil {
 			return fmt.Errorf("failed to analyze repo %s: %w", repo, err)
 		}

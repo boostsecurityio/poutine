@@ -2,6 +2,7 @@ package scanner
 
 import (
 	"context"
+	"github.com/boostsecurityio/poutine/results"
 	"testing"
 
 	"github.com/boostsecurityio/poutine/models"
@@ -18,9 +19,8 @@ func TestPurls(t *testing.T) {
 		Purl: "pkg:github/org/owner",
 	}
 	_ = pkg.NormalizePurl()
-	err := i.AddPackage(context.Background(), pkg, "testdata")
-
-	assert.Nil(t, err)
+	scannedPackage, err := i.ScanPackage(context.Background(), *pkg, "testdata")
+	assert.NoError(t, err)
 
 	purls := []string{
 		"pkg:docker/node%3Alatest",
@@ -48,10 +48,9 @@ func TestPurls(t *testing.T) {
 		"pkg:azurepipelinestask/DownloadPipelineArtifact@2",
 		"pkg:azurepipelinestask/Cache@2",
 	}
-	assert.ElementsMatch(t, i.Purls(), purls)
-	assert.Equal(t, 1, len(i.Packages))
-	assert.Equal(t, 18, len(i.Packages[0].BuildDependencies))
-	assert.Equal(t, 4, len(i.Packages[0].PackageDependencies))
+	assert.ElementsMatch(t, i.Purls(*scannedPackage), purls)
+	assert.Equal(t, 18, len(scannedPackage.BuildDependencies))
+	assert.Equal(t, 4, len(scannedPackage.PackageDependencies))
 }
 
 func TestFindings(t *testing.T) {
@@ -65,14 +64,13 @@ func TestFindings(t *testing.T) {
 	}
 	_ = pkg.NormalizePurl()
 
-	err := i.AddPackage(context.Background(), pkg, "testdata")
-	assert.Nil(t, err)
+	scannedPackage, err := i.ScanPackage(context.Background(), *pkg, "testdata")
+	assert.NoError(t, err)
 
-	results, err := i.Findings(context.Background())
-	assert.Nil(t, err)
+	analysisResults := scannedPackage.FindingsResults
 
 	rule_ids := []string{}
-	for _, r := range results.Rules {
+	for _, r := range analysisResults.Rules {
 		rule_ids = append(rule_ids, r.Id)
 	}
 
@@ -91,11 +89,11 @@ func TestFindings(t *testing.T) {
 		"unverified_script_exec",
 	})
 
-	findings := []opa.Finding{
+	findings := []results.Finding{
 		{
 			RuleId: "debug_enabled",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Path:    ".github/workflows/debug_enabled_valid.yml",
 				Details: "ACTIONS_RUNNER_DEBUG",
 			},
@@ -103,7 +101,7 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "debug_enabled",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Job:     "build",
 				Path:    ".github/workflows/debug_enabled_valid.yml",
 				Line:    9,
@@ -113,7 +111,7 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "debug_enabled",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Job:     "build",
 				Path:    ".github/workflows/debug_enabled_valid.yml",
 				Step:    "0",
@@ -124,7 +122,7 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "injection",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Job:     "build",
 				Path:    ".github/workflows/valid.yml",
 				Step:    "1",
@@ -135,7 +133,7 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "injection",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Job:     "build",
 				Path:    ".github/workflows/valid.yml",
 				Step:    "7",
@@ -146,7 +144,7 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "known_vulnerability_in_build_component",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Path:    "composite/action.yml",
 				OsvId:   "GHSA-4mgv-m5cm-f9h7",
 				Step:    "2",
@@ -157,7 +155,7 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "known_vulnerability_in_build_component",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Path:    ".github/workflows/valid.yml",
 				Job:     "build",
 				Step:    "5",
@@ -169,7 +167,7 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "known_vulnerability_in_build_component",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Path:    ".github/workflows/valid.yml",
 				Job:     "build",
 				Step:    "6",
@@ -181,7 +179,7 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "untrusted_checkout_exec",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Path:    ".github/workflows/valid.yml",
 				Line:    30,
 				Details: "Detected usage of `npm`",
@@ -190,7 +188,7 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "untrusted_checkout_exec",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Path:    ".github/workflows/valid.yml",
 				Line:    56,
 				Details: "Detected usage the GitHub Action `bridgecrewio/checkov-action`",
@@ -199,7 +197,7 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "untrusted_checkout_exec",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Path:    ".github/workflows/valid.yml",
 				Line:    60,
 				Details: "Detected usage of `pre-commit`",
@@ -208,7 +206,7 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "untrusted_checkout_exec",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Path:    ".github/workflows/workflow_run_valid.yml",
 				Line:    13,
 				Details: "Detected usage of `npm`",
@@ -217,28 +215,28 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "default_permissions_on_risky_events",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Path: ".github/workflows/valid.yml",
 			},
 		},
 		{
 			RuleId: "unpinnable_action",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Path: "action.yml",
 			},
 		},
 		{
 			RuleId: "unpinnable_action",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Path: "composite/action.yml",
 			},
 		},
 		{
 			RuleId: "pr_runs_on_self_hosted",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Path:    ".github/workflows/valid.yml",
 				Job:     "build",
 				Line:    9,
@@ -247,7 +245,7 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "pr_runs_on_self_hosted",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Path:    ".github/workflows/allowed_pr_runner.yml",
 				Job:     "group",
 				Line:    13,
@@ -256,7 +254,7 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "pr_runs_on_self_hosted",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Path:    ".github/workflows/allowed_pr_runner.yml",
 				Job:     "labels",
 				Line:    19,
@@ -265,14 +263,14 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "github_action_from_unverified_creator_used",
 			Purl:   "pkg:githubactions/kartverket/github-workflows",
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Details: "Used in 1 repo(s)",
 			},
 		},
 		{
 			RuleId: "injection",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Job:     "build",
 				Path:    ".github/workflows/valid.yml",
 				Step:    "8",
@@ -283,7 +281,7 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "injection",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Path:    ".gitlab-ci.yml",
 				Job:     "default.before_script[0]",
 				Details: "Sources: inputs.gem_name",
@@ -293,7 +291,7 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "debug_enabled",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Path:    ".gitlab-ci.yml",
 				Details: "CI_DEBUG_SERVICES CI_DEBUG_TRACE",
 			},
@@ -301,7 +299,7 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "job_all_secrets",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Path: ".github/workflows/secrets.yaml",
 				Line: 4,
 				Job:  "matrix",
@@ -310,7 +308,7 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "job_all_secrets",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Path: ".github/workflows/secrets.yaml",
 				Line: 16,
 				Job:  "json",
@@ -319,7 +317,7 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "if_always_true",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Path: "composite/action.yml",
 				Line: 17,
 				Step: "3",
@@ -328,7 +326,7 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "unverified_script_exec",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Path:    ".github/workflows/valid.yml",
 				Line:    70,
 				Job:     "build",
@@ -339,7 +337,7 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "unverified_script_exec",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Path:    ".github/workflows/valid.yml",
 				Line:    75,
 				Job:     "build",
@@ -350,7 +348,7 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "unverified_script_exec",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Path:    "azure-pipelines-1.yml",
 				Line:    8,
 				Step:    "2",
@@ -360,7 +358,7 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "injection",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Path:    ".azure-pipelines.yml",
 				Line:    14,
 				Job:     "build",
@@ -371,7 +369,7 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "debug_enabled",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Path:    ".azure-pipelines.yml",
 				Line:    0,
 				Job:     "",
@@ -382,7 +380,7 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "untrusted_checkout_exec",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Path:    "azure-pipelines-2.yml",
 				Line:    14,
 				Job:     "",
@@ -393,7 +391,7 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "untrusted_checkout_exec",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Path:    "azure-pipelines-4.yml",
 				Line:    11,
 				Job:     "",
@@ -404,7 +402,7 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "untrusted_checkout_exec",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Path:    ".tekton/pipeline-as-code-tekton.yml",
 				Line:    43,
 				Job:     "vale",
@@ -415,7 +413,7 @@ func TestFindings(t *testing.T) {
 		{
 			RuleId: "injection",
 			Purl:   purl,
-			Meta: opa.FindingMeta{
+			Meta: results.FindingMeta{
 				Path:    ".tekton/pipeline-as-code-tekton.yml",
 				Line:    45,
 				Job:     "vale",
@@ -425,8 +423,8 @@ func TestFindings(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, len(findings), len(results.Findings))
-	assert.ElementsMatch(t, findings, results.Findings)
+	assert.Equal(t, len(findings), len(analysisResults.Findings))
+	assert.ElementsMatch(t, findings, analysisResults.Findings)
 }
 
 func TestSkipRule(t *testing.T) {
@@ -442,14 +440,13 @@ func TestSkipRule(t *testing.T) {
 	}
 	_ = pkg.NormalizePurl()
 
-	err := i.AddPackage(ctx, pkg, "testdata")
-	assert.Nil(t, err)
+	updatedPkg, err := i.ScanPackage(ctx, *pkg, "testdata")
+	assert.NoError(t, err)
 
-	results, err := i.Findings(context.Background())
-	assert.Nil(t, err)
+	analysisResults := updatedPkg.FindingsResults
 
 	rule_ids := []string{}
-	for _, r := range results.Findings {
+	for _, r := range analysisResults.Findings {
 		rule_ids = append(rule_ids, r.RuleId)
 	}
 
@@ -464,11 +461,13 @@ func TestSkipRule(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	results, err = i.Findings(context.Background())
-	assert.Nil(t, err)
+	secondUpdatedPkg, err := i.ScanPackage(context.Background(), *pkg, "testdata")
+	assert.NoError(t, err)
+
+	analysisResults = secondUpdatedPkg.FindingsResults
 
 	rule_ids = []string{}
-	for _, r := range results.Findings {
+	for _, r := range analysisResults.Findings {
 		rule_ids = append(rule_ids, r.RuleId)
 	}
 
@@ -489,14 +488,11 @@ func TestRulesConfig(t *testing.T) {
 	}
 	_ = pkg.NormalizePurl()
 
-	err := i.AddPackage(ctx, pkg, "testdata")
-	assert.NoError(t, err)
-
-	results, err := i.Findings(ctx)
+	scannedPackage, err := i.ScanPackage(ctx, *pkg, "testdata")
 	assert.NoError(t, err)
 
 	labels := []string{}
-	for _, f := range results.Findings {
+	for _, f := range scannedPackage.FindingsResults.Findings {
 		if f.RuleId == rule_id && f.Meta.Path == path {
 			labels = append(labels, f.Meta.Details)
 		}
@@ -512,11 +508,11 @@ func TestRulesConfig(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	results, err = i.Findings(ctx)
+	reScannedPackage, err := i.ScanPackage(ctx, *pkg, "testdata")
 	assert.NoError(t, err)
 
 	labels = []string{}
-	for _, f := range results.Findings {
+	for _, f := range reScannedPackage.FindingsResults.Findings {
 		if f.RuleId == rule_id && f.Meta.Path == path {
 			labels = append(labels, f.Meta.Details)
 		}

@@ -3,6 +3,7 @@ package opa
 import (
 	"context"
 	"github.com/boostsecurityio/poutine/models"
+	"github.com/boostsecurityio/poutine/results"
 	"github.com/open-policy-agent/opa/ast"
 
 	"fmt"
@@ -228,7 +229,7 @@ func TestWithRulesConfig(t *testing.T) {
 	noOpaErrors(t, err)
 	ctx := context.TODO()
 
-	var rule *Rule
+	var rule *results.Rule
 	err = o.Eval(ctx, "data.rules.pr_runs_on_self_hosted.rule", nil, &rule)
 	noOpaErrors(t, err)
 	assert.Equal(t, []interface{}{}, rule.Config["allowed_runners"].Default)

@@ -6,6 +6,7 @@ import (
 	"github.com/boostsecurityio/poutine/models"
 	"github.com/boostsecurityio/poutine/opa"
 	"github.com/boostsecurityio/poutine/providers/pkgsupply"
+	"github.com/boostsecurityio/poutine/results"
 )
 
 type ReputationClient interface {
@@ -13,55 +14,72 @@ type ReputationClient interface {
 }
 
 type Inventory struct {
-	Packages        []*models.PackageInsights
-	providerVersion string
-	provider        string
-
 	opa             *opa.Opa
 	pkgsupplyClient ReputationClient
+	providerVersion string
+	provider        string
 }
 
-func NewInventory(opa *opa.Opa, pkgsupplyClient ReputationClient, provider string, providerVersion string) *Inventory {
+func NewInventory(opa *opa.Opa, pkgSupplyClient ReputationClient, provider string, providerVersion string) *Inventory {
 	return &Inventory{
-		Packages:        make([]*models.PackageInsights, 0),
 		opa:             opa,
-		pkgsupplyClient: pkgsupplyClient,
+		pkgsupplyClient: pkgSupplyClient,
 		provider:        provider,
 		providerVersion: providerVersion,
 	}
 }
 
-func (i *Inventory) AddPackage(ctx context.Context, pkg *models.PackageInsights, workdir string) error {
-	scannedPackage, err := i.ScanPackage(ctx, pkg, workdir)
+func (i *Inventory) ScanPackage(ctx context.Context, pkgInsights models.PackageInsights, workdir string) (*models.PackageInsights, error) {
+	inventoryScanner := NewInventoryScanner(workdir)
+
+	refPkgInsights := &pkgInsights
+
+	if err := inventoryScanner.Run(refPkgInsights); err != nil {
+		return nil, fmt.Errorf("failed to run inventory scanner on package: %w", err)
+	}
+
+	if err := i.performDependenciesInventory(ctx, refPkgInsights); err != nil {
+		return nil, fmt.Errorf("failed to perform dependencies inventory on package: %w", err)
+	}
+
+	findingsResults, err := i.analyzePackageForFindings(ctx, pkgInsights)
+	if err != nil {
+		return nil, fmt.Errorf("failed to analyze package for findings: %w", err)
+	}
+
+	if findingsResults != nil {
+		refPkgInsights.FindingsResults = *findingsResults
+	}
+
+	return refPkgInsights, nil
+}
+
+func (i *Inventory) performDependenciesInventory(ctx context.Context, pkg *models.PackageInsights) error {
+	result := opa.InventoryResult{}
+	err := i.opa.Eval(ctx,
+		"data.poutine.queries.inventory.result",
+		map[string]interface{}{
+			"packages": []interface{}{pkg},
+		},
+		&result,
+	)
 	if err != nil {
 		return err
 	}
 
-	i.Packages = append(i.Packages, scannedPackage)
+	pkg.BuildDependencies = result.BuildDependencies
+	pkg.PackageDependencies = result.PackageDependencies
+
 	return nil
 }
 
-func (i *Inventory) ScanPackage(ctx context.Context, pkg *models.PackageInsights, workdir string) (*models.PackageInsights, error) {
-	s := NewScanner(workdir)
-	s.Package = pkg
-
-	err := s.Run(ctx, i.opa)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.Package, nil
-}
-
-func (i *Inventory) Purls() []string {
+func (i *Inventory) Purls(pkgInsights models.PackageInsights) []string {
 	set := make(map[string]bool)
-	for _, pkg := range i.Packages {
-		for _, dep := range pkg.BuildDependencies {
-			set[dep] = true
-		}
-		for _, dep := range pkg.PackageDependencies {
-			set[dep] = true
-		}
+	for _, dep := range pkgInsights.BuildDependencies {
+		set[dep] = true
+	}
+	for _, dep := range pkgInsights.PackageDependencies {
+		set[dep] = true
 	}
 
 	purls := make([]string, 0, len(set))
@@ -72,9 +90,9 @@ func (i *Inventory) Purls() []string {
 	return purls
 }
 
-func (i *Inventory) Findings(ctx context.Context) (*opa.FindingsResult, error) {
-	results := &opa.FindingsResult{}
-	reputation, err := i.Reputation(ctx)
+func (i *Inventory) analyzePackageForFindings(ctx context.Context, pkgInsights models.PackageInsights) (*results.FindingsResult, error) {
+	analysisResults := &results.FindingsResult{}
+	reputation, err := i.reputation(ctx, pkgInsights)
 	if err != nil && i.pkgsupplyClient != nil {
 		return nil, err
 	}
@@ -82,25 +100,27 @@ func (i *Inventory) Findings(ctx context.Context) (*opa.FindingsResult, error) {
 	err = i.opa.Eval(ctx,
 		"data.poutine.queries.findings.result",
 		map[string]interface{}{
-			"packages":   i.Packages,
+			"packages": []models.PackageInsights{
+				pkgInsights,
+			},
 			"reputation": reputation,
 			"provider":   i.provider,
 			"version":    i.providerVersion,
 		},
-		results,
+		analysisResults,
 	)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return results, nil
+	return analysisResults, nil
 }
 
-func (i *Inventory) Reputation(ctx context.Context) (*pkgsupply.ReputationResponse, error) {
+func (i *Inventory) reputation(ctx context.Context, pkgInsights models.PackageInsights) (*pkgsupply.ReputationResponse, error) {
 	if i.pkgsupplyClient == nil {
 		return nil, fmt.Errorf("no pkgsupply client")
 	}
 
-	return i.pkgsupplyClient.GetReputation(ctx, i.Purls())
+	return i.pkgsupplyClient.GetReputation(ctx, i.Purls(pkgInsights))
 }
