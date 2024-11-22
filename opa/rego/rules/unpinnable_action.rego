@@ -1,7 +1,7 @@
 # METADATA
 # title: Unpinnable CI component used
 # description: |-
-#   Pinning this GitHub Action is likely ineffective 
+#   Pinning this GitHub Action is likely ineffective
 #   as it depends on other mutable supply chain components.
 # custom:
 #   level: note

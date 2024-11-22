@@ -52,6 +52,7 @@ is_debug_enabled(var) if {
 results contains poutine.finding(rule, pkg.purl, {
 	"path": workflow.path,
 	"details": var.name,
+	"event_triggers": [event | event := workflow.events[i].name],
 }) if {
 	pkg := input.packages[_]
 	workflow := pkg.github_actions_workflows[_]
@@ -64,6 +65,7 @@ results contains poutine.finding(rule, pkg.purl, {
 	"job": job.id,
 	"details": var.name,
 	"line": job.lines.start,
+	"event_triggers": [event | event := workflow.events[i].name],
 }) if {
 	pkg := input.packages[_]
 	workflow := pkg.github_actions_workflows[_]
@@ -78,6 +80,7 @@ results contains poutine.finding(rule, pkg.purl, {
 	"step": step_id,
 	"details": var.name,
 	"line": step.lines.start,
+	"event_triggers": [event | event := workflow.events[i].name],
 }) if {
 	pkg := input.packages[_]
 	workflow := pkg.github_actions_workflows[_]

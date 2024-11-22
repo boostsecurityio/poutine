@@ -1,9 +1,9 @@
 # METADATA
 # title: Default permissions used on risky events
 # description: |-
-#   The workflow and some of its jobs do not explicitely define permissions 
+#   The workflow and some of its jobs do not explicitely define permissions
 #   and the workflow triggers on events that are typically used to run builds from forks.
-#   Because no permissions is set, the workflow inherits the default permissions 
+#   Because no permissions is set, the workflow inherits the default permissions
 #   configured on the repository or the organization.
 # custom:
 #   level: warning
@@ -20,7 +20,10 @@ github.events contains event if some event in {
 	"issue_comment",
 }
 
-results contains poutine.finding(rule, pkg.purl, {"path": workflow.path}) if {
+results contains poutine.finding(rule, pkg.purl, {
+	"path": workflow.path,
+	"event_triggers": [event | event := workflow.events[j].name],
+}) if {
 	pkg := input.packages[_]
 	workflow = pkg.github_actions_workflows[_]
 	job := workflow.jobs[_]
@@ -31,7 +34,10 @@ results contains poutine.finding(rule, pkg.purl, {"path": workflow.path}) if {
 	utils.empty(job.permissions)
 }
 
-results contains poutine.finding(rule, pkg.purl, {"path": workflow.path}) if {
+results contains poutine.finding(rule, pkg.purl, {
+	"path": workflow.path,
+	"event_triggers": [event | event := workflow.events[j].name],
+}) if {
 	pkg := input.packages[_]
 	workflow = pkg.github_actions_workflows[_]
 	job := workflow.jobs[_]

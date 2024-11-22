@@ -14,12 +14,13 @@ type FindingsResult struct {
 }
 
 type FindingMeta struct {
-	Path    string `json:"path,omitempty"`
-	Line    int    `json:"line,omitempty"`
-	Job     string `json:"job,omitempty"`
-	Step    string `json:"step,omitempty"`
-	OsvId   string `json:"osv_id,omitempty"`
-	Details string `json:"details,omitempty"`
+	Path          string   `json:"path,omitempty"`
+	Line          int      `json:"line,omitempty"`
+	Job           string   `json:"job,omitempty"`
+	Step          string   `json:"step,omitempty"`
+	OsvId         string   `json:"osv_id,omitempty"`
+	Details       string   `json:"details,omitempty"`
+	EventTriggers []string `json:"event_triggers,omitempty"`
 }
 
 type Finding struct {

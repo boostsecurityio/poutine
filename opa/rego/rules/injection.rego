@@ -1,8 +1,8 @@
 # METADATA
 # title: Injection with Arbitrary External Contributor Input
 # description: |-
-#   The pipeline contains an injection into bash or JavaScript with an expression 
-#   that can contain user input. Prefer placing the expression in an environment variable 
+#   The pipeline contains an injection into bash or JavaScript with an expression
+#   that can contain user input. Prefer placing the expression in an environment variable
 #   instead of interpolating it directly into a script.
 # related_resources:
 # - https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
@@ -33,6 +33,7 @@ results contains poutine.finding(rule, pkg.purl, {
 	"job": job.id,
 	"step": i,
 	"details": sprintf("Sources: %s", [concat(" ", exprs)]),
+	"event_triggers": [event | event := workflow.events[j].name],
 }) if {
 	pkg = input.packages[_]
 	workflow = pkg.github_actions_workflows[_]
@@ -47,6 +48,7 @@ results contains poutine.finding(rule, pkg.purl, {
 	"line": line,
 	"step": i,
 	"details": sprintf("Sources: %s", [concat(" ", exprs)]),
+	"event_triggers": [event | event := action.events[j].name],
 }) if {
 	pkg = input.packages[_]
 	action := pkg.github_actions_metadata[_]
@@ -113,19 +115,17 @@ results contains poutine.finding(rule, pkg.purl, {
 	"path": pipeline.path,
 	"job": task.name,
 	"step": step_idx,
-	"line": step.lines["start"],
+	"line": step.lines.start,
 	"details": sprintf("Sources: %s", [concat(" ", exprs)]),
 }) if {
-    pkg := input.packages[_]
-    pipeline := pkg.pipeline_as_code_tekton[_]
-    contains(pipeline.api_version, "tekton.dev")
-    pipeline.kind == "PipelineRun"
-    contains(pipeline.metadata.annotations["pipelinesascode.tekton.dev/on-event"], "pull_request")
-    task := pipeline.spec.pipeline_spec.tasks[_]
-    step := task.task_spec.steps[step_idx]
+	pkg := input.packages[_]
+	pipeline := pkg.pipeline_as_code_tekton[_]
+	contains(pipeline.api_version, "tekton.dev")
+	pipeline.kind == "PipelineRun"
+	contains(pipeline.metadata.annotations["pipelinesascode.tekton.dev/on-event"], "pull_request")
+	task := pipeline.spec.pipeline_spec.tasks[_]
+	step := task.task_spec.steps[step_idx]
 
-    exprs := pipeline_as_code_tekton_injections(step.script)
-    count(exprs) > 0
+	exprs := pipeline_as_code_tekton_injections(step.script)
+	count(exprs) > 0
 }
-
-

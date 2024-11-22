@@ -30,6 +30,7 @@ results contains poutine.finding(rule, pkg.purl, {
 	"job": job.id,
 	"line": job.lines.runs_on,
 	"details": sprintf("runs-on: %s", [concat(", ", job.runs_on)]),
+	"event_triggers": [event | event := workflow.events[i].name],
 }) if {
 	pkg := input.packages[_]
 	workflow = pkg.github_actions_workflows[_]
