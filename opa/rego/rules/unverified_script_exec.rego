@@ -40,7 +40,7 @@ _scripts[pkg.purl] contains {
 	"job": job.id,
 	"line": step.lines.run,
 	"details": details,
-    "event_triggers": [event | event := workflow.events[j].name],
+	"event_triggers": [event | event := workflow.events[j].name],
 } if {
 	pkg := input.packages[_]
 	workflow := pkg.github_actions_workflows[_]
