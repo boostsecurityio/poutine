@@ -45,6 +45,8 @@ build_commands[cmd] = {
 	"ant": {"^ant "},
 	"mkdocs": {"mkdocs build"},
 	"vale": {"vale "},
+	"pip": {"pip install", "pipenv install", "pipenv run "},
+	"cargo": {"cargo build", "cargo run"},
 }[cmd]
 
 results contains poutine.finding(rule, pkg_purl, {
