@@ -37,9 +37,9 @@ build_commands[cmd] = {
 	"cargo": {"cargo build", "cargo run"},
 	"go generate": {"go generate"},
 	"gomplate": {"gomplate "},
-	"gradle": {"gradle ", "./gradlew "},
+	"gradle": {"gradle ", "./gradlew ", "./gradlew.bat "}, 	# https://docs.gradle.org/current/userguide/gradle_wrapper_basics.html
 	"make": {"make "},
-	"maven": {"mvn ", "./mvnw "},
+	"maven": {"mvn ", "./mvnw ", "./mvnw.bat", "./mvnw.cmd", "./mvnw.sh "}, # https://maven.apache.org/wrapper/
 	"mkdocs": {"mkdocs build"},
 	"msbuild": {"msbuild "},
 	"npm": {"npm install", "npm run ", "yarn ", "npm ci(\\b|$)"},
