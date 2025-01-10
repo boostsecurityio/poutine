@@ -35,6 +35,7 @@ build_commands[cmd] = {
 	"npm": {"npm install", "npm run ", "yarn ", "npm ci(\\b|$)"},
 	"make": {"make "},
 	"terraform": {"terraform plan", "terraform apply"},
+	"tofu": {"tofu plan", "tofu apply"},
 	"gomplate": {"gomplate "},
 	"pre-commit": {"pre-commit run", "pre-commit install"},
 	"go generate": {"go generate"},
