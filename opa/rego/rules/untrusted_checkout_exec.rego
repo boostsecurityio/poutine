@@ -32,22 +32,22 @@ build_github_actions[action] = {
 }[action]
 
 build_commands[cmd] = {
-	"npm": {"npm install", "npm run ", "yarn ", "npm ci(\\b|$)"},
+	"ant": {"^ant "},
+	"bundler": {"bundle install", "bundle exec "},
+	"cargo": {"cargo build", "cargo run"},
+	"go generate": {"go generate"},
+	"gomplate": {"gomplate "},
+	"gradle": {"gradle ", "./gradlew "},
 	"make": {"make "},
+	"maven": {"mvn ", "./mvnw "},
+	"mkdocs": {"mkdocs build"},
+	"msbuild": {"msbuild "},
+	"npm": {"npm install", "npm run ", "yarn ", "npm ci(\\b|$)"},
+	"pip": {"pip install", "pipenv install", "pipenv run "},
+	"pre-commit": {"pre-commit run", "pre-commit install"},
 	"terraform": {"terraform plan", "terraform apply"},
 	"tofu": {"tofu plan", "tofu apply"},
-	"gomplate": {"gomplate "},
-	"pre-commit": {"pre-commit run", "pre-commit install"},
-	"go generate": {"go generate"},
-	"msbuild": {"msbuild "},
-	"maven": {"mvn ", "./mvnw "},
-	"gradle": {"gradle ", "./gradlew "},
-	"bundler": {"bundle install", "bundle exec "},
-	"ant": {"^ant "},
-	"mkdocs": {"mkdocs build"},
 	"vale": {"vale "},
-	"pip": {"pip install", "pipenv install", "pipenv run "},
-	"cargo": {"cargo build", "cargo run"},
 }[cmd]
 
 results contains poutine.finding(rule, pkg_purl, {
