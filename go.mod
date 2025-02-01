@@ -16,7 +16,7 @@ require (
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.10.0
-	gitlab.com/gitlab-org/api/client-go v0.116.0
+	gitlab.com/gitlab-org/api/client-go v0.121.0
 	golang.org/x/oauth2 v0.24.0
 	golang.org/x/sync v0.10.0
 	gopkg.in/yaml.v3 v3.0.1
