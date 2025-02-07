@@ -8,7 +8,6 @@
 package rules.unverified_script_exec
 
 import data.poutine
-import data.poutine.utils
 import rego.v1
 
 rule := poutine.rule(rego.metadata.chain())

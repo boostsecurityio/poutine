@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/boostsecurityio/poutine/models"
 	"github.com/boostsecurityio/poutine/results"
-	"github.com/open-policy-agent/opa/ast"
+	"github.com/open-policy-agent/opa/v1/ast"
 
 	"fmt"
 	"github.com/stretchr/testify/assert"

@@ -36,7 +36,6 @@ _rule_config(rule_id, meta) = object.union(rule_config, config_values) if {
 		value := object.union({"value": object.get(param, "default", null)}, param)
 	}
 	config_values := {key: {"value": value} |
-		param := rule_config[k]
 		value := data.config.rules_config[rule_id][key]
 	}
 }
