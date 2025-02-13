@@ -181,7 +181,7 @@ func (gl Repo) GetSize() int {
 }
 
 func (gl Repo) GetDefaultBranch() string {
-	return ""
+	return "main"
 }
 
 func (gl Repo) GetLicense() string {
