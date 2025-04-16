@@ -1,19 +1,38 @@
+version: "2"
 linters:
-  disable-all: true
+  default: none
   enable:
+    - copyloopvar
     - errcheck
-    - gosimple
+    - errorlint
     - govet
     - ineffassign
-    - staticcheck
-    - unused
-    - gofmt
-    - errorlint
+    - perfsprint
     - prealloc
     - predeclared
     - protogetter
+    - staticcheck
     - testifylint
-    - zerologlint
-    - copyloopvar
+    - unused
     - wrapcheck
-    - perfsprint
+    - zerologlint
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

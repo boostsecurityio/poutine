@@ -12,7 +12,7 @@ Before you start contributing, please make sure to read and abide by our [Code o
 
 To contribute to Poutine, you'll need the following:
 
-- [Go toolchain v1.23](https://golang.org/dl/) or higher.
+- [Go toolchain v1.24](https://golang.org/dl/) or higher.
 
 ### Contributing Process
 
