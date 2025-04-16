@@ -2,6 +2,7 @@ package json
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/boostsecurityio/poutine/models"
 	"github.com/boostsecurityio/poutine/opa"
@@ -40,7 +41,7 @@ func (f *Format) Format(ctx context.Context, packages []*models.PackageInsights)
 			report.Rules[rule.Id] = rule
 		}
 	}
-	err := f.opa.Eval(ctx,
+	if err := f.opa.Eval(ctx,
 		"data.poutine.queries.format.result",
 		map[string]interface{}{
 			"packages":        packages,
@@ -49,13 +50,12 @@ func (f *Format) Format(ctx context.Context, packages []*models.PackageInsights)
 			"builtin_formats": []string{"sarif", "pretty"},
 		},
 		&result,
-	)
-	if err != nil {
+	); err != nil {
 		return err
 	}
 
 	if result.Error != "" {
-		return fmt.Errorf(result.Error)
+		return errors.New(result.Error)
 	}
 
 	fmt.Fprint(f.out, result.Output)
