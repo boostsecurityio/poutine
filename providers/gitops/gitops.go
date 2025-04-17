@@ -280,7 +280,7 @@ func (g *GitClient) getBranchWorkflow(ctx context.Context, clonePath string, bra
 func (g *GitClient) getRemoteBranches(ctx context.Context, clonePath string) (map[string][]string, error) {
 	output, err := g.Command.Run(ctx, "git", []string{"ls-remote", "--heads"}, clonePath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error ls-remote --heads: %w", err)
 	}
 	branches := make(map[string][]string)
 	scanner := bufio.NewScanner(bytes.NewReader(output))
