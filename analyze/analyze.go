@@ -5,15 +5,20 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/boostsecurityio/poutine/models"
+	"github.com/boostsecurityio/poutine/results"
 	"golang.org/x/sync/semaphore"
 
 	"github.com/boostsecurityio/poutine/opa"
+	"github.com/boostsecurityio/poutine/providers/gitops"
 	"github.com/boostsecurityio/poutine/providers/pkgsupply"
-	"github.com/boostsecurityio/poutine/providers/scm/domain"
+	scm_domain "github.com/boostsecurityio/poutine/providers/scm/domain"
 	"github.com/boostsecurityio/poutine/scanner"
 	"github.com/rs/zerolog/log"
 	"github.com/schollz/progressbar/v3"
@@ -60,10 +65,13 @@ type ScmClient interface {
 
 type GitClient interface {
 	Clone(ctx context.Context, clonePath string, url string, token string, ref string) error
+	FetchCone(ctx context.Context, clonePath string, url string, token string, ref string, cone string) error
 	CommitSHA(clonePath string) (string, error)
 	LastCommitDate(ctx context.Context, clonePath string) (time.Time, error)
 	GetRemoteOriginURL(ctx context.Context, repoPath string) (string, error)
 	GetRepoHeadBranchName(ctx context.Context, repoPath string) (string, error)
+	GetUniqWorkflowsBranches(ctx context.Context, clonePath string) (map[string][]gitops.BranchInfo, error)
+	BlobMatches(ctx context.Context, clonePath string, blobsha string, regex *regexp.Regexp) (bool, []byte, error)
 }
 
 func NewAnalyzer(scmClient ScmClient, gitClient GitClient, formatter Formatter, config *models.Config, opaClient *opa.Opa) *Analyzer {
@@ -208,6 +216,150 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 	return scannedPackages, nil
 }
 
+func (a *Analyzer) AnalyzeStaleBranch(ctx context.Context, repoString string, numberOfGoroutines *int) (*models.PackageInsights, error) {
+	org, repoName, err := a.ScmClient.ParseRepoAndOrg(repoString)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse repository: %w", err)
+	}
+	repo, err := a.ScmClient.GetRepo(ctx, org, repoName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get repo: %w", err)
+	}
+	provider := repo.GetProviderName()
+
+	providerVersion, err := a.ScmClient.GetProviderVersion(ctx)
+	if err != nil {
+		log.Debug().Err(err).Msgf("Failed to get provider version for %s", provider)
+	}
+
+	log.Debug().Msgf("Provider: %s, Version: %s, BaseURL: %s", provider, providerVersion, a.ScmClient.GetProviderBaseURL())
+
+	pkgsupplyClient := pkgsupply.NewStaticClient()
+
+	inventory := scanner.NewInventory(a.Opa, pkgsupplyClient, provider, providerVersion)
+
+	log.Debug().Msgf("Starting repository analysis for: %s/%s on %s", org, repoName, provider)
+	bar := a.progressBar(3, "Cloning repository")
+	_ = bar.RenderBlank()
+
+	repoUrl := repo.BuildGitURL(a.ScmClient.GetProviderBaseURL())
+	tempDir, err := a.fetchConeToTemp(ctx, repoUrl, a.ScmClient.GetToken(), "refs/heads/*:refs/remotes/origin/*", ".github/workflows")
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch cone: %w", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	bar.Describe("Listing unique pull_request_target")
+	_ = bar.Add(1)
+
+	workflows, err := a.GitClient.GetUniqWorkflowsBranches(ctx, tempDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get unique workflow: %w", err)
+	}
+
+	bar.Describe("Check which workflows uses pull_request_target (this may take some time)")
+	_ = bar.Add(1)
+
+	workflowDir := filepath.Join(tempDir, ".github", "workflows")
+	if err = os.MkdirAll(workflowDir, 0700); err != nil {
+		return nil, err
+	}
+
+	r := regexp.MustCompile("pull_request_target")
+
+	wg := sync.WaitGroup{}
+	errChan := make(chan error, 1)
+	maxGoroutines := 5
+	if numberOfGoroutines != nil {
+		maxGoroutines = *numberOfGoroutines
+	}
+	semaphore := semaphore.NewWeighted(int64(maxGoroutines))
+	m := sync.Mutex{}
+	blobShas := make([]string, 0, len(workflows))
+	for sha := range workflows {
+		blobShas = append(blobShas, sha)
+	}
+	for _, blobSha := range blobShas {
+		if err := semaphore.Acquire(ctx, 1); err != nil {
+			errChan <- fmt.Errorf("failed to aquire semaphore: %w", err)
+			break
+		}
+		wg.Add(1)
+		go func(blobSha string) {
+			defer wg.Done()
+			defer semaphore.Release(1)
+			match, content, err := a.GitClient.BlobMatches(ctx, tempDir, blobSha, r)
+			if err != nil {
+				errChan <- fmt.Errorf("failed to blob match %s: %w", blobSha, err)
+				return
+			}
+			m.Lock()
+			if match {
+				err = os.WriteFile(filepath.Join(workflowDir, blobSha+".yaml"), content, 0644)
+				if err != nil {
+					errChan <- fmt.Errorf("failed to write file for blob %s: %w", blobSha, err)
+				}
+			} else {
+				delete(workflows, blobSha)
+			}
+			m.Unlock()
+		}(blobSha)
+	}
+	wg.Wait()
+	close(errChan)
+	for err := range errChan {
+		return nil, err
+	}
+
+	bar.Describe("Scanning package")
+	_ = bar.Add(1)
+	pkg, err := a.generatePackageInsights(ctx, tempDir, repo, "HEAD")
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate package insight: %w", err)
+	}
+
+	inventoryScanner := scanner.InventoryScanner{
+		Path: tempDir,
+		Parsers: []scanner.Parser{
+			scanner.NewGithubActionWorkflowParser(),
+		},
+	}
+
+	scannedPackage, err := inventory.ScanPackageScanner(ctx, *pkg, &inventoryScanner)
+	if err != nil {
+		return nil, fmt.Errorf("failed to scan package: %w", err)
+	}
+
+	expanded := []results.Finding{}
+	for _, finding := range scannedPackage.FindingsResults.Findings {
+		filename := filepath.Base(finding.Meta.Path)
+		blobsha := strings.TrimSuffix(filename, filepath.Ext(filename))
+		purl, err := models.NewPurl(finding.Purl)
+		if err != nil {
+			log.Warn().Err(err).Str("purl", finding.Purl).Msg("failed to evaluate PURL, skipping")
+			continue
+		}
+		for _, branchInfo := range workflows[blobsha] {
+			for _, path := range branchInfo.FilePath {
+				finding.Meta.Path = path
+				purl.Version = branchInfo.BranchName
+				finding.Purl = purl.String()
+				expanded = append(expanded, finding)
+			}
+		}
+	}
+	scannedPackage.FindingsResults.Findings = expanded
+
+	_ = bar.Finish()
+
+	err = a.finalizeAnalysis(ctx, []*models.PackageInsights{scannedPackage})
+	if err != nil {
+		return nil, fmt.Errorf("failed to finalize analysis of package: %w", err)
+	}
+
+	return scannedPackage, nil
+}
+
 func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref string) (*models.PackageInsights, error) {
 	org, repoName, err := a.ScmClient.ParseRepoAndOrg(repoString)
 	if err != nil {
@@ -316,15 +468,16 @@ func (a *Analyzer) finalizeAnalysis(ctx context.Context, scannedPackages []*mode
 }
 
 func (a *Analyzer) generatePackageInsights(ctx context.Context, tempDir string, repo Repository, ref string) (*models.PackageInsights, error) {
-	commitDate, err := a.GitClient.LastCommitDate(ctx, tempDir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get last commit date: %w", err)
-	}
+	var err error
+	commitDate, _ := a.GitClient.LastCommitDate(ctx, tempDir)
+	// if err != nil {
+	// return nil, fmt.Errorf("failed to get last commit date: %w", err)
+	// }
 
-	commitSha, err := a.GitClient.CommitSHA(tempDir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get commit SHA: %w", err)
-	}
+	commitSha, _ := a.GitClient.CommitSHA(tempDir)
+	// if err != nil {
+	// return nil, fmt.Errorf("failed to get commit SHA: %w", err)
+	// }
 
 	var (
 		purl   models.Purl
@@ -374,6 +527,20 @@ func (a *Analyzer) generatePackageInsights(ctx context.Context, tempDir string, 
 		return nil, fmt.Errorf("failed to normalize purl: %w", err)
 	}
 	return pkg, nil
+}
+
+func (a *Analyzer) fetchConeToTemp(ctx context.Context, gitURL, token, ref string, cone string) (string, error) {
+	tempDir, err := os.MkdirTemp("", TEMP_DIR_PREFIX)
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp directory: %w", err)
+	}
+
+	err = a.GitClient.FetchCone(ctx, tempDir, gitURL, token, ref, cone)
+	if err != nil {
+		os.RemoveAll(tempDir) // Clean up if cloning fails
+		return "", fmt.Errorf("failed to clone repo: %w", err)
+	}
+	return tempDir, nil
 }
 
 func (a *Analyzer) cloneRepoToTemp(ctx context.Context, gitURL string, token string, ref string) (string, error) {
