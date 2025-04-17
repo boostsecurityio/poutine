@@ -469,15 +469,15 @@ func (a *Analyzer) finalizeAnalysis(ctx context.Context, scannedPackages []*mode
 
 func (a *Analyzer) generatePackageInsights(ctx context.Context, tempDir string, repo Repository, ref string) (*models.PackageInsights, error) {
 	var err error
-	commitDate, _ := a.GitClient.LastCommitDate(ctx, tempDir)
-	// if err != nil {
-	// return nil, fmt.Errorf("failed to get last commit date: %w", err)
-	// }
+	commitDate, err := a.GitClient.LastCommitDate(ctx, tempDir)
+	if err != nil {
+		log.Ctx(ctx).Warn().Err(err).Msg("failed to get last commit date")
+	}
 
-	commitSha, _ := a.GitClient.CommitSHA(tempDir)
-	// if err != nil {
-	// return nil, fmt.Errorf("failed to get commit SHA: %w", err)
-	// }
+	commitSha, err := a.GitClient.CommitSHA(tempDir)
+	if err != nil {
+		log.Ctx(ctx).Warn().Err(err).Msg("failed to get commit SHA")
+	}
 
 	var (
 		purl   models.Purl
