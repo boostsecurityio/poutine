@@ -5,9 +5,6 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
-	"io/fs"
-	"os"
-	"strings"
 
 	"github.com/boostsecurityio/poutine/models"
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -17,6 +14,9 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage/inmem"
 	"github.com/open-policy-agent/opa/v1/topdown/print"
 	"github.com/rs/zerolog/log"
+	"io/fs"
+	"os"
+	"strings"
 )
 
 //go:embed rego
