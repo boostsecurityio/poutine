@@ -262,7 +262,7 @@ func (a *Analyzer) AnalyzeStaleBranch(ctx context.Context, repoString string, nu
 
 	workflowDir := filepath.Join(tempDir, ".github", "workflows")
 	if err = os.MkdirAll(workflowDir, 0700); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create .github/workflows/ dir: %w", err)
 	}
 
 	r := regexp.MustCompile("pull_request_target")

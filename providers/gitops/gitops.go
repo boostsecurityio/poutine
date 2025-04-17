@@ -188,7 +188,7 @@ func (g *GitClient) FetchCone(ctx context.Context, clonePath, url, token, ref st
 				return errors.New(strings.ReplaceAll(err.Error(), token, "REDACTED"))
 			}
 
-			return err
+			return fmt.Errorf("git error trying to fetch cone: %w", err)
 		}
 	}
 
@@ -224,11 +224,8 @@ func (g *GitClient) GetUniqWorkflowsBranches(ctx context.Context, clonePath stri
 					FilePath:   paths,
 				})
 			}
-			if _, ok := workflowsInfo[blobsha]; ok {
-				workflowsInfo[blobsha] = append(workflowsInfo[blobsha], infos...)
-			} else {
-				workflowsInfo[blobsha] = infos
-			}
+
+			workflowsInfo[blobsha] = append(workflowsInfo[blobsha], infos...)
 		}
 	}
 
@@ -239,7 +236,7 @@ func (g *GitClient) GetUniqWorkflowsBranches(ctx context.Context, clonePath stri
 func (g *GitClient) BlobMatches(ctx context.Context, clonePath, blobSha string, re *regexp.Regexp) (bool, []byte, error) {
 	content, err := g.Command.Run(ctx, "git", []string{"cat-file", "blob", blobSha}, clonePath)
 	if err != nil {
-		return false, nil, err
+		return false, nil, fmt.Errorf("error cat-file blob %s: %w", blobSha, err)
 	}
 	return re.Match(content), content, nil
 }
@@ -257,7 +254,7 @@ func (g *GitClient) getBranchWorkflow(ctx context.Context, clonePath string, bra
 			strings.Contains(err.Error(), "did not match any file") {
 			return nil, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("error ls-tree ref %s: %w", ref, err)
 	}
 
 	records := make(map[string][]string)
@@ -270,16 +267,11 @@ func (g *GitClient) getBranchWorkflow(ctx context.Context, clonePath string, bra
 		}
 		blobSha := parts[2]
 		filePath := parts[len(parts)-1]
-		if !(strings.HasSuffix(filePath, ".yml") || strings.HasSuffix(filePath, ".yaml")) {
+		if !strings.HasSuffix(filePath, ".yml") && !strings.HasSuffix(filePath, ".yaml") {
 			continue
 		}
 
-		if _, ok := records[blobSha]; ok {
-			records[blobSha] = append(records[blobSha], filePath)
-		} else {
-			records[blobSha] = []string{filePath}
-		}
-
+		records[blobSha] = append(records[blobSha], filePath)
 	}
 	return records, nil
 }
@@ -308,12 +300,7 @@ func (g *GitClient) getRemoteBranches(ctx context.Context, clonePath string) (ma
 			continue
 		}
 		branchName := strings.TrimPrefix(ref, prefix)
-
-		if _, ok := branches[commit]; ok {
-			branches[commit] = append(branches[commit], branchName)
-		} else {
-			branches[commit] = []string{branchName}
-		}
+		branches[commit] = append(branches[commit], branchName)
 	}
 	return branches, nil
 }

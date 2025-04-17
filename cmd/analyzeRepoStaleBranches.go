@@ -41,6 +41,6 @@ func init() {
 	analyzeRepoStaleBranch.Flags().StringVarP(&token, "token", "t", "", "SCM access token (env: GH_TOKEN)")
 	analyzeRepoStaleBranch.Flags().IntVarP(&threadsRepoStaleBranch, "threads", "j", 5, "Parallelization factor for scanning stale branches")
 
-	viper.BindPFlag("token", analyzeRepoStaleBranch.Flags().Lookup("token"))
-	viper.BindEnv("token", "GH_TOKEN")
+	_ = viper.BindPFlag("token", analyzeRepoStaleBranch.Flags().Lookup("token"))
+	_ = viper.BindEnv("token", "GH_TOKEN")
 }
