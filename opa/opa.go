@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/boostsecurityio/poutine/models"
@@ -48,14 +46,7 @@ func NewOpa(ctx context.Context, config *models.Config) (*Opa, error) {
 		return nil, fmt.Errorf("failed to set opa with config: %w", err)
 	}
 
-	subset := []string{}
-	for _, skip := range config.Skip {
-		if skip.HasOnlyRule() {
-			subset = append(subset, skip.Rule...)
-		}
-	}
-
-	err = newOpa.Compile(ctx, subset)
+	err = newOpa.Compile(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize opa compiler: %w", err)
 	}
@@ -87,20 +78,11 @@ func (o *Opa) WithConfig(ctx context.Context, config *models.Config) error {
 	)
 }
 
-func (o *Opa) Compile(ctx context.Context, skip []string) error {
+func (o *Opa) Compile(ctx context.Context) error {
 	modules := make(map[string]string)
 	err := fs.WalkDir(regoFs, "rego", func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() {
 			return err
-		}
-
-		if len(skip) != 0 {
-			if filepath.Dir(path) == filepath.Join("rego", "rules") {
-				filename := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
-				if slices.Contains(skip, filename) {
-					return err
-				}
-			}
 		}
 
 		content, err := regoFs.ReadFile(path)
