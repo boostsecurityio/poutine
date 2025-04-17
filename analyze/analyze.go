@@ -293,16 +293,16 @@ func (a *Analyzer) AnalyzeStaleBranch(ctx context.Context, repoString string, nu
 				errChan <- fmt.Errorf("failed to blob match %s: %w", blobSha, err)
 				return
 			}
-			m.Lock()
 			if match {
 				err = os.WriteFile(filepath.Join(workflowDir, blobSha+".yaml"), content, 0644)
 				if err != nil {
 					errChan <- fmt.Errorf("failed to write file for blob %s: %w", blobSha, err)
 				}
 			} else {
+				m.Lock()
 				delete(workflows, blobSha)
+				m.Unlock()
 			}
-			m.Unlock()
 		}(blobSha)
 	}
 	wg.Wait()
