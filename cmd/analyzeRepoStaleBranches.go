@@ -15,7 +15,7 @@ var regex string
 
 var analyzeRepoStaleBranches = &cobra.Command{
 	Use:   "analyze_repo_stale_branches",
-	Short: "Analyzes a remote repository for vulnerable stale branch",
+	Short: "Analyzes a remote repository for pull_request_target vulnerabilities in stale branches",
 	Long: `Analyzes a remote repository for supply chain vulnerabilities
 Example Scanning a remote Github Repository: poutine analyze_repo_stale_branch org/repo --token "$GH_TOKEN"`,
 	Args: cobra.ExactArgs(1),
