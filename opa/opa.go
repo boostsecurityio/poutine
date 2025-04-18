@@ -98,7 +98,7 @@ func (o *Opa) Compile(ctx context.Context, skip []string) error {
 			if filepath.Dir(path) == filepath.Join("rego", "rules") {
 				filename := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
 				if slices.Contains(skip, filename) {
-					return err
+					return nil
 				}
 			}
 		}
