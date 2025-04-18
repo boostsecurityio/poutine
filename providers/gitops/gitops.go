@@ -197,13 +197,13 @@ func (g *GitClient) FetchCone(ctx context.Context, clonePath, url, token, ref st
 }
 
 func (g *GitClient) GetUniqWorkflowsBranches(ctx context.Context, clonePath string) (map[string][]models.BranchInfo, error) {
-	branches, err := g.getRemoteBranches(ctx, clonePath)
+	branchesMap, err := g.getRemoteBranches(ctx, clonePath)
 	if err != nil {
 		return nil, err
 	}
 
 	workflowsInfo := make(map[string][]models.BranchInfo)
-	for _, branches := range branches {
+	for _, branches := range branchesMap {
 		if len(branches) == 0 {
 			continue
 		}

@@ -105,7 +105,7 @@ func (f *Format) FormatWithPath(ctx context.Context, packages []*models.PackageI
 	}
 	for i, v := range resultJson.Findings {
 		filename := filepath.Base(v.Meta.Path)
-		resultJson.Findings[i].Meta.Blobsha = strings.TrimRight(filename, filepath.Ext(filename))
+		resultJson.Findings[i].Meta.BlobSHA = strings.TrimRight(filename, filepath.Ext(filename))
 		resultJson.Findings[i].Meta.Path = ""
 	}
 	resultJsonStr, err := json.Marshal(resultJson)
