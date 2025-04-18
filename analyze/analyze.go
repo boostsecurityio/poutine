@@ -278,7 +278,7 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 	}
 	for _, blobSha := range blobShas {
 		if err := semaphore.Acquire(ctx, 1); err != nil {
-			errChan <- fmt.Errorf("failed to aquire semaphore: %w", err)
+			errChan <- fmt.Errorf("failed to acquire semaphore: %w", err)
 			break
 		}
 		wg.Add(1)
