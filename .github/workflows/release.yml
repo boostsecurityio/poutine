@@ -8,7 +8,7 @@ on:
       - "v1.[0-9]+.[0-9]+"
 
 env:
-  GO_VERSION: 1.23
+  GO_VERSION: 1.24
   GO_RELEASER_VERSION: v2.4.7
   
 permissions: {}
@@ -21,7 +21,7 @@ jobs:
       packages: write
       id-token: write
     steps:
-    - uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
+    - uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
       with:
         egress-policy: audit
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -39,7 +39,7 @@ jobs:
         DOCKER_USERNAME: ${{ github.actor }}
         DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
     - name: Run GoReleaser
-      uses: goreleaser/goreleaser-action@9ed2f89a662bf1735a48bc8557fd212fa902bebf # v6.1.0
+      uses: goreleaser/goreleaser-action@9c156ee8a17a598857849441385a2041ef570552 # v6.3.0
       with:
         distribution: goreleaser
         version: ${{ env.GO_RELEASER_VERSION }} # Not pinnable by hash, nor does it verify its signature
