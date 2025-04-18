@@ -298,19 +298,19 @@ f44e85d85347913cfb29732653b6dcfb090b00b9	refs/heads/a2`), nil
 			assert.Len(t, got, len(expected))
 			return
 		}
-		for blobsha, exepect := range expected {
+		for blobsha, expect := range expected {
 			gotVal, ok := got[blobsha]
 			if !ok {
 				assert.True(t, ok)
 				continue
 			}
-			if len(gotVal) != len(exepect) {
-				assert.Len(t, gotVal, len(exepect))
+			if len(gotVal) != len(expect) {
+				assert.Len(t, gotVal, len(expect))
 				return
 			}
-			sortBranchInfo(exepect)
+			sortBranchInfo(expect)
 			sortBranchInfo(gotVal)
-			for j, branchInfo := range exepect {
+			for j, branchInfo := range expect {
 				if len(gotVal[j].FilePath) != len(branchInfo.FilePath) {
 					assert.Len(t, gotVal[j].FilePath, len(branchInfo.FilePath))
 					return
