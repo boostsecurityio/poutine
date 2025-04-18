@@ -1,16 +1,19 @@
 package gitops
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/boostsecurityio/poutine/models"
 	"github.com/rs/zerolog/log"
 )
 
@@ -162,6 +165,142 @@ func (g *GitClient) Clone(ctx context.Context, clonePath string, url string, tok
 	return nil
 }
 
+func (g *GitClient) FetchCone(ctx context.Context, clonePath, url, token, ref string, cone string) error {
+	os.Setenv("POUTINE_GIT_ASKPASS_TOKEN", token)
+	credentialHelperScript := "!f() { test \"$1\" = get && echo \"password=$POUTINE_GIT_ASKPASS_TOKEN\"; }; f"
+	commands := []struct {
+		cmd  string
+		args []string
+	}{
+		{"git", []string{"init", "--quiet"}},
+		{"git", []string{"remote", "add", "origin", url}},
+		{"git", []string{"config", "credential.helper", credentialHelperScript}},
+		{"git", []string{"config", "submodule.recurse", "false"}},
+		{"git", []string{"config", "core.sparseCheckout", "true"}},
+		{"git", []string{"config", "index.sparse", "true"}},
+		{"git", []string{"sparse-checkout", "init", "--sparse-index", "--cone"}},
+		{"git", []string{"sparse-checkout", "set", cone}},
+		{"git", []string{"fetch", "--quiet", "--no-tags", "--depth", "1", "--filter=blob:none", "origin", ref}},
+	}
+
+	for _, c := range commands {
+		if _, err := g.Command.Run(ctx, c.cmd, c.args, clonePath); err != nil {
+			if token != "" && strings.Contains(err.Error(), token) {
+				return errors.New(strings.ReplaceAll(err.Error(), token, "REDACTED"))
+			}
+
+			return fmt.Errorf("git error trying to fetch cone: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (g *GitClient) GetUniqWorkflowsBranches(ctx context.Context, clonePath string) (map[string][]models.BranchInfo, error) {
+	branchesMap, err := g.getRemoteBranches(ctx, clonePath)
+	if err != nil {
+		return nil, err
+	}
+
+	workflowsInfo := make(map[string][]models.BranchInfo)
+	for _, branches := range branchesMap {
+		if len(branches) == 0 {
+			continue
+		}
+		workflows, err := g.getBranchWorkflow(ctx, clonePath, branches[0])
+		if err != nil {
+			return nil, err
+		}
+
+		for blobsha, paths := range workflows {
+			var infos []models.BranchInfo
+			for _, branch := range branches {
+				infos = append(infos, models.BranchInfo{
+					BranchName: branch,
+					FilePath:   paths,
+				})
+			}
+
+			workflowsInfo[blobsha] = append(workflowsInfo[blobsha], infos...)
+		}
+	}
+
+	return workflowsInfo, nil
+}
+
+// blobMatches returns true if the blob (by its SHA) matches the given regex.
+func (g *GitClient) BlobMatches(ctx context.Context, clonePath, blobSha string, re *regexp.Regexp) (bool, []byte, error) {
+	content, err := g.Command.Run(ctx, "git", []string{"cat-file", "blob", blobSha}, clonePath)
+	if err != nil {
+		return false, nil, fmt.Errorf("error cat-file blob %s: %w", blobSha, err)
+	}
+	return re.Match(content), content, nil
+}
+
+// processBranch uses the remote ref (origin/<branch>) to list YAML files under .github/workflows.
+// It avoids checking out by operating on the remote reference directly.
+func (g *GitClient) getBranchWorkflow(ctx context.Context, clonePath string, branch string) (map[string][]string, error) {
+	ref := "origin/" + branch
+
+	// List files under .github/workflows in the remote branch.
+	lsOutput, err := g.Command.Run(ctx, "git", []string{"ls-tree", "-r", ref, "--full-tree", ".github/workflows"}, clonePath)
+	if err != nil {
+		// If the directory doesn’t exist, skip.
+		if strings.Contains(err.Error(), "Not a valid object name") ||
+			strings.Contains(err.Error(), "did not match any file") {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("error ls-tree ref %s: %w", ref, err)
+	}
+
+	records := make(map[string][]string)
+	scanner := bufio.NewScanner(bytes.NewReader(lsOutput))
+	for scanner.Scan() {
+		line := scanner.Text()
+		parts := strings.Fields(line)
+		if len(parts) < 4 {
+			continue
+		}
+		blobSha := parts[2]
+		filePath := parts[len(parts)-1]
+		if !strings.HasSuffix(filePath, ".yml") && !strings.HasSuffix(filePath, ".yaml") {
+			continue
+		}
+
+		records[blobSha] = append(records[blobSha], filePath)
+	}
+	return records, nil
+}
+
+// getRemoteBranches lists remote branches (excluding refs/pull/*) and deduplicates by commit SHA.
+func (g *GitClient) getRemoteBranches(ctx context.Context, clonePath string) (map[string][]string, error) {
+	output, err := g.Command.Run(ctx, "git", []string{"ls-remote", "--heads"}, clonePath)
+	if err != nil {
+		return nil, fmt.Errorf("error ls-remote --heads: %w", err)
+	}
+	branches := make(map[string][]string)
+	scanner := bufio.NewScanner(bytes.NewReader(output))
+	for scanner.Scan() {
+		line := scanner.Text()
+		parts := strings.Split(line, "\t")
+		if len(parts) < 2 {
+			continue
+		}
+		commit := parts[0]
+		ref := parts[1]
+		if strings.Contains(ref, "refs/pull/") {
+			continue
+		}
+		const prefix = "refs/heads/"
+		if !strings.HasPrefix(ref, prefix) {
+			continue
+		}
+		branchName := strings.TrimPrefix(ref, prefix)
+		branches[commit] = append(branches[commit], branchName)
+	}
+	return branches, nil
+}
+
 func (g *GitClient) CommitSHA(clonePath string) (string, error) {
 	out, err := g.Command.Run(context.Background(), "git", []string{"log", "-1", "--format=%H"}, clonePath)
 	if err != nil {
@@ -230,6 +369,45 @@ func NewLocalGitClient(command *GitCommand) *LocalGitClient {
 
 type LocalGitClient struct {
 	GitClient *GitClient
+}
+
+func (g *LocalGitClient) GetUniqWorkflowsBranches(ctx context.Context, clonePath string) (map[string][]models.BranchInfo, error) {
+	branchInfo, err := g.GitClient.GetUniqWorkflowsBranches(ctx, clonePath)
+	if err != nil {
+		var gitErr GitError
+		if errors.As(err, &gitErr) {
+			log.Debug().Err(err).Msg("failed to get unique workflows for local repo")
+			return nil, nil
+		}
+		return nil, err
+	}
+	return branchInfo, nil
+}
+
+func (g *LocalGitClient) FetchCone(ctx context.Context, clonePath, url, token, ref, cone string) error {
+	err := g.GitClient.FetchCone(ctx, clonePath, url, token, ref, cone)
+	if err != nil {
+		var gitErr GitError
+		if errors.As(err, &gitErr) {
+			log.Debug().Err(err).Msg("failed to fetch cone for local repo")
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
+func (g *LocalGitClient) BlobMatches(ctx context.Context, clonePath, blobSha string, re *regexp.Regexp) (bool, []byte, error) {
+	match, content, err := g.GitClient.BlobMatches(ctx, clonePath, blobSha, re)
+	if err != nil {
+		var gitErr GitError
+		if errors.As(err, &gitErr) {
+			log.Debug().Err(err).Msg("failed to blob match for local repo")
+			return false, nil, nil
+		}
+		return false, nil, err
+	}
+	return match, content, nil
 }
 
 func (g *LocalGitClient) GetRemoteOriginURL(ctx context.Context, repoPath string) (string, error) {

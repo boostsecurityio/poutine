@@ -3,10 +3,13 @@ package pretty
 import (
 	"context"
 	"fmt"
-	"github.com/boostsecurityio/poutine/results"
 	"io"
 	"os"
+	"path/filepath"
 	"sort"
+	"strings"
+
+	"github.com/boostsecurityio/poutine/results"
 
 	"github.com/rs/zerolog/log"
 
@@ -41,6 +44,82 @@ func (f *Format) Format(ctx context.Context, packages []*models.PackageInsights)
 	printFindingsPerRule(os.Stdout, findings, rules)
 	printSummaryTable(os.Stdout, failures, rules)
 
+	return nil
+}
+
+func (f *Format) FormatWithPath(ctx context.Context, packages []*models.PackageInsights, pathAssociations map[string][]models.BranchInfo) error {
+	failures := map[string]int{}
+	rules := map[string]results.Rule{}
+
+	for _, pkg := range packages {
+		findings := map[string][]string{}
+		for _, finding := range pkg.FindingsResults.Findings {
+			failures[finding.RuleId]++
+			filename := filepath.Base(finding.Meta.Path)
+			filename = strings.TrimSuffix(filename, filepath.Ext(filename))
+			findings[filename] = append(findings[filename], finding.RuleId)
+		}
+
+		for _, rule := range pkg.FindingsResults.Rules {
+			rules[rule.Id] = rule
+		}
+
+		_ = f.printFindingsPerWorkflow(os.Stdout, findings, pkg.Purl, pathAssociations)
+	}
+	printSummaryTable(os.Stdout, failures, rules)
+
+	return nil
+}
+
+func (f *Format) printFindingsPerWorkflow(out io.Writer, results map[string][]string, purlStr string, pathAssociations map[string][]models.BranchInfo) error {
+	// Skip rules with no findings.
+	table := tablewriter.NewWriter(out)
+	table.SetAutoMergeCells(true)
+	table.SetHeader([]string{"Workflow sha", "Rule", "Branch", "URL"})
+
+	purl, err := models.NewPurl(purlStr)
+	if err != nil {
+		return fmt.Errorf("error creating purl: %w", err)
+	}
+	for blobsha, branchInfos := range pathAssociations {
+		findings := results[blobsha]
+		if len(findings) == 0 {
+			continue
+		}
+		largestElement := len(findings)
+		sumPath := 0
+		for _, branchInfo := range branchInfos {
+			sumPath += len(branchInfo.FilePath)
+		}
+		blobshaTable := make([][]string, max(largestElement, sumPath))
+		for i := range blobshaTable {
+			blobshaTable[i] = make([]string, 4)
+		}
+
+		blobshaTable[0][0] = blobsha
+
+		for i, finding := range findings {
+			blobshaTable[i][1] = finding
+		}
+
+		index := 0
+		for _, branchInfo := range branchInfos {
+			for j, path := range branchInfo.FilePath {
+				if j == 0 {
+					blobshaTable[index][2] = branchInfo.BranchName
+				}
+
+				blobshaTable[index][3] = purl.Link() + "/tree/" + branchInfo.BranchName + "/" + path
+				index += 1
+			}
+		}
+
+		table.AppendBulk(blobshaTable)
+		table.Append([]string{"", "", "", ""})
+	}
+
+	table.Render()
+	fmt.Fprint(out, "\n")
 	return nil
 }
 

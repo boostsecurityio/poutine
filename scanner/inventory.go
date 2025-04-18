@@ -3,6 +3,7 @@ package scanner
 import (
 	"context"
 	"fmt"
+
 	"github.com/boostsecurityio/poutine/models"
 	"github.com/boostsecurityio/poutine/opa"
 	"github.com/boostsecurityio/poutine/providers/pkgsupply"
@@ -29,9 +30,7 @@ func NewInventory(opa *opa.Opa, pkgSupplyClient ReputationClient, provider strin
 	}
 }
 
-func (i *Inventory) ScanPackage(ctx context.Context, pkgInsights models.PackageInsights, workdir string) (*models.PackageInsights, error) {
-	inventoryScanner := NewInventoryScanner(workdir)
-
+func (i *Inventory) ScanPackageScanner(ctx context.Context, pkgInsights models.PackageInsights, inventoryScanner *InventoryScanner) (*models.PackageInsights, error) {
 	refPkgInsights := &pkgInsights
 
 	if err := inventoryScanner.Run(refPkgInsights); err != nil {
@@ -52,6 +51,10 @@ func (i *Inventory) ScanPackage(ctx context.Context, pkgInsights models.PackageI
 	}
 
 	return refPkgInsights, nil
+}
+
+func (i *Inventory) ScanPackage(ctx context.Context, pkgInsights models.PackageInsights, workdir string) (*models.PackageInsights, error) {
+	return i.ScanPackageScanner(ctx, pkgInsights, NewInventoryScanner(workdir))
 }
 
 func (i *Inventory) performDependenciesInventory(ctx context.Context, pkg *models.PackageInsights) error {
