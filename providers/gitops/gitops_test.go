@@ -164,7 +164,7 @@ func TestGitClient_BlobMatches(t *testing.T) {
 			regex: regexp.MustCompile(`-918dasd0-ac2a`),
 		},
 		{
-			name:    "Complexe regex with match",
+			name:    "Complex regex with match",
 			blobSha: "ba50d9b9d4567fd9cc6229af2670b5b42434b852",
 			want: Want{
 				match:  true,
