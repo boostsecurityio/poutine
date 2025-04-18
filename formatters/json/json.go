@@ -74,9 +74,7 @@ func (f *Format) FormatWithPath(ctx context.Context, packages []*models.PackageI
 		Rules:    map[string]results.Rule{},
 	}
 	for _, pkg := range packages {
-		for _, finding := range pkg.FindingsResults.Findings {
-			report.Findings = append(report.Findings, finding)
-		}
+		report.Findings = append(report.Findings, pkg.FindingsResults.Findings...)
 		for _, rule := range pkg.FindingsResults.Rules {
 			report.Rules[rule.Id] = rule
 		}

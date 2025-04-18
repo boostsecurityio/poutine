@@ -23,9 +23,9 @@ Example Scanning a remote Github Repository: poutine analyze_repo_stale_branch o
 	RunE: func(cmd *cobra.Command, args []string) error {
 		token = viper.GetString("token")
 		ctx := cmd.Context()
-		analyzer, err := GetAnalyzer(ctx, "analyze_repo_stale_branch")
+		analyzer, err := GetAnalyzer(ctx, "analyze_repo_stale_branches")
 		if err != nil {
-			return err
+			return fmt.Errorf("error getting analyzer analyze_repo_stale_branches: %w", err)
 		}
 
 		if Format == "sarif" {
@@ -36,7 +36,7 @@ Example Scanning a remote Github Repository: poutine analyze_repo_stale_branch o
 
 		reg, err := regexp.Compile(regex)
 		if err != nil {
-			return err
+			return fmt.Errorf("error compiling regex: %w", err)
 		}
 
 		_, err = analyzer.AnalyzeStaleBranches(ctx, repo, &threadsRepoStaleBranch, &expand, reg)
