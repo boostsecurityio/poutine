@@ -3,6 +3,12 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"strings"
+	"syscall"
+
 	"github.com/boostsecurityio/poutine/analyze"
 	"github.com/boostsecurityio/poutine/formatters/json"
 	"github.com/boostsecurityio/poutine/formatters/pretty"
@@ -11,15 +17,10 @@ import (
 	"github.com/boostsecurityio/poutine/opa"
 	"github.com/boostsecurityio/poutine/providers/gitops"
 	"github.com/boostsecurityio/poutine/providers/scm"
-	"github.com/boostsecurityio/poutine/providers/scm/domain"
+	scm_domain "github.com/boostsecurityio/poutine/providers/scm/domain"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
-	"os"
-	"os/signal"
-	"path/filepath"
-	"strings"
-	"syscall"
 
 	"github.com/spf13/cobra"
 )
@@ -36,6 +37,7 @@ var (
 var token string
 var cfgFile string
 var config *models.Config = models.DefaultConfig()
+var skipRules []string
 
 var legacyFlags = []string{"-token", "-format", "-verbose", "-scm", "-scm-base-uri", "-threads"}
 
@@ -112,6 +114,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&ScmProvider, "scm", "s", "github", "SCM platform (github, gitlab)")
 	rootCmd.PersistentFlags().VarP(&ScmBaseURL, "scm-base-url", "b", "Base URI of the self-hosted SCM instance (optional)")
 	rootCmd.PersistentFlags().BoolVarP(&config.Quiet, "quiet", "q", false, "Disable progress output")
+	rootCmd.PersistentFlags().StringSliceVar(&skipRules, "skip", []string{}, "Adds rules to the configured skip list for the current run (optional)")
 
 	viper.BindPFlag("quiet", rootCmd.PersistentFlags().Lookup("quiet"))
 }
@@ -186,6 +189,9 @@ func GetAnalyzer(ctx context.Context, command string) (*analyze.Analyzer, error)
 }
 
 func newOpa(ctx context.Context) (*opa.Opa, error) {
+	if len(skipRules) > 0 {
+		config.Skip = append(config.Skip, models.ConfigSkip{Rule: skipRules})
+	}
 	opaClient, err := opa.NewOpa(ctx, config)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create OPA client")

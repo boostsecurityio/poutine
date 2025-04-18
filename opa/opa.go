@@ -5,6 +5,12 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
+
 	"github.com/boostsecurityio/poutine/models"
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/loader"
@@ -13,9 +19,6 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage/inmem"
 	"github.com/open-policy-agent/opa/v1/topdown/print"
 	"github.com/rs/zerolog/log"
-	"io/fs"
-	"os"
-	"strings"
 )
 
 //go:embed rego
@@ -45,7 +48,14 @@ func NewOpa(ctx context.Context, config *models.Config) (*Opa, error) {
 		return nil, fmt.Errorf("failed to set opa with config: %w", err)
 	}
 
-	err = newOpa.Compile(ctx)
+	subset := []string{}
+	for _, skip := range config.Skip {
+		if skip.HasOnlyRule() {
+			subset = append(subset, skip.Rule...)
+		}
+	}
+
+	err = newOpa.Compile(ctx, subset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize opa compiler: %w", err)
 	}
@@ -77,11 +87,20 @@ func (o *Opa) WithConfig(ctx context.Context, config *models.Config) error {
 	)
 }
 
-func (o *Opa) Compile(ctx context.Context) error {
+func (o *Opa) Compile(ctx context.Context, skip []string) error {
 	modules := make(map[string]string)
 	err := fs.WalkDir(regoFs, "rego", func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() {
 			return err
+		}
+
+		if len(skip) != 0 {
+			if filepath.Dir(path) == filepath.Join("rego", "rules") {
+				filename := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+				if slices.Contains(skip, filename) {
+					return nil
+				}
+			}
 		}
 
 		content, err := regoFs.ReadFile(path)
