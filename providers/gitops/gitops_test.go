@@ -281,7 +281,7 @@ f44e85d85347913cfb29732653b6dcfb090b00b9	refs/heads/a2`), nil
 		})
 	}
 
-	t.Run("Complexe repo", func(t *testing.T) {
+	t.Run("Complex repo", func(t *testing.T) {
 		path, err := os.MkdirTemp("/tmp", "poutine-")
 		if err != nil {
 			t.Error(fmt.Errorf("error creating temp dir: %w", err))
