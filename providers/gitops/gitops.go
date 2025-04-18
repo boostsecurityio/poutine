@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/boostsecurityio/poutine/models"
 	"github.com/rs/zerolog/log"
 )
 
@@ -195,18 +196,13 @@ func (g *GitClient) FetchCone(ctx context.Context, clonePath, url, token, ref st
 	return nil
 }
 
-type BranchInfo struct {
-	BranchName string
-	FilePath   []string
-}
-
-func (g *GitClient) GetUniqWorkflowsBranches(ctx context.Context, clonePath string) (map[string][]BranchInfo, error) {
+func (g *GitClient) GetUniqWorkflowsBranches(ctx context.Context, clonePath string) (map[string][]models.BranchInfo, error) {
 	branches, err := g.getRemoteBranches(ctx, clonePath)
 	if err != nil {
 		return nil, err
 	}
 
-	workflowsInfo := make(map[string][]BranchInfo)
+	workflowsInfo := make(map[string][]models.BranchInfo)
 	for _, branches := range branches {
 		if len(branches) == 0 {
 			continue
@@ -217,9 +213,9 @@ func (g *GitClient) GetUniqWorkflowsBranches(ctx context.Context, clonePath stri
 		}
 
 		for blobsha, paths := range workflows {
-			var infos []BranchInfo
+			var infos []models.BranchInfo
 			for _, branch := range branches {
-				infos = append(infos, BranchInfo{
+				infos = append(infos, models.BranchInfo{
 					BranchName: branch,
 					FilePath:   paths,
 				})
@@ -375,7 +371,7 @@ type LocalGitClient struct {
 	GitClient *GitClient
 }
 
-func (g *LocalGitClient) GetUniqWorkflowsBranches(ctx context.Context, clonePath string) (map[string][]BranchInfo, error) {
+func (g *LocalGitClient) GetUniqWorkflowsBranches(ctx context.Context, clonePath string) (map[string][]models.BranchInfo, error) {
 	branchInfo, err := g.GitClient.GetUniqWorkflowsBranches(ctx, clonePath)
 	if err != nil {
 		var gitErr GitError

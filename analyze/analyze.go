@@ -16,7 +16,6 @@ import (
 	"golang.org/x/sync/semaphore"
 
 	"github.com/boostsecurityio/poutine/opa"
-	"github.com/boostsecurityio/poutine/providers/gitops"
 	"github.com/boostsecurityio/poutine/providers/pkgsupply"
 	scm_domain "github.com/boostsecurityio/poutine/providers/scm/domain"
 	"github.com/boostsecurityio/poutine/scanner"
@@ -70,7 +69,7 @@ type GitClient interface {
 	LastCommitDate(ctx context.Context, clonePath string) (time.Time, error)
 	GetRemoteOriginURL(ctx context.Context, repoPath string) (string, error)
 	GetRepoHeadBranchName(ctx context.Context, repoPath string) (string, error)
-	GetUniqWorkflowsBranches(ctx context.Context, clonePath string) (map[string][]gitops.BranchInfo, error)
+	GetUniqWorkflowsBranches(ctx context.Context, clonePath string) (map[string][]models.BranchInfo, error)
 	BlobMatches(ctx context.Context, clonePath string, blobsha string, regex *regexp.Regexp) (bool, []byte, error)
 }
 
@@ -216,7 +215,7 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 	return scannedPackages, nil
 }
 
-func (a *Analyzer) AnalyzeStaleBranch(ctx context.Context, repoString string, numberOfGoroutines *int) (*models.PackageInsights, error) {
+func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, numberOfGoroutines *int, expand *bool, regex *regexp.Regexp) (*models.PackageInsights, error) {
 	org, repoName, err := a.ScmClient.ParseRepoAndOrg(repoString)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse repository: %w", err)
@@ -249,7 +248,7 @@ func (a *Analyzer) AnalyzeStaleBranch(ctx context.Context, repoString string, nu
 	}
 	defer os.RemoveAll(tempDir)
 
-	bar.Describe("Listing unique pull_request_target")
+	bar.Describe("Listing unique workflows")
 	_ = bar.Add(1)
 
 	workflows, err := a.GitClient.GetUniqWorkflowsBranches(ctx, tempDir)
@@ -257,15 +256,13 @@ func (a *Analyzer) AnalyzeStaleBranch(ctx context.Context, repoString string, nu
 		return nil, fmt.Errorf("failed to get unique workflow: %w", err)
 	}
 
-	bar.Describe("Check which workflows uses pull_request_target (this may take some time)")
+	bar.Describe(fmt.Sprintf("Check which workflows match regex: %s", regex.String()))
 	_ = bar.Add(1)
 
 	workflowDir := filepath.Join(tempDir, ".github", "workflows")
 	if err = os.MkdirAll(workflowDir, 0700); err != nil {
 		return nil, fmt.Errorf("failed to create .github/workflows/ dir: %w", err)
 	}
-
-	r := regexp.MustCompile("pull_request_target")
 
 	wg := sync.WaitGroup{}
 	errChan := make(chan error, 1)
@@ -288,7 +285,7 @@ func (a *Analyzer) AnalyzeStaleBranch(ctx context.Context, repoString string, nu
 		go func(blobSha string) {
 			defer wg.Done()
 			defer semaphore.Release(1)
-			match, content, err := a.GitClient.BlobMatches(ctx, tempDir, blobSha, r)
+			match, content, err := a.GitClient.BlobMatches(ctx, tempDir, blobSha, regex)
 			if err != nil {
 				errChan <- fmt.Errorf("failed to blob match %s: %w", blobSha, err)
 				return
@@ -330,31 +327,36 @@ func (a *Analyzer) AnalyzeStaleBranch(ctx context.Context, repoString string, nu
 		return nil, fmt.Errorf("failed to scan package: %w", err)
 	}
 
-	expanded := []results.Finding{}
-	for _, finding := range scannedPackage.FindingsResults.Findings {
-		filename := filepath.Base(finding.Meta.Path)
-		blobsha := strings.TrimSuffix(filename, filepath.Ext(filename))
-		purl, err := models.NewPurl(finding.Purl)
-		if err != nil {
-			log.Warn().Err(err).Str("purl", finding.Purl).Msg("failed to evaluate PURL, skipping")
-			continue
-		}
-		for _, branchInfo := range workflows[blobsha] {
-			for _, path := range branchInfo.FilePath {
-				finding.Meta.Path = path
-				purl.Version = branchInfo.BranchName
-				finding.Purl = purl.String()
-				expanded = append(expanded, finding)
+	_ = bar.Finish()
+	if *expand {
+		expanded := []results.Finding{}
+		for _, finding := range scannedPackage.FindingsResults.Findings {
+			filename := filepath.Base(finding.Meta.Path)
+			blobsha := strings.TrimSuffix(filename, filepath.Ext(filename))
+			purl, err := models.NewPurl(finding.Purl)
+			if err != nil {
+				log.Warn().Err(err).Str("purl", finding.Purl).Msg("failed to evaluate PURL, skipping")
+				continue
+			}
+			for _, branchInfo := range workflows[blobsha] {
+				for _, path := range branchInfo.FilePath {
+					finding.Meta.Path = path
+					purl.Version = branchInfo.BranchName
+					finding.Purl = purl.String()
+					expanded = append(expanded, finding)
+				}
 			}
 		}
-	}
-	scannedPackage.FindingsResults.Findings = expanded
+		scannedPackage.FindingsResults.Findings = expanded
 
-	_ = bar.Finish()
+		if err := a.Formatter.Format(ctx, []*models.PackageInsights{scannedPackage}); err != nil {
+			return nil, fmt.Errorf("failed to finalize analysis of package: %w", err)
+		}
+	} else {
+		if err := a.Formatter.FormatWithPath(ctx, []*models.PackageInsights{scannedPackage}, workflows); err != nil {
+			return nil, fmt.Errorf("failed to finalize analysis of package: %w", err)
+		}
 
-	err = a.finalizeAnalysis(ctx, []*models.PackageInsights{scannedPackage})
-	if err != nil {
-		return nil, fmt.Errorf("failed to finalize analysis of package: %w", err)
 	}
 
 	return scannedPackage, nil
@@ -456,6 +458,7 @@ func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) (*mode
 
 type Formatter interface {
 	Format(ctx context.Context, packages []*models.PackageInsights) error
+	FormatWithPath(ctx context.Context, packages []*models.PackageInsights, pathAssociation map[string][]models.BranchInfo) error
 }
 
 func (a *Analyzer) finalizeAnalysis(ctx context.Context, scannedPackages []*models.PackageInsights) error {

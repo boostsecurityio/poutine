@@ -2,10 +2,12 @@ package sarif
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"github.com/boostsecurityio/poutine/results"
 	"io"
 	"strings"
+
+	"github.com/boostsecurityio/poutine/results"
 
 	"github.com/boostsecurityio/poutine/docs"
 	"github.com/boostsecurityio/poutine/models"
@@ -113,4 +115,8 @@ func (f *Format) Format(ctx context.Context, packages []*models.PackageInsights)
 	_ = sarifReport.PrettyWrite(f.out)
 
 	return nil
+}
+
+func (f *Format) FormatWithPath(ctx context.Context, packages []*models.PackageInsights, pathAssociations map[string][]models.BranchInfo) error {
+	return errors.New("not implemented")
 }

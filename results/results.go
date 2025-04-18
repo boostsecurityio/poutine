@@ -4,8 +4,9 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"github.com/rs/zerolog/log"
 	"strconv"
+
+	"github.com/rs/zerolog/log"
 )
 
 type FindingsResult struct {
@@ -21,6 +22,7 @@ type FindingMeta struct {
 	OsvId         string   `json:"osv_id,omitempty"`
 	Details       string   `json:"details,omitempty"`
 	EventTriggers []string `json:"event_triggers,omitempty"`
+	Blobsha       string   `json:"blobsha,omitempty"`
 }
 
 type Finding struct {

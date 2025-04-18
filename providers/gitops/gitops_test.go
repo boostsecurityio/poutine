@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/boostsecurityio/poutine/models"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -226,7 +227,7 @@ f44e85d85347913cfb29732653b6dcfb090b00b9	refs/heads/a2`), nil
 
 	client := &GitClient{Command: mockCommand}
 	ctx := context.Background()
-	expected := map[string][]BranchInfo{
+	expected := map[string][]models.BranchInfo{
 		"ba50d9b9d4567fd9cc6229af2670b5b42434b852": {
 			{
 				BranchName: "main",
@@ -274,7 +275,7 @@ f44e85d85347913cfb29732653b6dcfb090b00b9	refs/heads/a2`), nil
 		},
 	}
 
-	sortBranchInfo := func(branches []BranchInfo) {
+	sortBranchInfo := func(branches []models.BranchInfo) {
 		sort.Slice(branches, func(i, j int) bool {
 			return branches[i].BranchName < branches[j].BranchName
 		})
