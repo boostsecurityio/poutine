@@ -256,7 +256,7 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 		return nil, fmt.Errorf("failed to get unique workflow: %w", err)
 	}
 
-	bar.Describe(fmt.Sprintf("Check which workflows match regex: %s", regex.String()))
+	bar.Describe("Check which workflows match regex: " + regex.String())
 	_ = bar.Add(1)
 
 	workflowDir := filepath.Join(tempDir, ".github", "workflows")

@@ -79,7 +79,7 @@ func (f *Format) printFindingsPerWorkflow(out io.Writer, results map[string][]st
 
 	purl, err := models.NewPurl(purlStr)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating purl: %w", err)
 	}
 	for blobsha, branchInfos := range pathAssociations {
 		findings := results[blobsha]

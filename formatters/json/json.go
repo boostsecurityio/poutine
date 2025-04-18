@@ -38,9 +38,7 @@ func (f *Format) Format(ctx context.Context, packages []*models.PackageInsights)
 		Rules:    map[string]results.Rule{},
 	}
 	for _, pkg := range packages {
-		for _, finding := range pkg.FindingsResults.Findings {
-			report.Findings = append(report.Findings, finding)
-		}
+		report.Findings = append(report.Findings, pkg.FindingsResults.Findings...)
 		for _, rule := range pkg.FindingsResults.Rules {
 			report.Rules[rule.Id] = rule
 		}
@@ -55,7 +53,7 @@ func (f *Format) Format(ctx context.Context, packages []*models.PackageInsights)
 		},
 		&result,
 	); err != nil {
-		return err
+		return fmt.Errorf("error evaluating rego: %w", err)
 	}
 
 	if result.Error != "" {
