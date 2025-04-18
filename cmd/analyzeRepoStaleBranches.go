@@ -13,7 +13,6 @@ var threadsRepoStaleBranch int
 var expand bool
 var regex string
 
-// analyzeRepoCmd represents the analyzeRepo command
 var analyzeRepoStaleBranches = &cobra.Command{
 	Use:   "analyze_repo_stale_branches",
 	Short: "Analyzes a remote repository for vulnerable stale branch",
