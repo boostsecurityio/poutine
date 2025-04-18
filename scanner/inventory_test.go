@@ -2,8 +2,9 @@ package scanner
 
 import (
 	"context"
-	"github.com/boostsecurityio/poutine/results"
 	"testing"
+
+	"github.com/boostsecurityio/poutine/results"
 
 	"github.com/boostsecurityio/poutine/models"
 	"github.com/boostsecurityio/poutine/opa"
@@ -220,6 +221,26 @@ func TestFindings(t *testing.T) {
 			RuleId: "untrusted_checkout_exec",
 			Purl:   purl,
 			Meta: results.FindingMeta{
+				Path:          ".github/workflows/valid.yml",
+				Line:          75,
+				Details:       "Detected usage of `bash`",
+				EventTriggers: []string{"push", "pull_request_target"},
+			},
+		},
+		{
+			RuleId: "untrusted_checkout_exec",
+			Purl:   purl,
+			Meta: results.FindingMeta{
+				Path:          ".github/workflows/valid.yml",
+				Line:          80,
+				Details:       "Detected usage of `bash`",
+				EventTriggers: []string{"push", "pull_request_target"},
+			},
+		},
+		{
+			RuleId: "untrusted_checkout_exec",
+			Purl:   purl,
+			Meta: results.FindingMeta{
 				Path:          ".github/workflows/workflow_run_valid.yml",
 				Line:          13,
 				Details:       "Detected usage of `npm`",
@@ -408,10 +429,32 @@ func TestFindings(t *testing.T) {
 			Purl:   purl,
 			Meta: results.FindingMeta{
 				Path:    "azure-pipelines-2.yml",
+				Line:    13,
+				Job:     "",
+				Step:    "1",
+				Details: "Detected usage of `bash`",
+			},
+		},
+		{
+			RuleId: "untrusted_checkout_exec",
+			Purl:   purl,
+			Meta: results.FindingMeta{
+				Path:    "azure-pipelines-2.yml",
 				Line:    14,
 				Job:     "",
 				Step:    "2",
 				Details: "Detected usage of `npm`",
+			},
+		},
+		{
+			RuleId: "untrusted_checkout_exec",
+			Purl:   purl,
+			Meta: results.FindingMeta{
+				Path:    "azure-pipelines-4.yml",
+				Line:    10,
+				Job:     "",
+				Step:    "1",
+				Details: "Detected usage of `bash`",
 			},
 		},
 		{
