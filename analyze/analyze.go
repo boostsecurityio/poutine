@@ -215,6 +215,311 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 	return scannedPackages, nil
 }
 
+func (a *Analyzer) AnalyzeOrgStaleBranch(ctx context.Context, org string, numberOfGoroutines *int, expand *bool, regex *regexp.Regexp) ([]*models.PackageInsights, error) {
+	provider := a.ScmClient.GetProviderName()
+
+	providerVersion, err := a.ScmClient.GetProviderVersion(ctx)
+	if err != nil {
+		log.Debug().Err(err).Msgf("Failed to get provider version for %s", provider)
+	}
+
+	log.Debug().Msgf("Provider: %s, Version: %s, BaseURL: %s", provider, providerVersion, a.ScmClient.GetProviderBaseURL())
+
+	log.Debug().Msgf("Fetching list of repositories for organization: %s on %s", org, provider)
+	orgReposBatches := a.ScmClient.GetOrgRepos(ctx, org)
+
+	pkgsupplyClient := pkgsupply.NewStaticClient()
+	inventory := scanner.NewInventory(a.Opa, pkgsupplyClient, provider, providerVersion)
+
+	log.Debug().Msgf("Starting repository analysis for organization: %s on %s", org, provider)
+	bar := a.progressBar(0, "Get unique workflows")
+
+	var reposWg sync.WaitGroup
+	errChan := make(chan error, 1)
+	maxGoroutines := 2
+	if numberOfGoroutines != nil {
+		maxGoroutines = *numberOfGoroutines
+	}
+	goRoutineLimitSem := semaphore.NewWeighted(int64(maxGoroutines))
+
+	repoInfos := make(map[string][]models.RepoInfo, 0)
+	tmpDirs := make(map[string]string, 0)
+	pkgs := make([]*models.PackageInsights, 0)
+
+	pkgChan := make(chan *models.PackageInsights)
+	repoInfoChan := make(chan map[string]models.RepoInfo)
+	type tmpDirInfo struct {
+		repoName string
+		tmpDir   string
+	}
+	tmpDirChan := make(chan tmpDirInfo)
+
+	pkgWg := sync.WaitGroup{}
+	pkgWg.Add(1)
+	go func() {
+		defer pkgWg.Done()
+
+		activePkgChan := pkgChan
+		activeTmpDirChan := tmpDirChan
+		activeRepoInfoChan := repoInfoChan
+
+		for activePkgChan != nil || activeTmpDirChan != nil || activeRepoInfoChan != nil {
+			select {
+			case pkg, ok := <-activePkgChan:
+				if !ok {
+					activePkgChan = nil
+					continue
+				}
+				pkgs = append(pkgs, pkg)
+			case tmpDir, ok := <-activeTmpDirChan:
+				if !ok {
+					activeTmpDirChan = nil
+					continue
+				}
+				tmpDirs[tmpDir.repoName] = tmpDir.tmpDir
+			case repoInfo, ok := <-repoInfoChan:
+				if !ok {
+					activeRepoInfoChan = nil
+					continue
+				}
+				for k, v := range repoInfo {
+					repoInfos[k] = append(repoInfos[k], v)
+				}
+			}
+		}
+	}()
+
+	for repoBatch := range orgReposBatches {
+		if repoBatch.Err != nil {
+			return nil, fmt.Errorf("failed to get batch of repos: %w", repoBatch.Err)
+		}
+		if repoBatch.TotalCount != 0 {
+			bar.ChangeMax(repoBatch.TotalCount)
+		}
+
+		for _, repo := range repoBatch.Repositories {
+			if a.Config.IgnoreForks && repo.GetIsFork() {
+				// bar.ChangeMax(repoBatch.TotalCount - 1)
+				continue
+			}
+			if repo.GetSize() == 0 {
+				// bar.ChangeMax(repoBatch.TotalCount - 1)
+				log.Info().Str("repo", repo.GetRepoIdentifier()).Msg("Skipping empty repository")
+				continue
+			}
+			if err := goRoutineLimitSem.Acquire(ctx, 1); err != nil {
+				close(errChan)
+				return nil, fmt.Errorf("failed to acquire semaphore: %w", err)
+			}
+
+			reposWg.Add(1)
+			go func(repo Repository) {
+				defer goRoutineLimitSem.Release(1)
+				defer reposWg.Done()
+				defer bar.Add(1)
+				repoNameWithOwner := repo.GetRepoIdentifier()
+
+				repoUrl := repo.BuildGitURL(a.ScmClient.GetProviderBaseURL())
+				tempDir, err := a.fetchConeToTemp(ctx, repoUrl, a.ScmClient.GetToken(), "refs/heads/*:refs/remotes/origin/*", ".github/workflows")
+				if err != nil {
+					log.Error().Err(err).Str("repo", repoNameWithOwner).Msg("failed to clone repo")
+					return
+				}
+
+				workflows, err := a.GitClient.GetUniqWorkflowsBranches(ctx, tempDir)
+				if err != nil {
+					log.Error().Err(err).Str("repo", repoNameWithOwner).Msg("failed to get unique workflow")
+					return
+				}
+
+				if len(workflows) == 0 {
+					os.RemoveAll(tempDir)
+					return
+				}
+
+				select {
+				case tmpDirChan <- tmpDirInfo{
+					repoName: repoUrl,
+					tmpDir:   tempDir,
+				}:
+				case <-ctx.Done():
+					log.Error().Msg("Context canceled while sending temp dir to channel")
+					return
+				}
+
+				pkg, err := a.generatePackageInsights(ctx, tempDir, repo, "HEAD")
+				if err != nil {
+					log.Error().Err(err).Str("repo", repoNameWithOwner).Msg("failed to generate package insights")
+					return
+				}
+				select {
+				case pkgChan <- pkg:
+				case <-ctx.Done():
+					log.Error().Msg("Context canceled while sending package to channel")
+					return
+				}
+
+				repoInfo := make(map[string]models.RepoInfo, len(workflows))
+				for k, v := range workflows {
+					repoInfo[k] = models.RepoInfo{
+						RepoName:    repoUrl,
+						BranchInfos: v,
+					}
+				}
+
+				select {
+				case repoInfoChan <- repoInfo:
+				case <-ctx.Done():
+					log.Error().Msg("Context canceled while sending repo info to channel")
+					return
+				}
+			}(repo)
+		}
+	}
+
+	go func() {
+		reposWg.Wait()
+		close(pkgChan)
+		close(repoInfoChan)
+		close(tmpDirChan)
+		close(errChan)
+	}()
+
+	pkgWg.Wait()
+
+	for err := range errChan {
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	workflowsTmpDir, err := os.MkdirTemp("", TEMP_DIR_PREFIX)
+	if err != nil {
+		return nil, fmt.Errorf("error creating temp dir: %w", err)
+	}
+	defer os.RemoveAll(workflowsTmpDir)
+
+	workflowDir := filepath.Join(workflowsTmpDir, ".github", "workflows")
+	if err = os.MkdirAll(workflowDir, 0700); err != nil {
+		return nil, fmt.Errorf("failed to create .github/workflows/ dir: %w", err)
+	}
+
+	bar.Set(0)
+	bar = a.progressBar(int64(len(repoInfos)), fmt.Sprintf("Analyzing workflows matching %s", regex.String()))
+
+	wg := sync.WaitGroup{}
+	errChan = make(chan error, 1)
+	semaphore := semaphore.NewWeighted(int64(maxGoroutines))
+	m := sync.Mutex{}
+
+	blobShas := make([]string, 0, len(repoInfos))
+	for sha := range repoInfos {
+		blobShas = append(blobShas, sha)
+	}
+	for _, blobSha := range blobShas {
+		if err := semaphore.Acquire(ctx, 1); err != nil {
+			errChan <- fmt.Errorf("failed to acquire semaphore: %w", err)
+			close(errChan)
+			break
+		}
+		wg.Add(1)
+		go func(blobSha string) {
+			defer wg.Done()
+			defer semaphore.Release(1)
+			defer bar.Add(1)
+			tmpDirRepo, ok := tmpDirs[repoInfos[blobSha][0].RepoName]
+			if !ok {
+				errChan <- fmt.Errorf("failed to get temp directory location")
+				close(errChan)
+				return
+			}
+
+			match, content, err := a.GitClient.BlobMatches(ctx, tmpDirRepo, blobSha, regex)
+			if err != nil {
+				errChan <- fmt.Errorf("failed to blob match %s: %w", blobSha, err)
+				close(errChan)
+				return
+			}
+
+			if match {
+				err = os.WriteFile(filepath.Join(workflowDir, blobSha+".yaml"), content, 0644)
+				if err != nil {
+					errChan <- fmt.Errorf("failed to write file for blob %s: %w", blobSha, err)
+					close(errChan)
+					return
+				}
+			} else {
+				m.Lock()
+				delete(repoInfos, blobSha)
+				m.Unlock()
+			}
+		}(blobSha)
+	}
+
+	wg.Wait()
+	close(errChan)
+
+	for err := range errChan {
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	for _, v := range tmpDirs {
+		os.RemoveAll(v)
+	}
+
+	bar.Describe("Scanning package")
+	bar.Set(1)
+
+	inventoryScanner := scanner.InventoryScanner{
+		Path: workflowsTmpDir,
+		Parsers: []scanner.Parser{
+			scanner.NewGithubActionWorkflowParser(),
+		},
+	}
+
+	scannedPackage, err := inventory.ScanPackageScanner(ctx, models.PackageInsights{}, &inventoryScanner)
+	if err != nil {
+		return nil, fmt.Errorf("failed to scan package: %w", err)
+	}
+
+	// if *expand {
+	// expanded := []results.Finding{}
+	// for _, finding := range scannedPackage.FindingsResults.Findings {
+	// 	filename := filepath.Base(finding.Meta.Path)
+	// 	blobsha := strings.TrimSuffix(filename, filepath.Ext(filename))
+	// 	purl, err := models.NewPurl(finding.Purl)
+	// 	if err != nil {
+	// 		log.Warn().Err(err).Str("purl", finding.Purl).Msg("failed to evaluate PURL, skipping")
+	// 		continue
+	// 	}
+	// 	for _, branchInfo := range workflows[blobsha] {
+	// 		for _, path := range branchInfo.FilePath {
+	// 			finding.Meta.Path = path
+	// 			purl.Version = branchInfo.BranchName
+	// 			finding.Purl = purl.String()
+	// 			expanded = append(expanded, finding)
+	// 		}
+	// 	}
+	// }
+	// scannedPackage.FindingsResults.Findings = expanded
+
+	// if err := a.Formatter.Format(ctx, []*models.PackageInsights{scannedPackage}); err != nil {
+	// 	return nil, fmt.Errorf("failed to finalize analysis of package: %w", err)
+	// }
+	// } else {
+	if err := a.Formatter.FormatWithPath(ctx, []*models.PackageInsights{scannedPackage}, repoInfos); err != nil {
+		return nil, fmt.Errorf("failed to finalize analysis of package: %w", err)
+	}
+	//
+	// }
+
+	_ = bar.Finish()
+
+	return []*models.PackageInsights{scannedPackage}, nil
+}
+
 func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, numberOfGoroutines *int, expand *bool, regex *regexp.Regexp) (*models.PackageInsights, error) {
 	org, repoName, err := a.ScmClient.ParseRepoAndOrg(repoString)
 	if err != nil {
@@ -353,7 +658,7 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 			return nil, fmt.Errorf("failed to finalize analysis of package: %w", err)
 		}
 	} else {
-		if err := a.Formatter.FormatWithPath(ctx, []*models.PackageInsights{scannedPackage}, workflows); err != nil {
+		if err := a.Formatter.FormatWithPath(ctx, []*models.PackageInsights{scannedPackage}, nil); err != nil {
 			return nil, fmt.Errorf("failed to finalize analysis of package: %w", err)
 		}
 
@@ -458,7 +763,7 @@ func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) (*mode
 
 type Formatter interface {
 	Format(ctx context.Context, packages []*models.PackageInsights) error
-	FormatWithPath(ctx context.Context, packages []*models.PackageInsights, pathAssociation map[string][]models.BranchInfo) error
+	FormatWithPath(ctx context.Context, packages []*models.PackageInsights, pathAssociation map[string][]models.RepoInfo) error
 }
 
 func (a *Analyzer) finalizeAnalysis(ctx context.Context, scannedPackages []*models.PackageInsights) error {

@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/boostsecurityio/poutine/analyze"
-	"github.com/boostsecurityio/poutine/providers/scm/domain"
+	scm_domain "github.com/boostsecurityio/poutine/providers/scm/domain"
 	"github.com/rs/zerolog/log"
 
 	"github.com/gofri/go-github-ratelimit/github_ratelimit"

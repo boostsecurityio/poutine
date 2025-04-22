@@ -47,7 +47,7 @@ func (f *Format) Format(ctx context.Context, packages []*models.PackageInsights)
 	return nil
 }
 
-func (f *Format) FormatWithPath(ctx context.Context, packages []*models.PackageInsights, pathAssociations map[string][]models.BranchInfo) error {
+func (f *Format) FormatWithPath(ctx context.Context, packages []*models.PackageInsights, pathAssociations map[string][]models.RepoInfo) error {
 	failures := map[string]int{}
 	rules := map[string]results.Rule{}
 
@@ -64,7 +64,7 @@ func (f *Format) FormatWithPath(ctx context.Context, packages []*models.PackageI
 			rules[rule.Id] = rule
 		}
 
-		_ = f.printFindingsPerWorkflow(os.Stdout, findings, pkg.Purl, pathAssociations)
+		_ = f.printFindingsPerWorkflow(os.Stdout, findings, pkg.Purl, nil)
 	}
 	printSummaryTable(os.Stdout, failures, rules)
 
