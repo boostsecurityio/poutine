@@ -64,7 +64,7 @@ func (f *Format) Format(ctx context.Context, packages []*models.PackageInsights)
 	return nil
 }
 
-func (f *Format) FormatWithPath(ctx context.Context, packages []*models.PackageInsights, pathAssociations map[string][]models.BranchInfo) error {
+func (f *Format) FormatWithPath(ctx context.Context, packages []*models.PackageInsights, pathAssociations map[string][]*models.RepoInfo) error {
 	var result struct {
 		Output string `json:"output"`
 		Error  string `json:"error"`
