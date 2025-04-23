@@ -6,6 +6,7 @@ type BranchInfo struct {
 }
 
 type RepoInfo struct {
+	Purl        string       `json:"purl"`
 	RepoName    string       `json:"repo_name"`
 	BranchInfos []BranchInfo `json:"branch_infos"`
 }

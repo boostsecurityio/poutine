@@ -1,13 +1,15 @@
 package scanner
 
 import (
-	"github.com/boostsecurityio/poutine/models"
-	"github.com/rs/zerolog/log"
-	"gopkg.in/yaml.v3"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/boostsecurityio/poutine/models"
+	"github.com/rs/zerolog/log"
+	"gopkg.in/yaml.v3"
 )
 
 type GithubActionsMetadataParser struct {
@@ -35,18 +37,22 @@ func (p *GithubActionsMetadataParser) Parse(filePath string, scanningPath string
 		return err
 	}
 
+	return p.ParseFromMemory(data, relPath, pkgInsights)
+}
+
+func (p *GithubActionsMetadataParser) ParseFromMemory(data []byte, filePath string, pkgInsights *models.PackageInsights) error {
 	var meta models.GithubActionsMetadata
-	err = yaml.Unmarshal(data, &meta)
+	err := yaml.Unmarshal(data, &meta)
 	if err != nil {
-		log.Debug().Err(err).Str("file", relPath).Msg("failed to unmarshal YAML file")
+		log.Debug().Err(err).Str("file", filePath).Msg("failed to unmarshal YAML file")
 		return nil
 	}
 
 	if meta.IsValid() {
-		meta.Path = relPath
+		meta.Path = filePath
 		pkgInsights.GithubActionsMetadata = append(pkgInsights.GithubActionsMetadata, meta)
 	} else {
-		log.Debug().Str("file", relPath).Msg("invalid Github Actions metadata")
+		log.Debug().Str("file", filePath).Msg("invalid Github Actions metadata")
 	}
 
 	return nil
@@ -77,17 +83,21 @@ func (p *GithubActionWorkflowParser) Parse(filePath string, scanningPath string,
 		return err
 	}
 
-	workflow := models.GithubActionsWorkflow{Path: relPath}
-	err = yaml.Unmarshal(data, &workflow)
+	return p.ParseFromMemory(data, relPath, pkgInsights)
+}
+
+func (p *GithubActionWorkflowParser) ParseFromMemory(data []byte, filePath string, pkgInsights *models.PackageInsights) error {
+	workflow := models.GithubActionsWorkflow{Path: filePath}
+	err := yaml.Unmarshal(data, &workflow)
 	if err != nil {
-		log.Debug().Err(err).Str("file", relPath).Msg("failed to unmarshal yaml file")
+		log.Debug().Err(err).Str("file", filePath).Msg("failed to unmarshal yaml file")
 		return nil
 	}
 
 	if workflow.IsValid() {
 		pkgInsights.GithubActionsWorkflows = append(pkgInsights.GithubActionsWorkflows, workflow)
 	} else {
-		log.Debug().Str("file", relPath).Msg("failed to parse github actions workflow")
+		log.Debug().Str("file", filePath).Msg("failed to parse github actions workflow")
 	}
 
 	return nil
@@ -117,21 +127,23 @@ func (p *AzurePipelinesParser) Parse(filePath string, scanningPath string, pkgIn
 	if err != nil {
 		return err
 	}
+	return p.ParseFromMemory(data, relPath, pkgInsights)
+}
 
+func (p *AzurePipelinesParser) ParseFromMemory(data []byte, filePath string, pkgInsights *models.PackageInsights) error {
 	pipeline := models.AzurePipeline{}
-	err = yaml.Unmarshal(data, &pipeline)
+	err := yaml.Unmarshal(data, &pipeline)
 	if err != nil {
-		log.Debug().Err(err).Str("file", relPath).Msg("failed to unmarshal yaml file")
+		log.Debug().Err(err).Str("file", filePath).Msg("failed to unmarshal yaml file")
 		return nil
 	}
 
 	if pipeline.IsValid() {
-		pipeline.Path = relPath
+		pipeline.Path = filePath
 		pkgInsights.AzurePipelines = append(pkgInsights.AzurePipelines, pipeline)
 	} else {
-		log.Debug().Str("file", relPath).Msg("failed to parse azure pipeline")
+		log.Debug().Str("file", filePath).Msg("failed to parse azure pipeline")
 	}
-
 	return nil
 }
 
@@ -199,6 +211,17 @@ func (p *GitlabCiParser) Parse(filePath string, scanningPath string, pkgInsights
 	return nil
 }
 
+func (p *GitlabCiParser) ParseFromMemory(data []byte, filePath string, pkgInsights *models.PackageInsights) error {
+	config, err := models.ParseGitlabciConfig(data)
+	if err != nil {
+		return fmt.Errorf("failed to parse gitlabci config: %w", err)
+	}
+	config.Path = filePath
+
+	pkgInsights.GitlabciConfigs = append(pkgInsights.GitlabciConfigs, *config)
+	return nil
+}
+
 type PipelineAsCodeTektonParser struct {
 	pattern *regexp.Regexp
 }
@@ -224,15 +247,18 @@ func (p *PipelineAsCodeTektonParser) Parse(filePath string, scanningPath string,
 		return err
 	}
 
+	return p.ParseFromMemory(data, relPath, pkgInsights)
+}
+
+func (p *PipelineAsCodeTektonParser) ParseFromMemory(data []byte, filePath string, pkgInsights *models.PackageInsights) error {
 	pipelineAsCode := models.PipelineAsCodeTekton{}
-	err = yaml.Unmarshal(data, &pipelineAsCode)
+	err := yaml.Unmarshal(data, &pipelineAsCode)
 	if err != nil {
-		log.Debug().Err(err).Str("file", relPath).Msg("failed to unmarshal pipeline as code yaml file")
+		log.Debug().Err(err).Str("file", filePath).Msg("failed to unmarshal pipeline as code yaml file")
 		return nil
 	}
 
-	pipelineAsCode.Path = relPath
+	pipelineAsCode.Path = filePath
 	pkgInsights.PipelineAsCodeTekton = append(pkgInsights.PipelineAsCodeTekton, pipelineAsCode)
-
 	return nil
 }

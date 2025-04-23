@@ -30,7 +30,11 @@ func NewInventory(opa *opa.Opa, pkgSupplyClient ReputationClient, provider strin
 	}
 }
 
-func (i *Inventory) ScanPackageScanner(ctx context.Context, pkgInsights models.PackageInsights, inventoryScanner *InventoryScanner) (*models.PackageInsights, error) {
+type InventoryScannerI interface {
+	Run(pkgInsights *models.PackageInsights) error
+}
+
+func (i *Inventory) ScanPackageScanner(ctx context.Context, pkgInsights models.PackageInsights, inventoryScanner InventoryScannerI) (*models.PackageInsights, error) {
 	refPkgInsights := &pkgInsights
 
 	if err := inventoryScanner.Run(refPkgInsights); err != nil {
