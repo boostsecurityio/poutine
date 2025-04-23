@@ -3,6 +3,7 @@ package analyze
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -397,8 +398,8 @@ func (a *Analyzer) AnalyzeOrgStaleBranch(ctx context.Context, org string, number
 		}
 	}
 
-	bar.Set(len(repoInfos))
-	bar.Describe(fmt.Sprintf("Analyzing workflows matching %s", regex.String()))
+	_ = bar.Set(len(repoInfos))
+	bar.Describe("Analyzing workflows matching " + regex.String())
 
 	wgConsumer := sync.WaitGroup{}
 	wgProducer := sync.WaitGroup{}
@@ -428,7 +429,7 @@ func (a *Analyzer) AnalyzeOrgStaleBranch(ctx context.Context, org string, number
 		}
 		tmpDirRepo, ok := tmpDirs[repoInfos[blobSha][0].RepoName]
 		if !ok {
-			errChan <- fmt.Errorf("failed to get temp directory location")
+			errChan <- errors.New("failed to get temp directory location")
 			close(errChan)
 			break
 		}
@@ -479,7 +480,7 @@ func (a *Analyzer) AnalyzeOrgStaleBranch(ctx context.Context, org string, number
 	}
 
 	bar.Describe("Scanning package")
-	bar.Set(1)
+	_ = bar.Set(1)
 
 	inventoryScanner := scanner.InventoryScannerMem{
 		Files: files,
