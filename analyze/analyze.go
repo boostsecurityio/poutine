@@ -244,12 +244,12 @@ func (a *Analyzer) AnalyzeOrgStaleBranch(ctx context.Context, org string, number
 	}
 	goRoutineLimitSem := semaphore.NewWeighted(int64(maxGoroutines))
 
-	repoInfos := make(map[string][]models.RepoInfo, 0)
+	repoInfos := make(map[string][]*models.RepoInfo, 0)
 	tmpDirs := make(map[string]string, 0)
 	pkgs := make([]*models.PackageInsights, 0)
 
 	pkgChan := make(chan *models.PackageInsights)
-	repoInfoChan := make(chan map[string]models.RepoInfo)
+	repoInfoChan := make(chan map[string]*models.RepoInfo)
 	type tmpDirInfo struct {
 		repoName string
 		tmpDir   string
@@ -365,9 +365,9 @@ func (a *Analyzer) AnalyzeOrgStaleBranch(ctx context.Context, org string, number
 					return
 				}
 
-				repoInfo := make(map[string]models.RepoInfo, len(workflows))
+				repoInfo := make(map[string]*models.RepoInfo, len(workflows))
 				for k, v := range workflows {
-					repoInfo[k] = models.RepoInfo{
+					repoInfo[k] = &models.RepoInfo{
 						RepoName:    repoName,
 						Purl:        pkg.Purl,
 						BranchInfos: v,
@@ -384,16 +384,11 @@ func (a *Analyzer) AnalyzeOrgStaleBranch(ctx context.Context, org string, number
 		}
 	}
 
-	pkgWg.Add(1)
-	go func() {
-		defer pkgWg.Done()
-		reposWg.Wait()
-		close(pkgChan)
-		close(repoInfoChan)
-		close(tmpDirChan)
-		close(errChan)
-	}()
-
+	reposWg.Wait()
+	close(pkgChan)
+	close(repoInfoChan)
+	close(tmpDirChan)
+	close(errChan)
 	pkgWg.Wait()
 
 	for err := range errChan {
@@ -409,43 +404,40 @@ func (a *Analyzer) AnalyzeOrgStaleBranch(ctx context.Context, org string, number
 	wgProducer := sync.WaitGroup{}
 	errChan = make(chan error, 1)
 	semaphore := semaphore.NewWeighted(int64(maxGoroutines))
-	m := sync.Mutex{}
 	type file struct {
-		path string
-		data []byte
+		blobsha string
+		path    string
+		data    []byte
 	}
 	filesChan := make(chan *file)
-	files := make(map[string][]byte)
+	filesList := make([]*file, 0)
 
 	wgConsumer.Add(1)
 	go func() {
 		defer wgConsumer.Done()
 		for v := range filesChan {
-			files[v.path] = v.data
+			filesList = append(filesList, v)
 		}
 	}()
 
-	blobShas := make([]string, 0, len(repoInfos))
-	for sha := range repoInfos {
-		blobShas = append(blobShas, sha)
-	}
-	for _, blobSha := range blobShas {
+	for blobSha := range repoInfos {
 		if err := semaphore.Acquire(ctx, 1); err != nil {
 			errChan <- fmt.Errorf("failed to acquire semaphore: %w", err)
 			close(errChan)
 			break
 		}
+		tmpDirRepo, ok := tmpDirs[repoInfos[blobSha][0].RepoName]
+		if !ok {
+			errChan <- fmt.Errorf("failed to get temp directory location")
+			close(errChan)
+			break
+		}
+
 		wgProducer.Add(1)
-		go func(blobSha string) {
+		go func(blobSha string, tmpDirRepo string) {
 			defer wgProducer.Done()
 			defer semaphore.Release(1)
 			defer bar.Add(1)
-			tmpDirRepo, ok := tmpDirs[repoInfos[blobSha][0].RepoName]
-			if !ok {
-				errChan <- fmt.Errorf("failed to get temp directory location")
-				close(errChan)
-				return
-			}
 
 			match, content, err := a.GitClient.BlobMatches(ctx, tmpDirRepo, blobSha, regex)
 			if err != nil {
@@ -456,15 +448,12 @@ func (a *Analyzer) AnalyzeOrgStaleBranch(ctx context.Context, org string, number
 
 			if match {
 				filesChan <- &file{
-					path: ".github/workflows/" + blobSha + ".yaml",
-					data: content,
+					blobsha: blobSha,
+					path:    ".github/workflows/" + blobSha + ".yaml",
+					data:    content,
 				}
-			} else {
-				m.Lock()
-				delete(repoInfos, blobSha)
-				m.Unlock()
 			}
-		}(blobSha)
+		}(blobSha, tmpDirRepo)
 	}
 
 	wgProducer.Wait()
@@ -480,6 +469,13 @@ func (a *Analyzer) AnalyzeOrgStaleBranch(ctx context.Context, org string, number
 
 	for _, v := range tmpDirs {
 		os.RemoveAll(v)
+	}
+
+	files := make(map[string][]byte)
+	repoInfosKeep := make(map[string][]*models.RepoInfo)
+	for _, file := range filesList {
+		repoInfosKeep[file.blobsha] = repoInfos[file.blobsha]
+		files[file.path] = file.data
 	}
 
 	bar.Describe("Scanning package")
@@ -502,7 +498,7 @@ func (a *Analyzer) AnalyzeOrgStaleBranch(ctx context.Context, org string, number
 		for _, finding := range scannedPackage.FindingsResults.Findings {
 			filename := filepath.Base(finding.Meta.Path)
 			blobsha := strings.TrimSuffix(filename, filepath.Ext(filename))
-			for _, repoInfo := range repoInfos[blobsha] {
+			for _, repoInfo := range repoInfosKeep[blobsha] {
 				purl, err := models.NewPurl(repoInfo.Purl)
 				if err != nil {
 					log.Warn().Err(err).Str("purl", finding.Purl).Msg("failed to evaluate PURL, skipping")
@@ -524,7 +520,7 @@ func (a *Analyzer) AnalyzeOrgStaleBranch(ctx context.Context, org string, number
 			return nil, fmt.Errorf("failed to finalize analysis of package: %w", err)
 		}
 	} else {
-		if err := a.Formatter.FormatWithPath(ctx, []*models.PackageInsights{scannedPackage}, repoInfos); err != nil {
+		if err := a.Formatter.FormatWithPath(ctx, []*models.PackageInsights{scannedPackage}, repoInfosKeep); err != nil {
 			return nil, fmt.Errorf("failed to finalize analysis of package: %w", err)
 		}
 	}
@@ -685,9 +681,9 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 			return nil, fmt.Errorf("failed to finalize analysis of package: %w", err)
 		}
 	} else {
-		results := make(map[string][]models.RepoInfo, len(workflows))
+		results := make(map[string][]*models.RepoInfo, len(workflows))
 		for blobsha, branchinfos := range workflows {
-			results[blobsha] = []models.RepoInfo{{
+			results[blobsha] = []*models.RepoInfo{{
 				RepoName:    repoName,
 				Purl:        pkg.Purl,
 				BranchInfos: branchinfos,
@@ -799,7 +795,7 @@ func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) (*mode
 
 type Formatter interface {
 	Format(ctx context.Context, packages []*models.PackageInsights) error
-	FormatWithPath(ctx context.Context, packages []*models.PackageInsights, pathAssociation map[string][]models.RepoInfo) error
+	FormatWithPath(ctx context.Context, packages []*models.PackageInsights, pathAssociation map[string][]*models.RepoInfo) error
 }
 
 func (a *Analyzer) finalizeAnalysis(ctx context.Context, scannedPackages []*models.PackageInsights) error {
