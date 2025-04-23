@@ -55,8 +55,7 @@ func NewOpa(ctx context.Context, config *models.Config) (*Opa, error) {
 		}
 	}
 
-	err = newOpa.Compile(ctx, subset)
-	if err != nil {
+	if err := newOpa.Compile(ctx, subset, config.IncludeRules); err != nil {
 		return nil, fmt.Errorf("failed to initialize opa compiler: %w", err)
 	}
 
@@ -87,19 +86,22 @@ func (o *Opa) WithConfig(ctx context.Context, config *models.Config) error {
 	)
 }
 
-func (o *Opa) Compile(ctx context.Context, skip []string) error {
+func (o *Opa) Compile(ctx context.Context, skip []string, include []string) error {
 	modules := make(map[string]string)
 	err := fs.WalkDir(regoFs, "rego", func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() {
 			return err
 		}
 
-		if len(skip) != 0 {
-			if filepath.Dir(path) == filepath.Join("rego", "rules") {
-				filename := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
-				if slices.Contains(skip, filename) {
+		if filepath.Dir(path) == filepath.Join("rego", "rules") {
+			filename := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+			if len(include) > 0 {
+				if !slices.Contains(include, filename) {
 					return nil
 				}
+			}
+			if slices.Contains(skip, filename) {
+				return nil
 			}
 		}
 

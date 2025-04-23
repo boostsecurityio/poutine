@@ -38,6 +38,7 @@ var token string
 var cfgFile string
 var config *models.Config = models.DefaultConfig()
 var skipRules []string
+var includeRules []string
 
 var legacyFlags = []string{"-token", "-format", "-verbose", "-scm", "-scm-base-uri", "-threads"}
 
@@ -115,6 +116,7 @@ func init() {
 	rootCmd.PersistentFlags().VarP(&ScmBaseURL, "scm-base-url", "b", "Base URI of the self-hosted SCM instance (optional)")
 	rootCmd.PersistentFlags().BoolVarP(&config.Quiet, "quiet", "q", false, "Disable progress output")
 	rootCmd.PersistentFlags().StringSliceVar(&skipRules, "skip", []string{}, "Adds rules to the configured skip list for the current run (optional)")
+	rootCmd.PersistentFlags().StringSliceVar(&includeRules, "include", []string{}, "Adds rules to the configured includeRules list for the current run (optional)")
 
 	viper.BindPFlag("quiet", rootCmd.PersistentFlags().Lookup("quiet"))
 }
@@ -192,6 +194,7 @@ func newOpa(ctx context.Context) (*opa.Opa, error) {
 	if len(skipRules) > 0 {
 		config.Skip = append(config.Skip, models.ConfigSkip{Rule: skipRules})
 	}
+	config.IncludeRules = append(config.IncludeRules, includeRules...)
 	opaClient, err := opa.NewOpa(ctx, config)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create OPA client")
