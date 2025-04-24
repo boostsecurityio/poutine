@@ -101,8 +101,16 @@ func (f *Format) printFindingsPerWorkflow(out io.Writer, results map[string]map[
 
 		blobshaTable[0][0] = blobsha
 
-		i := 0
+		// Extract and sort the keys of the findings map
+		sortedFindings := make([]string, 0, len(findings))
 		for finding := range findings {
+			sortedFindings = append(sortedFindings, finding)
+		}
+		sort.Strings(sortedFindings)
+
+		// Iterate over the sorted keys
+		i := 0
+		for _, finding := range sortedFindings {
 			blobshaTable[i][1] = finding
 			i++
 		}
