@@ -50,7 +50,7 @@ skipExamples:
 
 
 # includes only this set of rules
-includeRules:
+allowedRules:
 - "pr_runs_on_self_hosted"
 - "unpinnable_action"
 - "github_action_from_unverified_creator_used"

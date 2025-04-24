@@ -24,7 +24,7 @@ type ConfigInclude struct {
 
 type Config struct {
 	Skip         []ConfigSkip                      `json:"skip"`
-	IncludeRules []string                          `json:"include_rules"`
+	AllowedRules []string                          `json:"allowed_rules"`
 	Include      []ConfigInclude                   `json:"include"`
 	IgnoreForks  bool                              `json:"ignore_forks"`
 	Quiet        bool                              `json:"quiet,omitempty"`
