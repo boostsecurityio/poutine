@@ -238,7 +238,7 @@ func (a *Analyzer) AnalyzeOrgStaleBranch(ctx context.Context, org string, number
 	bar := a.progressBar(0, "Find unique workflows")
 
 	var reposWg sync.WaitGroup
-	errChan := make(chan error, 1)
+	errChan := make(chan error, maxGoroutines)
 	maxGoroutines := 2
 	if numberOfGoroutines != nil {
 		maxGoroutines = *numberOfGoroutines
