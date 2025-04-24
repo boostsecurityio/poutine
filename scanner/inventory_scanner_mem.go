@@ -17,19 +17,6 @@ type InventoryScannerMem struct {
 	Parsers []MemParser
 }
 
-func NewInventoryScannerMem(files map[string][]byte) *InventoryScannerMem {
-	return &InventoryScannerMem{
-		Files: files,
-		Parsers: []MemParser{
-			NewGithubActionsMetadataParser(),
-			NewGithubActionWorkflowParser(),
-			NewAzurePipelinesParser(),
-			NewGitlabCiParser(),
-			NewPipelineAsCodeTektonParser(),
-		},
-	}
-}
-
 func (s *InventoryScannerMem) Run(pkgInsights *models.PackageInsights) error {
 	for path, data := range s.Files {
 		for _, parser := range s.Parsers {
