@@ -319,7 +319,7 @@ func (a *Analyzer) AnalyzeOrgStaleBranch(ctx context.Context, org string, number
 			go func(repo Repository) {
 				defer goRoutineLimitSem.Release(1)
 				defer reposWg.Done()
-				defer bar.Add(1)
+				defer func() { _ = bar.Add(1) }()
 				repoNameWithOwner := repo.GetRepoIdentifier()
 				_, repoName, err := a.ScmClient.ParseRepoAndOrg(repoNameWithOwner)
 				if err != nil {
@@ -438,7 +438,7 @@ func (a *Analyzer) AnalyzeOrgStaleBranch(ctx context.Context, org string, number
 		go func(blobSha string, tmpDirRepo string) {
 			defer wgProducer.Done()
 			defer semaphore.Release(1)
-			defer bar.Add(1)
+			func() { _ = bar.Add(1) }()
 
 			match, content, err := a.GitClient.BlobMatches(ctx, tmpDirRepo, blobSha, regex)
 			if err != nil {
