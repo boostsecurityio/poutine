@@ -47,49 +47,52 @@ func (f *Format) Format(ctx context.Context, packages []*models.PackageInsights)
 	return nil
 }
 
-func (f *Format) FormatWithPath(ctx context.Context, packages []*models.PackageInsights, pathAssociations map[string][]models.BranchInfo) error {
+func (f *Format) FormatWithPath(ctx context.Context, packages []*models.PackageInsights, pathAssociations map[string][]*models.RepoInfo) error {
 	failures := map[string]int{}
 	rules := map[string]results.Rule{}
 
 	for _, pkg := range packages {
-		findings := map[string][]string{}
+		findings := make(map[string]map[string]bool)
 		for _, finding := range pkg.FindingsResults.Findings {
-			failures[finding.RuleId]++
 			filename := filepath.Base(finding.Meta.Path)
 			filename = strings.TrimSuffix(filename, filepath.Ext(filename))
-			findings[filename] = append(findings[filename], finding.RuleId)
+			if _, ok := findings[filename]; !ok {
+				findings[filename] = make(map[string]bool)
+			}
+			if _, ok := findings[filename][finding.RuleId]; !ok {
+				failures[finding.RuleId]++
+			}
+			findings[filename][finding.RuleId] = true
 		}
 
 		for _, rule := range pkg.FindingsResults.Rules {
 			rules[rule.Id] = rule
 		}
 
-		_ = f.printFindingsPerWorkflow(os.Stdout, findings, pkg.Purl, pathAssociations)
+		_ = f.printFindingsPerWorkflow(os.Stdout, findings, pathAssociations)
 	}
 	printSummaryTable(os.Stdout, failures, rules)
 
 	return nil
 }
 
-func (f *Format) printFindingsPerWorkflow(out io.Writer, results map[string][]string, purlStr string, pathAssociations map[string][]models.BranchInfo) error {
+func (f *Format) printFindingsPerWorkflow(out io.Writer, results map[string]map[string]bool, pathAssociations map[string][]*models.RepoInfo) error {
 	// Skip rules with no findings.
 	table := tablewriter.NewWriter(out)
 	table.SetAutoMergeCells(true)
-	table.SetHeader([]string{"Workflow sha", "Rule", "Branch", "URL"})
+	table.SetHeader([]string{"Workflow sha", "Rule", "Location", "URL"})
 
-	purl, err := models.NewPurl(purlStr)
-	if err != nil {
-		return fmt.Errorf("error creating purl: %w", err)
-	}
-	for blobsha, branchInfos := range pathAssociations {
+	for blobsha, repoInfos := range pathAssociations {
 		findings := results[blobsha]
 		if len(findings) == 0 {
 			continue
 		}
 		largestElement := len(findings)
 		sumPath := 0
-		for _, branchInfo := range branchInfos {
-			sumPath += len(branchInfo.FilePath)
+		for _, repoInfo := range repoInfos {
+			for _, branchInfo := range repoInfo.BranchInfos {
+				sumPath += len(branchInfo.FilePath)
+			}
 		}
 		blobshaTable := make([][]string, max(largestElement, sumPath))
 		for i := range blobshaTable {
@@ -98,19 +101,35 @@ func (f *Format) printFindingsPerWorkflow(out io.Writer, results map[string][]st
 
 		blobshaTable[0][0] = blobsha
 
-		for i, finding := range findings {
+		// Extract and sort the keys of the findings map
+		sortedFindings := make([]string, 0, len(findings))
+		for finding := range findings {
+			sortedFindings = append(sortedFindings, finding)
+		}
+		sort.Strings(sortedFindings)
+
+		// Iterate over the sorted keys
+		i := 0
+		for _, finding := range sortedFindings {
 			blobshaTable[i][1] = finding
+			i++
 		}
 
 		index := 0
-		for _, branchInfo := range branchInfos {
-			for j, path := range branchInfo.FilePath {
-				if j == 0 {
-					blobshaTable[index][2] = branchInfo.BranchName
-				}
+		for _, repoInfo := range repoInfos {
+			purl, err := models.NewPurl(repoInfo.Purl)
+			if err != nil {
+				return fmt.Errorf("failed to parse purl: %w", err)
+			}
+			for _, branchInfo := range repoInfo.BranchInfos {
+				for j, path := range branchInfo.FilePath {
+					if j == 0 {
+						blobshaTable[index][2] = repoInfo.RepoName + "/" + branchInfo.BranchName
+					}
 
-				blobshaTable[index][3] = purl.Link() + "/tree/" + branchInfo.BranchName + "/" + path
-				index += 1
+					blobshaTable[index][3] = purl.Link() + "/tree/" + branchInfo.BranchName + "/" + path
+					index += 1
+				}
 			}
 		}
 

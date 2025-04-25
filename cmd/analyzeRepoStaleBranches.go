@@ -9,7 +9,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-var threadsRepoStaleBranch int
 var expand bool
 var regex string
 
@@ -38,7 +37,7 @@ Example Scanning a remote Github Repository: poutine analyze_repo_stale_branches
 			return fmt.Errorf("error compiling regex: %w", err)
 		}
 
-		_, err = analyzer.AnalyzeStaleBranches(ctx, repo, &threadsRepoStaleBranch, &expand, reg)
+		_, err = analyzer.AnalyzeStaleBranches(ctx, repo, &threads, &expand, reg)
 		if err != nil {
 			return fmt.Errorf("failed to analyze repo %s: %w", repo, err)
 		}
@@ -51,7 +50,7 @@ func init() {
 	rootCmd.AddCommand(analyzeRepoStaleBranches)
 
 	analyzeRepoStaleBranches.Flags().StringVarP(&token, "token", "t", "", "SCM access token (env: GH_TOKEN)")
-	analyzeRepoStaleBranches.Flags().IntVarP(&threadsRepoStaleBranch, "threads", "j", 5, "Parallelization factor for scanning stale branches")
+	analyzeRepoStaleBranches.Flags().IntVarP(&threads, "threads", "j", 5, "Parallelization factor for scanning stale branches")
 	analyzeRepoStaleBranches.Flags().BoolVarP(&expand, "expand", "e", false, "Expand the output to the classic representation from analyze_repo")
 	analyzeRepoStaleBranches.Flags().StringVarP(&regex, "regex", "r", "pull_request_target", "Regex to check if the workflow is accessible in stale branches")
 

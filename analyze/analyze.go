@@ -259,12 +259,6 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 	bar.Describe("Check which workflows match regex: " + regex.String())
 	_ = bar.Add(1)
 
-	workflowDir := filepath.Join(tempDir, ".github", "workflows")
-	if err = os.MkdirAll(workflowDir, 0700); err != nil {
-		return nil, fmt.Errorf("failed to create .github/workflows/ dir: %w", err)
-	}
-
-	wg := sync.WaitGroup{}
 	errChan := make(chan error, 1)
 	maxGoroutines := 5
 	if numberOfGoroutines != nil {
@@ -272,6 +266,23 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 	}
 	semaphore := semaphore.NewWeighted(int64(maxGoroutines))
 	m := sync.Mutex{}
+	type file struct {
+		path string
+		data []byte
+	}
+	filesChan := make(chan *file)
+	files := make(map[string][]byte)
+
+	wgConsumer := sync.WaitGroup{}
+	wgProducer := sync.WaitGroup{}
+
+	wgConsumer.Add(1)
+	go func() {
+		defer wgConsumer.Done()
+		for v := range filesChan {
+			files[v.path] = v.data
+		}
+	}()
 	blobShas := make([]string, 0, len(workflows))
 	for sha := range workflows {
 		blobShas = append(blobShas, sha)
@@ -281,9 +292,9 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 			errChan <- fmt.Errorf("failed to acquire semaphore: %w", err)
 			break
 		}
-		wg.Add(1)
+		wgProducer.Add(1)
 		go func(blobSha string) {
-			defer wg.Done()
+			defer wgProducer.Done()
 			defer semaphore.Release(1)
 			match, content, err := a.GitClient.BlobMatches(ctx, tempDir, blobSha, regex)
 			if err != nil {
@@ -291,9 +302,9 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 				return
 			}
 			if match {
-				err = os.WriteFile(filepath.Join(workflowDir, blobSha+".yaml"), content, 0644)
-				if err != nil {
-					errChan <- fmt.Errorf("failed to write file for blob %s: %w", blobSha, err)
+				filesChan <- &file{
+					path: ".github/workflows/" + blobSha + ".yaml",
+					data: content,
 				}
 			} else {
 				m.Lock()
@@ -302,8 +313,10 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 			}
 		}(blobSha)
 	}
-	wg.Wait()
+	wgProducer.Wait()
 	close(errChan)
+	close(filesChan)
+	wgConsumer.Wait()
 	for err := range errChan {
 		return nil, err
 	}
@@ -315,9 +328,9 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 		return nil, fmt.Errorf("failed to generate package insight: %w", err)
 	}
 
-	inventoryScanner := scanner.InventoryScanner{
-		Path: tempDir,
-		Parsers: []scanner.Parser{
+	inventoryScanner := scanner.InventoryScannerMem{
+		Files: files,
+		Parsers: []scanner.MemParser{
 			scanner.NewGithubActionWorkflowParser(),
 		},
 	}
@@ -353,7 +366,16 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 			return nil, fmt.Errorf("failed to finalize analysis of package: %w", err)
 		}
 	} else {
-		if err := a.Formatter.FormatWithPath(ctx, []*models.PackageInsights{scannedPackage}, workflows); err != nil {
+		results := make(map[string][]*models.RepoInfo, len(workflows))
+		for blobsha, branchinfos := range workflows {
+			results[blobsha] = []*models.RepoInfo{{
+				RepoName:    repoName,
+				Purl:        pkg.Purl,
+				BranchInfos: branchinfos,
+			}}
+		}
+
+		if err := a.Formatter.FormatWithPath(ctx, []*models.PackageInsights{scannedPackage}, results); err != nil {
 			return nil, fmt.Errorf("failed to finalize analysis of package: %w", err)
 		}
 
@@ -458,7 +480,7 @@ func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) (*mode
 
 type Formatter interface {
 	Format(ctx context.Context, packages []*models.PackageInsights) error
-	FormatWithPath(ctx context.Context, packages []*models.PackageInsights, pathAssociation map[string][]models.BranchInfo) error
+	FormatWithPath(ctx context.Context, packages []*models.PackageInsights, pathAssociation map[string][]*models.RepoInfo) error
 }
 
 func (a *Analyzer) finalizeAnalysis(ctx context.Context, scannedPackages []*models.PackageInsights) error {
