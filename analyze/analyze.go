@@ -582,12 +582,12 @@ func (a *Analyzer) cloneRepoToTemp(ctx context.Context, gitURL string, token str
 	return tempDir, nil
 }
 
-func (a *Analyzer) ProgressBar(max int64, description string) *progressbar.ProgressBar {
+func (a *Analyzer) ProgressBar(maxValue int64, description string) *progressbar.ProgressBar {
 	if a.Config.Quiet {
-		return progressbar.DefaultSilent(max, description)
+		return progressbar.DefaultSilent(maxValue, description)
 	} else {
 		return progressbar.NewOptions64(
-			max,
+			maxValue,
 			progressbar.OptionSetDescription(description),
 			progressbar.OptionShowCount(),
 			progressbar.OptionSetWriter(os.Stderr),
