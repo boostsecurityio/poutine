@@ -23,7 +23,7 @@ Note: This command will scan all repositories in the organization except those t
 `,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		token = viper.GetString("token")
+		Token = viper.GetString("token")
 		ctx := cmd.Context()
 		analyzer, err := GetAnalyzer(ctx, "analyze_org")
 		if err != nil {
@@ -44,7 +44,7 @@ Note: This command will scan all repositories in the organization except those t
 func init() {
 	RootCmd.AddCommand(analyzeOrgCmd)
 
-	analyzeOrgCmd.Flags().StringVarP(&token, "token", "t", "", "SCM access token (env: GH_TOKEN)")
+	analyzeOrgCmd.Flags().StringVarP(&Token, "token", "t", "", "SCM access token (env: GH_TOKEN)")
 
 	analyzeOrgCmd.Flags().IntVarP(&threads, "threads", "j", 2, "Parallelization factor for scanning organizations")
 	analyzeOrgCmd.Flags().BoolVarP(&config.IgnoreForks, "ignore-forks", "i", false, "Ignore forked repositories in the organization")
