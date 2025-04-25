@@ -17,7 +17,7 @@ var analyzeRepoCmd = &cobra.Command{
 Example Scanning a remote Github Repository: poutine analyze_repo org/repo --token "$GH_TOKEN"`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		token = viper.GetString("token")
+		Token = viper.GetString("token")
 		ctx := cmd.Context()
 		analyzer, err := GetAnalyzer(ctx, "analyze_repo")
 		if err != nil {
@@ -36,9 +36,9 @@ Example Scanning a remote Github Repository: poutine analyze_repo org/repo --tok
 }
 
 func init() {
-	rootCmd.AddCommand(analyzeRepoCmd)
+	RootCmd.AddCommand(analyzeRepoCmd)
 
-	analyzeRepoCmd.Flags().StringVarP(&token, "token", "t", "", "SCM access token (env: GH_TOKEN)")
+	analyzeRepoCmd.Flags().StringVarP(&Token, "token", "t", "", "SCM access token (env: GH_TOKEN)")
 	analyzeRepoCmd.Flags().StringVarP(&ref, "ref", "r", "HEAD", "Commit or branch to analyze (defaults to HEAD)")
 
 	viper.BindPFlag("token", analyzeOrgCmd.Flags().Lookup("token"))

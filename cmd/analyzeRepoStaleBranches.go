@@ -19,7 +19,7 @@ var analyzeRepoStaleBranches = &cobra.Command{
 Example Scanning a remote Github Repository: poutine analyze_repo_stale_branches org/repo --token "$GH_TOKEN"`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		token = viper.GetString("token")
+		Token = viper.GetString("token")
 		ctx := cmd.Context()
 		analyzer, err := GetAnalyzer(ctx, "analyze_repo_stale_branches")
 		if err != nil {
@@ -47,9 +47,9 @@ Example Scanning a remote Github Repository: poutine analyze_repo_stale_branches
 }
 
 func init() {
-	rootCmd.AddCommand(analyzeRepoStaleBranches)
+	RootCmd.AddCommand(analyzeRepoStaleBranches)
 
-	analyzeRepoStaleBranches.Flags().StringVarP(&token, "token", "t", "", "SCM access token (env: GH_TOKEN)")
+	analyzeRepoStaleBranches.Flags().StringVarP(&Token, "token", "t", "", "SCM access token (env: GH_TOKEN)")
 	analyzeRepoStaleBranches.Flags().IntVarP(&threads, "threads", "j", 5, "Parallelization factor for scanning stale branches")
 	analyzeRepoStaleBranches.Flags().BoolVarP(&expand, "expand", "e", false, "Expand the output to the classic representation from analyze_repo")
 	analyzeRepoStaleBranches.Flags().StringVarP(&regex, "regex", "r", "pull_request_target", "Regex to check if the workflow is accessible in stale branches")

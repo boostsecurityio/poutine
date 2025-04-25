@@ -111,7 +111,7 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 	inventory := scanner.NewInventory(a.Opa, pkgsupplyClient, provider, providerVersion)
 
 	log.Debug().Msgf("Starting repository analysis for organization: %s on %s", org, provider)
-	bar := a.progressBar(0, "Analyzing repositories")
+	bar := a.ProgressBar(0, "Analyzing repositories")
 
 	var reposWg sync.WaitGroup
 	errChan := make(chan error, 1)
@@ -168,7 +168,7 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 				}
 				defer os.RemoveAll(tempDir)
 
-				pkg, err := a.generatePackageInsights(ctx, tempDir, repo, "HEAD")
+				pkg, err := a.GeneratePackageInsights(ctx, tempDir, repo, "HEAD")
 				if err != nil {
 					log.Error().Err(err).Str("repo", repoNameWithOwner).Msg("failed to generate package insights")
 					return
@@ -238,11 +238,11 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 	inventory := scanner.NewInventory(a.Opa, pkgsupplyClient, provider, providerVersion)
 
 	log.Debug().Msgf("Starting repository analysis for: %s/%s on %s", org, repoName, provider)
-	bar := a.progressBar(3, "Cloning repository")
+	bar := a.ProgressBar(3, "Cloning repository")
 	_ = bar.RenderBlank()
 
 	repoUrl := repo.BuildGitURL(a.ScmClient.GetProviderBaseURL())
-	tempDir, err := a.fetchConeToTemp(ctx, repoUrl, a.ScmClient.GetToken(), "refs/heads/*:refs/remotes/origin/*", ".github/workflows")
+	tempDir, err := a.FetchConeToTemp(ctx, repoUrl, a.ScmClient.GetToken(), "refs/heads/*:refs/remotes/origin/*", ".github/workflows")
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch cone: %w", err)
 	}
@@ -323,7 +323,7 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 
 	bar.Describe("Scanning package")
 	_ = bar.Add(1)
-	pkg, err := a.generatePackageInsights(ctx, tempDir, repo, "HEAD")
+	pkg, err := a.GeneratePackageInsights(ctx, tempDir, repo, "HEAD")
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate package insight: %w", err)
 	}
@@ -406,7 +406,7 @@ func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref strin
 	inventory := scanner.NewInventory(a.Opa, pkgsupplyClient, provider, providerVersion)
 
 	log.Debug().Msgf("Starting repository analysis for: %s/%s on %s", org, repoName, provider)
-	bar := a.progressBar(2, "Cloning repository")
+	bar := a.ProgressBar(2, "Cloning repository")
 	_ = bar.RenderBlank()
 
 	tempDir, err := a.cloneRepoToTemp(ctx, repo.BuildGitURL(a.ScmClient.GetProviderBaseURL()), a.ScmClient.GetToken(), ref)
@@ -418,7 +418,7 @@ func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref strin
 	bar.Describe("Analyzing repository")
 	_ = bar.Add(1)
 
-	pkg, err := a.generatePackageInsights(ctx, tempDir, repo, ref)
+	pkg, err := a.GeneratePackageInsights(ctx, tempDir, repo, ref)
 	if err != nil {
 		return nil, err
 	}
@@ -460,7 +460,7 @@ func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) (*mode
 
 	log.Debug().Msgf("Starting repository analysis for: %s/%s on %s", org, repoName, provider)
 
-	pkg, err := a.generatePackageInsights(ctx, repoPath, repo, "")
+	pkg, err := a.GeneratePackageInsights(ctx, repoPath, repo, "")
 	if err != nil {
 		return nil, err
 	}
@@ -492,7 +492,7 @@ func (a *Analyzer) finalizeAnalysis(ctx context.Context, scannedPackages []*mode
 	return nil
 }
 
-func (a *Analyzer) generatePackageInsights(ctx context.Context, tempDir string, repo Repository, ref string) (*models.PackageInsights, error) {
+func (a *Analyzer) GeneratePackageInsights(ctx context.Context, tempDir string, repo Repository, ref string) (*models.PackageInsights, error) {
 	var err error
 	commitDate, err := a.GitClient.LastCommitDate(ctx, tempDir)
 	if err != nil {
@@ -554,7 +554,7 @@ func (a *Analyzer) generatePackageInsights(ctx context.Context, tempDir string, 
 	return pkg, nil
 }
 
-func (a *Analyzer) fetchConeToTemp(ctx context.Context, gitURL, token, ref string, cone string) (string, error) {
+func (a *Analyzer) FetchConeToTemp(ctx context.Context, gitURL, token, ref string, cone string) (string, error) {
 	tempDir, err := os.MkdirTemp("", TEMP_DIR_PREFIX)
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp directory: %w", err)
@@ -582,12 +582,12 @@ func (a *Analyzer) cloneRepoToTemp(ctx context.Context, gitURL string, token str
 	return tempDir, nil
 }
 
-func (a *Analyzer) progressBar(max int64, description string) *progressbar.ProgressBar {
+func (a *Analyzer) ProgressBar(maxValue int64, description string) *progressbar.ProgressBar {
 	if a.Config.Quiet {
-		return progressbar.DefaultSilent(max, description)
+		return progressbar.DefaultSilent(maxValue, description)
 	} else {
 		return progressbar.NewOptions64(
-			max,
+			maxValue,
 			progressbar.OptionSetDescription(description),
 			progressbar.OptionShowCount(),
 			progressbar.OptionSetWriter(os.Stderr),
