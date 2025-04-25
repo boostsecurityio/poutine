@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+
 	"github.com/boostsecurityio/poutine/analyze"
 	"github.com/boostsecurityio/poutine/providers/gitops"
 	"github.com/boostsecurityio/poutine/providers/local"
@@ -46,5 +47,5 @@ Example: poutine analyze_local /path/to/repo`,
 }
 
 func init() {
-	rootCmd.AddCommand(analyzeLocalCmd)
+	RootCmd.AddCommand(analyzeLocalCmd)
 }

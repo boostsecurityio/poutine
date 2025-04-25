@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -41,7 +42,7 @@ Note: This command will scan all repositories in the organization except those t
 }
 
 func init() {
-	rootCmd.AddCommand(analyzeOrgCmd)
+	RootCmd.AddCommand(analyzeOrgCmd)
 
 	analyzeOrgCmd.Flags().StringVarP(&token, "token", "t", "", "SCM access token (env: GH_TOKEN)")
 
