@@ -34,7 +34,7 @@ var (
 	Commit  string
 	Date    string
 )
-var token string
+var Token string
 var cfgFile string
 var config *models.Config = models.DefaultConfig()
 var skipRules []string
@@ -172,7 +172,7 @@ func GetFormatter(opaClient *opa.Opa) analyze.Formatter {
 }
 
 func GetAnalyzer(ctx context.Context, command string) (*analyze.Analyzer, error) {
-	scmClient, err := scm.NewScmClient(ctx, ScmProvider, ScmBaseURL.String(), token, command)
+	scmClient, err := scm.NewScmClient(ctx, ScmProvider, ScmBaseURL.String(), Token, command)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create SCM client: %w", err)
 	}
