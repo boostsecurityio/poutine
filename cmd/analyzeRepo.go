@@ -36,7 +36,7 @@ Example Scanning a remote Github Repository: poutine analyze_repo org/repo --tok
 }
 
 func init() {
-	rootCmd.AddCommand(analyzeRepoCmd)
+	RootCmd.AddCommand(analyzeRepoCmd)
 
 	analyzeRepoCmd.Flags().StringVarP(&token, "token", "t", "", "SCM access token (env: GH_TOKEN)")
 	analyzeRepoCmd.Flags().StringVarP(&ref, "ref", "r", "HEAD", "Commit or branch to analyze (defaults to HEAD)")

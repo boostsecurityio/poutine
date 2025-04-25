@@ -47,7 +47,7 @@ Example Scanning a remote Github Repository: poutine analyze_repo_stale_branches
 }
 
 func init() {
-	rootCmd.AddCommand(analyzeRepoStaleBranches)
+	RootCmd.AddCommand(analyzeRepoStaleBranches)
 
 	analyzeRepoStaleBranches.Flags().StringVarP(&token, "token", "t", "", "SCM access token (env: GH_TOKEN)")
 	analyzeRepoStaleBranches.Flags().IntVarP(&threads, "threads", "j", 5, "Parallelization factor for scanning stale branches")
