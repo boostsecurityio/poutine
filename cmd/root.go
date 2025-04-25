@@ -118,7 +118,7 @@ func init() {
 	RootCmd.PersistentFlags().StringSliceVar(&skipRules, "skip", []string{}, "Adds rules to the configured skip list for the current run (optional)")
 	RootCmd.PersistentFlags().StringSliceVar(&allowedRules, "allowed-rules", []string{}, "Overwrite the configured allowedRules list for the current run (optional)")
 
-	viper.BindPFlag("quiet", RootCmd.PersistentFlags().Lookup("quiet"))
+	_ = viper.BindPFlag("quiet", RootCmd.PersistentFlags().Lookup("quiet"))
 }
 
 func initConfig() {
