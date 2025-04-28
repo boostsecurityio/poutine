@@ -46,7 +46,7 @@ job_uses_self_hosted_runner(job) if {
 	run_on := job.runs_on[_]
 	not contains(run_on, "$") # skip expressions
 	not regex.match(
-		"(?i)^((ubuntu-(([0-9]{2})\\.04|latest)|macos-([0-9]{2}|latest)(-x?large)?|windows-(20[0-9]{2}|latest)|(buildjet|warp)-[a-z0-9-]+))$",
+		"(?i)^((ubuntu-(([0-9]{2})\\.04|latest(-(4|8|16)-cores)?)|macos-([0-9]{2}|latest)(-x?large)?|windows-(20[0-9]{2}|latest(-8-cores)?)|(buildjet|warp)-[a-z0-9-]+))$",
 		run_on,
 	)
 } else := false
