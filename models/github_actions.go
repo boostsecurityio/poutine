@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"fmt"
 	"gopkg.in/yaml.v3"
 	"strings"
@@ -559,13 +560,42 @@ func (o *GithubActionsStrategy) UnmarshalYAML(node *yaml.Node) error {
 	for i := 0; i < len(node.Content); i += 2 {
 		key := node.Content[i].Value
 		value := node.Content[i+1]
-		if key == "matrix" {
-			var m map[string]StringList
-			if err := value.Decode(&m); err != nil {
-				return err
-			}
-			o.Matrix = m
+		if key != "matrix" {
+			continue
 		}
+		if value.Kind != yaml.MappingNode {
+			return fmt.Errorf("matrix must be a mapping")
+		}
+		m := make(map[string]StringList, len(value.Content)/2)
+		// walk each matrix dimension
+		for j := 0; j < len(value.Content); j += 2 {
+			dim := value.Content[j].Value
+			listNode := value.Content[j+1]
+			if listNode.Kind != yaml.SequenceNode {
+				return fmt.Errorf("matrix.%s must be a sequence", dim)
+			}
+			var items StringList
+			for _, item := range listNode.Content {
+				switch item.Kind {
+				case yaml.ScalarNode:
+					items = append(items, item.Value)
+				case yaml.MappingNode:
+					var obj map[string]interface{}
+					if err := item.Decode(&obj); err != nil {
+						return err
+					}
+					b, err := json.Marshal(obj)
+					if err != nil {
+						return fmt.Errorf("failed to marshal matrix item: %w", err)
+					}
+					items = append(items, string(b))
+				default:
+					return fmt.Errorf("unsupported node kind %v in matrix.%s", item.Kind, dim)
+				}
+			}
+			m[dim] = items
+		}
+		o.Matrix = m
 	}
 	return nil
 }

@@ -200,6 +200,40 @@ func TestGithubActionsWorkflowJobs(t *testing.T) {
 				},
 			},
 		},
+		{
+			Name:  "multi dimension matrix",
+			Input: `example_matrix: { strategy: { matrix: { os: [ubuntu-22.04, ubuntu-20.04], version: [10, 12, 14] } }, runs-on: '${{ matrix.os }}' }`,
+			Expected: GithubActionsJob{
+				ID:     "example_matrix",
+				RunsOn: []string{"${{ matrix.os }}"},
+				Strategy: GithubActionsStrategy{
+					Matrix: map[string]StringList{
+						"os":      {"ubuntu-22.04", "ubuntu-20.04"},
+						"version": {"10", "12", "14"},
+					},
+				},
+				Lines: map[string]int{"runs_on": 1, "start": 1},
+			},
+		},
+		{
+			Name:  "multi dimension matrix list of objects",
+			Input: `example_matrix: { strategy: { matrix: { os: [ubuntu-latest, macos-latest], node: [ { version: 14 }, { version: 20, env: NODE_OPTIONS=--openssl-legacy-provider } ] } } }`,
+			Expected: GithubActionsJob{
+				ID: "example_matrix",
+				Strategy: GithubActionsStrategy{
+					Matrix: map[string]StringList{
+						"os": {
+							"ubuntu-latest",
+							"macos-latest",
+						},
+						"node": {
+							`{"version":14}`,
+							`{"env":"NODE_OPTIONS=--openssl-legacy-provider","version":20}`,
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
