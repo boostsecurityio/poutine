@@ -172,6 +172,7 @@ type GithubActionsJob struct {
 	Env               GithubActionsEnvs            `json:"env,omitempty"`
 	Steps             GithubActionsSteps           `json:"steps"`
 	ReferencesSecrets []string                     `json:"references_secrets" yaml:"-"`
+	Strategy          GithubActionsStrategy        `json:"strategy,omitempty" yaml:"strategy"`
 	Line              int                          `json:"line" yaml:"-"`
 
 	Lines map[string]int `json:"lines" yaml:"-"`
@@ -543,5 +544,28 @@ func (o *GithubActionsJobEnvironments) UnmarshalYAML(node *yaml.Node) error {
 	}
 
 	*o = GithubActionsJobEnvironments{env}
+	return nil
+}
+
+type GithubActionsStrategy struct {
+	Matrix map[string]StringList `json:"matrix,omitempty" yaml:"matrix"`
+}
+
+// UnmarshalYAML parses the `strategy` block and extracts `matrix`
+func (o *GithubActionsStrategy) UnmarshalYAML(node *yaml.Node) error {
+	if node.Kind != yaml.MappingNode {
+		return fmt.Errorf("invalid yaml node type for strategy")
+	}
+	for i := 0; i < len(node.Content); i += 2 {
+		key := node.Content[i].Value
+		value := node.Content[i+1]
+		if key == "matrix" {
+			var m map[string]StringList
+			if err := value.Decode(&m); err != nil {
+				return err
+			}
+			o.Matrix = m
+		}
+	}
 	return nil
 }
