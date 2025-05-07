@@ -2,27 +2,32 @@ package models
 
 import (
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 	"testing"
 )
 
 func TestGithubActionsWorkflowJobs(t *testing.T) {
-	cases := []struct {
+	tests := []struct {
+		Name     string
 		Input    string
 		Expected GithubActionsJob
 		Error    bool
 	}{
 		{
+			Name:  "empty",
 			Input: `[]`,
 			Error: true,
 		},
 		{
+			Name:  "empty job",
 			Input: `build: {}`,
 			Expected: GithubActionsJob{
 				ID: "build",
 			},
 		},
 		{
+			Name:  "env as scalar",
 			Input: `build: {env: "${{ fromJSON(inputs.env) }}"}`,
 			Expected: GithubActionsJob{
 				ID: "build",
@@ -34,6 +39,7 @@ func TestGithubActionsWorkflowJobs(t *testing.T) {
 			},
 		},
 		{
+			Name:  "runs-on list",
 			Input: `build: {runs-on: [ubuntu-latest]}`,
 			Expected: GithubActionsJob{
 				ID:     "build",
@@ -42,6 +48,7 @@ func TestGithubActionsWorkflowJobs(t *testing.T) {
 			},
 		},
 		{
+			Name:  "runs-on objects",
 			Input: `build: {runs-on: { group: runner-group, labels: [runner-label] }}`,
 			Expected: GithubActionsJob{
 				ID:     "build",
@@ -50,6 +57,7 @@ func TestGithubActionsWorkflowJobs(t *testing.T) {
 			},
 		},
 		{
+			Name:  "runs-on with labels",
 			Input: `build: {runs-on: { labels: runner-label }}`,
 			Expected: GithubActionsJob{
 				ID:     "build",
@@ -58,50 +66,62 @@ func TestGithubActionsWorkflowJobs(t *testing.T) {
 			},
 		},
 		{
+			Name:  "runs-on with empty labels",
 			Input: `build: {runs-on: { labels: [ {} ] }}`,
 			Error: true,
 		},
 		{
+			Name:  "runs-on with empty string labels",
 			Input: `build: {runs-on: { labels: [ "" ] }}`,
 			Error: true,
 		},
 		{
+			Name:  "runs-on with empty string group",
 			Input: `build: {runs-on: { group: [ "" ] }}`,
 			Error: true,
 		},
 		{
+			Name:  "runs-on with empty object",
 			Input: `build: {runs-on: [ {}]}`,
 			Error: true,
 		},
 		{
+			Name:  "empty build",
 			Input: `build: []`,
 			Error: true,
 		},
 		{
+			Name:  "invalid permissions",
 			Input: `build: {permissions: foobar}`,
 			Error: true,
 		},
 		{
+			Name:  "invalid permissions list",
 			Input: `build: {permissions: [foobar]}`,
 			Error: true,
 		},
 		{
+			Name:  "invalid env",
 			Input: `build: {env: foobar}`,
 			Error: true,
 		},
 		{
+			Name:  "invalid steps",
 			Input: `build: {steps: [foobar]}`,
 			Error: true,
 		},
 		{
+			Name:  "invalid secrets",
 			Input: `build: {secrets: []}`,
 			Error: true,
 		},
 		{
+			Name:  "invalid outputs",
 			Input: `build: {outputs: []]}`,
 			Error: true,
 		},
 		{
+			Name:  "container as scalar",
 			Input: `build: {container: ubuntu:latest}`,
 			Expected: GithubActionsJob{
 				ID: "build",
@@ -111,6 +131,7 @@ func TestGithubActionsWorkflowJobs(t *testing.T) {
 			},
 		},
 		{
+			Name:  "container as object",
 			Input: `build: {container: {image: ubuntu:latest}}`,
 			Expected: GithubActionsJob{
 				ID: "build",
@@ -120,10 +141,12 @@ func TestGithubActionsWorkflowJobs(t *testing.T) {
 			},
 		},
 		{
+			Name:  "invalid container empty list",
 			Input: `build: {container: []}`,
 			Error: true,
 		},
 		{
+			Name:  "invalid container empty list",
 			Input: `build: {permissions: {contents: read}}`,
 			Expected: GithubActionsJob{
 				ID: "build",
@@ -136,6 +159,7 @@ func TestGithubActionsWorkflowJobs(t *testing.T) {
 			},
 		},
 		{
+			Name:  "environment as scalar",
 			Input: `build: {environment: public}`,
 			Expected: GithubActionsJob{
 				ID: "build",
@@ -147,6 +171,7 @@ func TestGithubActionsWorkflowJobs(t *testing.T) {
 			},
 		},
 		{
+			Name:  "environment as object",
 			Input: `build: {environment: {name: dev, url: example.com}}`,
 			Expected: GithubActionsJob{
 				ID: "build",
@@ -159,25 +184,43 @@ func TestGithubActionsWorkflowJobs(t *testing.T) {
 			},
 		},
 		{
+			Name:  "invalid empty environment",
 			Input: `build: {environment: []}`,
 			Error: true,
 		},
+		{
+			Name:  "single dimension matrix",
+			Input: `example_matrix: { strategy: { matrix: { version: [10, 12, 14] } } }`,
+			Expected: GithubActionsJob{
+				ID: "example_matrix",
+				Strategy: GithubActionsStrategy{
+					Matrix: map[string]StringList{
+						"version": {"10", "12", "14"},
+					},
+				},
+			},
+		},
 	}
 
-	for _, c := range cases {
-		var jobs GithubActionsJobs
-		err := yaml.Unmarshal([]byte(c.Input), &jobs)
+	for _, tt := range tests {
+		t.Run(tt.Name, func(t *testing.T) {
+			var jobs GithubActionsJobs
+			err := yaml.Unmarshal([]byte(tt.Input), &jobs)
 
-		if c.Error {
-			assert.NotNil(t, err)
-		} else {
-			assert.Nil(t, err)
-			c.Expected.Line = 1
-			if c.Expected.Lines == nil {
-				c.Expected.Lines = map[string]int{"start": c.Expected.Line}
+			if tt.Error {
+				require.Error(t, err)
+				return
 			}
-			assert.Equal(t, c.Expected, jobs[0])
-		}
+			require.NoError(t, err)
+			require.Len(t, jobs, 1)
+
+			got := jobs[0]
+			tt.Expected.Line = 1
+			if tt.Expected.Lines == nil {
+				tt.Expected.Lines = map[string]int{"start": tt.Expected.Line}
+			}
+			assert.Equal(t, tt.Expected, got)
+		})
 	}
 }
 
