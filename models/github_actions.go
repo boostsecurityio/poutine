@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"gopkg.in/yaml.v3"
 	"strings"
@@ -555,7 +556,7 @@ type GithubActionsStrategy struct {
 // UnmarshalYAML parses the `strategy` block and extracts `matrix`
 func (o *GithubActionsStrategy) UnmarshalYAML(node *yaml.Node) error {
 	if node.Kind != yaml.MappingNode {
-		return fmt.Errorf("invalid yaml node type for strategy")
+		return errors.New("invalid yaml node type for strategy")
 	}
 	for i := 0; i < len(node.Content); i += 2 {
 		key := node.Content[i].Value
@@ -564,7 +565,7 @@ func (o *GithubActionsStrategy) UnmarshalYAML(node *yaml.Node) error {
 			continue
 		}
 		if value.Kind != yaml.MappingNode {
-			return fmt.Errorf("matrix must be a mapping")
+			return errors.New("matrix must be a mapping")
 		}
 		m := make(map[string]StringList, len(value.Content)/2)
 		// walk each matrix dimension
@@ -582,7 +583,7 @@ func (o *GithubActionsStrategy) UnmarshalYAML(node *yaml.Node) error {
 				case yaml.MappingNode:
 					var obj map[string]interface{}
 					if err := item.Decode(&obj); err != nil {
-						return err
+						return fmt.Errorf("failed to decode matrix item: %w", err)
 					}
 					b, err := json.Marshal(obj)
 					if err != nil {

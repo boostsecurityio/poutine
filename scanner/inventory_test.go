@@ -52,7 +52,7 @@ func TestPurls(t *testing.T) {
 		"pkg:githubactions/org/owner@main#.github/workflows/ci.yml",
 	}
 	assert.ElementsMatch(t, i.Purls(*scannedPackage), purls)
-	assert.Equal(t, 20, len(scannedPackage.BuildDependencies))
+	assert.Len(t, scannedPackage.BuildDependencies, 20)
 	assert.Equal(t, 4, len(scannedPackage.PackageDependencies))
 }
 
