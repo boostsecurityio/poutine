@@ -34,6 +34,7 @@ func TestPurls(t *testing.T) {
 		"pkg:githubactions/kartverket/github-workflows@v2.7.1#.github/workflows/run-terraform.yml",
 		"pkg:docker/alpine%3Alatest",
 		"pkg:githubactions/actions/github-script@main",
+		"pkg:githubactions/actions/setup-node@v4",
 		"pkg:githubactions/hashicorp/vault-action@v2.1.0",
 		"pkg:githubactions/actions/checkout@v4",
 		"pkg:docker/ruby%3A3.2",
@@ -51,7 +52,7 @@ func TestPurls(t *testing.T) {
 		"pkg:githubactions/org/owner@main#.github/workflows/ci.yml",
 	}
 	assert.ElementsMatch(t, i.Purls(*scannedPackage), purls)
-	assert.Equal(t, 19, len(scannedPackage.BuildDependencies))
+	assert.Equal(t, 20, len(scannedPackage.BuildDependencies))
 	assert.Equal(t, 4, len(scannedPackage.PackageDependencies))
 }
 
