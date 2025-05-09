@@ -17,6 +17,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+var ErrRepoNotReachable = errors.New("repo or ref not reachable")
+
 type GitClient struct {
 	Command GitCommand
 }
@@ -154,6 +156,13 @@ func (g *GitClient) Clone(ctx context.Context, clonePath string, url string, tok
 
 	for _, c := range commands {
 		if _, err := g.Command.Run(ctx, c.cmd, c.args, clonePath); err != nil {
+			if IsGitRepoUnauthorizedOrNotReachable(err) {
+				msg := err.Error()
+				if token != "" {
+					msg = strings.ReplaceAll(msg, token, "REDACTED")
+				}
+				return fmt.Errorf("%w: %s", ErrRepoNotReachable, msg) //nolint:errorlint
+			}
 			if token != "" && strings.Contains(err.Error(), token) {
 				return errors.New(strings.ReplaceAll(err.Error(), token, "REDACTED"))
 			}
@@ -185,6 +194,13 @@ func (g *GitClient) FetchCone(ctx context.Context, clonePath, url, token, ref st
 
 	for _, c := range commands {
 		if _, err := g.Command.Run(ctx, c.cmd, c.args, clonePath); err != nil {
+			if IsGitRepoUnauthorizedOrNotReachable(err) {
+				msg := err.Error()
+				if token != "" {
+					msg = strings.ReplaceAll(msg, token, "REDACTED")
+				}
+				return fmt.Errorf("%w: %s", ErrRepoNotReachable, msg) //nolint:errorlint
+			}
 			if token != "" && strings.Contains(err.Error(), token) {
 				return errors.New(strings.ReplaceAll(err.Error(), token, "REDACTED"))
 			}
@@ -471,4 +487,36 @@ func (g *LocalGitClient) GetRepoHeadBranchName(ctx context.Context, repoPath str
 	headBranch := string(bytes.TrimSpace(output))
 
 	return headBranch, nil
+}
+
+func IsGitRepoUnauthorizedOrNotReachable(err error) bool {
+	var gitExitErr *GitExitError
+	if !errors.As(err, &gitExitErr) {
+		return false
+	}
+
+	stderr := strings.ToLower(gitExitErr.Stderr)
+
+	// Common error patterns for authentication and repository access issues
+	unreachablePatterns := []string{
+		"could not read username for 'https://github.com'",
+		"authentication failed",
+		"fatal: repository not found",
+		"access denied",
+		"permission denied",
+		"error: could not fetch",
+		"fatal: could not read from remote repository",
+		"no such device or address",
+		"fatal: remote error: upload-pack: not our ref",
+		"couldn't find remote ref",
+		"Connection reset by peer",
+	}
+
+	for _, pattern := range unreachablePatterns {
+		if strings.Contains(stderr, pattern) {
+			return true
+		}
+	}
+
+	return false
 }
