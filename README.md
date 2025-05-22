@@ -99,7 +99,7 @@ poutine analyze_org org --token "$GH_TOKEN"
 #### Analyze all projects in a self-hosted Gitlab instance
 
 ``` bash
-poutine analyze_org my-org/project --token "$GL_TOKEN" --scm gitlab --scm-base-uri https://gitlab.example.com
+poutine analyze_org my-org/project --token "$GL_TOKEN" --scm gitlab --scm-base-url https://gitlab.example.com
 ```
 
 ### Configuration Options
@@ -109,7 +109,7 @@ poutine analyze_org my-org/project --token "$GL_TOKEN" --scm gitlab --scm-base-u
 --format         Output format (default: pretty, json, sarif)
 --ignore-forks   Ignore forked repositories in the organization(analyze_org)
 --scm            SCM platform (default: github, gitlab)
---scm-base-uri   Base URI of the self-hosted SCM instance
+--scm-base-url   Base URI of the self-hosted SCM instance
 --threads        Number of threads to use (default: 2)
 --config         Path to the configuration file (default: .poutine.yml)
 --verbose        Enable debug logging
