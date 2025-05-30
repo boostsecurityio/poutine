@@ -92,6 +92,7 @@ func TestFindings(t *testing.T) {
 		"debug_enabled",
 		"job_all_secrets",
 		"unverified_script_exec",
+		"confused_deputy_auto_merge",
 	})
 
 	findings := []results.Finding{
