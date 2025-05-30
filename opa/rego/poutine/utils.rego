@@ -74,3 +74,33 @@ to_set(xs) = xs if {
 } else := {v | v := xs[_]} if {
 	is_array(xs)
 } else := {xs}
+
+########################################################################
+# job order utils
+########################################################################
+
+job_steps_after(options) := steps if {
+	steps := {{"step": s, "step_idx": k} |
+		s := options.job.steps[k]
+		k > options.step_idx
+	}
+}
+
+job_steps_before(options) := steps if {
+	steps := {{"step": s, "step_idx": k} |
+		s := options.job.steps[k]
+		k < options.step_idx
+	}
+}
+
+
+########################################################################
+# find_first_uses_in_job
+########################################################################
+
+find_first_uses_in_job(job, uses) := xs if {
+	xs := {{"job": job, "step_idx": i} |
+		s := job.steps[i]
+		startswith(s.uses, sprintf("%v@", [uses[_]]))
+	}
+}
