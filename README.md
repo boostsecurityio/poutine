@@ -148,3 +148,39 @@ You may submit the flags you find in a [private vulnerability disclosure](https:
 ## License
 
 This project is licensed under the Apache License 2.0 - see the LICENSE file for details.
+
+### `poutine serve-mcp`
+
+Starts an MCP (Model Context Protocol) server to expose poutine's analysis capabilities as tools for AI models.
+
+This command runs a persistent server process over `stdio`.
+
+**Tools exposed:**
+
+*   `analyze_repo`: Analyzes a remote repository for supply chain vulnerabilities.
+    *   `github_repo` (string, required): The slug of the GitHub repository to analyze (i.e. org/repo).
+    *   `ref` (string): Defaults to 'HEAD'.
+*   `analyze_org`: Analyzes all repositories in an organization.
+    *   `github_org` (string, required): The slug of the GitHub organization to analyze.
+    *   `threads` (string): Number of concurrent analyzers to run. Defaults to 4.
+*   `analyze_repo_stale_branches`: Analyzes a remote repository for stale branches.
+    *   `github_repo` (string, required): The slug of the GitHub repository to analyze (i.e. org/repo).
+    *   `regex` (string): Regex to match stale branches. Defaults to an empty string, matching all branches.
+
+**Example MCP Client configuration (e.g. Claude Desktop):**
+
+```json
+{
+  "mcpServers": {
+    "poutine": {
+      "command": "poutine",
+      "args": [
+        "serve-mcp"
+      ],
+      "env": {
+        "GH_TOKEN": "..."
+      }
+    }
+  }
+}
+```
