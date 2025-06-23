@@ -28,7 +28,6 @@ func (f *Format) Format(ctx context.Context, packages []*models.PackageInsights)
 	for _, pkg := range packages {
 		if len(pkg.FindingsResults.Findings) == 0 {
 			log.Info().Msg("No results returned by analysis")
-			continue
 		}
 
 		for _, finding := range pkg.FindingsResults.Findings {
@@ -216,7 +215,7 @@ func printSummaryTable(out io.Writer, failures map[string]int, rules map[string]
 	table.SetHeader([]string{"Rule ID", "Rule Name", "Failures", "Status"})
 	table.SetColWidth(80)
 
-	var sortedRuleIDs []string
+	sortedRuleIDs := make([]string, 0, len(rules))
 	for ruleID := range rules {
 		sortedRuleIDs = append(sortedRuleIDs, ruleID)
 	}
