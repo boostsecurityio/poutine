@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -91,9 +92,35 @@ func startMCPServer(_ context.Context) error {
 		),
 	)
 
+	// Create analyze_repo_stale_branches tool
+	analyzeStaleBranchesTool := mcp.NewTool("analyze_repo_stale_branches",
+		mcp.WithDescription("Analyze a remote repository for pull_request_target vulnerabilities in stale branches"),
+		mcp.WithString("repo",
+			mcp.Required(),
+			mcp.Description("Repository name in format 'org/repo'"),
+		),
+		mcp.WithString("scm_provider",
+			mcp.Description("SCM platform (github, gitlab)"),
+			mcp.Enum("github", "gitlab"),
+		),
+		mcp.WithString("scm_base_url",
+			mcp.Description("Base URL of self-hosted SCM instance (optional)"),
+		),
+		mcp.WithNumber("threads",
+			mcp.Description("Number of parallel threads for analysis"),
+		),
+		mcp.WithBoolean("expand",
+			mcp.Description("Expand the output to the classic representation from analyze_repo"),
+		),
+		mcp.WithString("regex",
+			mcp.Description("Regex to check if the workflow is accessible in stale branches"),
+		),
+	)
+
 	// Add tool handlers
 	s.AddTool(analyzeOrgTool, handleAnalyzeOrg)
 	s.AddTool(analyzeRepoTool, handleAnalyzeRepo)
+	s.AddTool(analyzeStaleBranchesTool, handleAnalyzeStaleBranches)
 
 	log.Info().Msg("Starting Poutine MCP server on stdio")
 
@@ -173,6 +200,55 @@ func handleAnalyzeRepo(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 	}
 
 	results, err := analyzer.AnalyzeRepo(ctx, repo, ref)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("failed to analyze repo %s: %v", repo, err)), nil
+	}
+
+	resultData, err := json.Marshal(results)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("failed to marshal results: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(string(resultData)), nil
+}
+
+func handleAnalyzeStaleBranches(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	token := viper.GetString("token")
+	if token == "" {
+		return mcp.NewToolResultError("SCM access token is required. Please provide it via --token flag or GH_TOKEN/GL_TOKEN environment variable"), nil
+	}
+
+	repo, err := request.RequireString("repo")
+	if err != nil {
+		return mcp.NewToolResultError("repo parameter is required"), nil
+	}
+
+	scmProvider := request.GetString("scm_provider", "github")
+	scmBaseURLStr := request.GetString("scm_base_url", "")
+	threads := int(request.GetFloat("threads", 5))
+	expand := request.GetBool("expand", false)
+	regexStr := request.GetString("regex", "pull_request_target")
+
+	Token = token
+	ScmProvider = scmProvider
+	if scmBaseURLStr != "" {
+		if err := ScmBaseURL.Set(scmBaseURLStr); err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("invalid scm_base_url: %v", err)), nil
+		}
+	}
+
+	// Compile the regex
+	reg, err := regexp.Compile(regexStr)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("error compiling regex: %v", err)), nil
+	}
+
+	analyzer, err := GetAnalyzer(ctx, "analyze_repo_stale_branches")
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("failed to create analyzer: %v", err)), nil
+	}
+
+	results, err := analyzer.AnalyzeStaleBranches(ctx, repo, &threads, &expand, reg)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to analyze repo %s: %v", repo, err)), nil
 	}
