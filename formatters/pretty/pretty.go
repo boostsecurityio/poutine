@@ -15,6 +15,7 @@ import (
 
 	"github.com/boostsecurityio/poutine/models"
 	"github.com/olekukonko/tablewriter"
+	"github.com/olekukonko/tablewriter/tw"
 )
 
 type Format struct {
@@ -77,9 +78,16 @@ func (f *Format) FormatWithPath(ctx context.Context, packages []*models.PackageI
 
 func (f *Format) printFindingsPerWorkflow(out io.Writer, results map[string]map[string]bool, pathAssociations map[string][]*models.RepoInfo) error {
 	// Skip rules with no findings.
-	table := tablewriter.NewWriter(out)
-	table.SetAutoMergeCells(true)
-	table.SetHeader([]string{"Workflow sha", "Rule", "Location", "URL"})
+	table := tablewriter.NewTable(out, 
+		tablewriter.WithConfig(tablewriter.Config{
+			Row: tw.CellConfig{
+				Formatting: tw.CellFormatting{
+					MergeMode: tw.MergeHierarchical,
+				},
+			},
+		}),
+	)
+	table.Header("Workflow sha", "Rule", "Location", "URL")
 
 	for blobsha, repoInfos := range pathAssociations {
 		findings := results[blobsha]
@@ -132,7 +140,7 @@ func (f *Format) printFindingsPerWorkflow(out io.Writer, results map[string]map[
 			}
 		}
 
-		table.AppendBulk(blobshaTable)
+		table.Bulk(blobshaTable)
 		table.Append([]string{"", "", "", ""})
 	}
 
@@ -155,9 +163,16 @@ func printFindingsPerRule(out io.Writer, results map[string][]results.Finding, r
 			continue
 		}
 
-		table := tablewriter.NewWriter(out)
-		table.SetAutoMergeCells(true)
-		table.SetHeader([]string{"Repository", "Details", "URL"})
+		table := tablewriter.NewTable(out,
+			tablewriter.WithConfig(tablewriter.Config{
+				Row: tw.CellConfig{
+					Formatting: tw.CellFormatting{
+						MergeMode: tw.MergeHierarchical,
+					},
+				},
+			}),
+		)
+		table.Header("Repository", "Details", "URL")
 
 		fmt.Fprintf(out, "Rule: %s\n", rules[ruleId].Title)
 		fmt.Fprintf(out, "Severity: %s\n", rules[ruleId].Level)
@@ -211,9 +226,14 @@ func printFindingsPerRule(out io.Writer, results map[string][]results.Finding, r
 }
 
 func printSummaryTable(out io.Writer, failures map[string]int, rules map[string]results.Rule) {
-	table := tablewriter.NewWriter(out)
-	table.SetHeader([]string{"Rule ID", "Rule Name", "Failures", "Status"})
-	table.SetColWidth(80)
+	table := tablewriter.NewTable(out,
+		tablewriter.WithConfig(tablewriter.Config{
+			Widths: tw.CellWidth{
+				Global: 80,
+			},
+		}),
+	)
+	table.Header("Rule ID", "Rule Name", "Failures", "Status")
 
 	sortedRuleIDs := make([]string, 0, len(rules))
 	for ruleID := range rules {
