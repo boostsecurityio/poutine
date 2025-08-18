@@ -78,7 +78,7 @@ func (f *Format) FormatWithPath(ctx context.Context, packages []*models.PackageI
 
 func (f *Format) printFindingsPerWorkflow(out io.Writer, results map[string]map[string]bool, pathAssociations map[string][]*models.RepoInfo) error {
 	// Skip rules with no findings.
-	table := tablewriter.NewTable(out, 
+	table := tablewriter.NewTable(out,
 		tablewriter.WithConfig(tablewriter.Config{
 			Row: tw.CellConfig{
 				Formatting: tw.CellFormatting{
