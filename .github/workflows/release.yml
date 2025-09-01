@@ -39,7 +39,7 @@ jobs:
         DOCKER_USERNAME: ${{ github.actor }}
         DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
     - name: Run GoReleaser
-      uses: goreleaser/goreleaser-action@9c156ee8a17a598857849441385a2041ef570552 # v6.3.0
+      uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6.4.0
       with:
         distribution: goreleaser
         version: ${{ env.GO_RELEASER_VERSION }} # Not pinnable by hash, nor does it verify its signature
