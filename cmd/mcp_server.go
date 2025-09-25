@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strings"
 
+	"github.com/boostsecurityio/poutine/analyze"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/rs/zerolog/log"
@@ -20,9 +22,11 @@ var mcpServerCmd = &cobra.Command{
 through the Model Context Protocol (MCP). This allows AI assistants and other
 tools to analyze repositories and organizations for supply chain vulnerabilities.
 
-The server communicates via JSON-RPC over stdio and provides two main tools:
+The server communicates via JSON-RPC over stdio and provides these tools:
 - analyze_org: Analyze all repositories in an organization
 - analyze_repo: Analyze a specific repository
+- analyze_repo_stale_branches: Analyze stale branches for pull_request_target vulnerabilities
+- analyze_manifest: Analyze CI/CD pipeline manifests for security issues with actionable recommendations (ideal for agents generating secure pipelines)
 
 Parameters that must be provided for each tool call:
 - org/repo: Organization or repository name
@@ -117,10 +121,23 @@ func startMCPServer(_ context.Context) error {
 		),
 	)
 
+	analyzeManifestTool := mcp.NewTool("analyze_manifest",
+		mcp.WithDescription("Analyze a CI/CD pipeline manifest for supply chain vulnerabilities and security best practices. Use this tool when generating or reviewing pipeline manifests to ensure they are secure and follow best practices. The tool identifies security issues and provides actionable recommendations for creating secure pipelines."),
+		mcp.WithString("content",
+			mcp.Required(),
+			mcp.Description("The complete CI/CD pipeline manifest content as a string (YAML format)"),
+		),
+		mcp.WithString("manifest_type",
+			mcp.Description("Type of CI/CD manifest to analyze"),
+			mcp.Enum("github-actions", "gitlab-ci", "azure-pipelines", "tekton", "auto-detect"),
+		),
+	)
+
 	// Add tool handlers
 	s.AddTool(analyzeOrgTool, handleAnalyzeOrg)
 	s.AddTool(analyzeRepoTool, handleAnalyzeRepo)
 	s.AddTool(analyzeStaleBranchesTool, handleAnalyzeStaleBranches)
+	s.AddTool(analyzeManifestTool, handleAnalyzeManifest)
 
 	log.Info().Msg("Starting Poutine MCP server on stdio")
 
@@ -158,12 +175,12 @@ func handleAnalyzeOrg(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 		return mcp.NewToolResultError(fmt.Sprintf("failed to create analyzer: %v", err)), nil
 	}
 
-	results, err := analyzer.AnalyzeOrg(ctx, org, &threads)
+	analysisResults, err := analyzer.AnalyzeOrg(ctx, org, &threads)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to analyze org %s: %v", org, err)), nil
 	}
 
-	resultData, err := json.Marshal(results)
+	resultData, err := json.Marshal(analysisResults)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to marshal results: %v", err)), nil
 	}
@@ -199,12 +216,12 @@ func handleAnalyzeRepo(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 		return mcp.NewToolResultError(fmt.Sprintf("failed to create analyzer: %v", err)), nil
 	}
 
-	results, err := analyzer.AnalyzeRepo(ctx, repo, ref)
+	analysisResults, err := analyzer.AnalyzeRepo(ctx, repo, ref)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to analyze repo %s: %v", repo, err)), nil
 	}
 
-	resultData, err := json.Marshal(results)
+	resultData, err := json.Marshal(analysisResults)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to marshal results: %v", err)), nil
 	}
@@ -248,12 +265,44 @@ func handleAnalyzeStaleBranches(ctx context.Context, request mcp.CallToolRequest
 		return mcp.NewToolResultError(fmt.Sprintf("failed to create analyzer: %v", err)), nil
 	}
 
-	results, err := analyzer.AnalyzeStaleBranches(ctx, repo, &threads, &expand, reg)
+	analysisResults, err := analyzer.AnalyzeStaleBranches(ctx, repo, &threads, &expand, reg)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to analyze repo %s: %v", repo, err)), nil
 	}
 
-	resultData, err := json.Marshal(results)
+	resultData, err := json.Marshal(analysisResults)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("failed to marshal results: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(string(resultData)), nil
+}
+
+func handleAnalyzeManifest(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	content, err := request.RequireString("content")
+	if err != nil {
+		return mcp.NewToolResultError("content parameter is required"), nil
+	}
+
+	manifestType := request.GetString("manifest_type", "auto-detect")
+
+	opaClient, err := newOpa(ctx)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create OPA client")
+		return mcp.NewToolResultError(fmt.Sprintf("failed to create opa client: %v", err)), nil
+	}
+
+	formatter := GetFormatter(opaClient)
+
+	analyzer := analyze.NewAnalyzer(nil, nil, formatter, config, opaClient)
+
+	manifestReader := strings.NewReader(content)
+	analysisResults, err := analyzer.AnalyzeManifest(ctx, manifestReader, manifestType)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("failed to analyze manifest: %v", err)), nil
+	}
+
+	resultData, err := json.Marshal(analysisResults)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to marshal results: %v", err)), nil
 	}
