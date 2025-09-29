@@ -480,13 +480,8 @@ func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) (*mode
 }
 
 func (a *Analyzer) AnalyzeManifest(ctx context.Context, manifestReader io.Reader, manifestType string) (*models.PackageInsights, error) {
-	provider := a.ScmClient.GetProviderName()
-	providerVersion, err := a.ScmClient.GetProviderVersion(ctx)
-	if err != nil {
-		log.Debug().Err(err).Msgf("Failed to get provider version for %s", provider)
-	}
-
-	log.Debug().Msgf("Provider: %s, Version: %s, BaseURL: %s", provider, providerVersion, a.ScmClient.GetProviderBaseURL())
+	provider := "manifest"
+	providerVersion := "unknown"
 
 	pkgSupplyClient := pkgsupply.NewStaticClient()
 	inventory := scanner.NewInventory(a.Opa, pkgSupplyClient, provider, providerVersion)
@@ -498,8 +493,8 @@ func (a *Analyzer) AnalyzeManifest(ctx context.Context, manifestReader io.Reader
 		return nil, fmt.Errorf("failed to read manifest: %w", err)
 	}
 
-	if manifestType == "" || manifestType == "auto-detect" {
-		manifestType = a.detectManifestType(manifestData)
+	if manifestType == "" {
+		return nil, fmt.Errorf("invalid manifest type: %s", manifestType)
 	}
 
 	filename := a.getManifestFilename(manifestType)
@@ -530,28 +525,6 @@ func (a *Analyzer) AnalyzeManifest(ctx context.Context, manifestReader io.Reader
 	}
 
 	return scannedPackage, nil
-}
-
-func (a *Analyzer) detectManifestType(manifestData []byte) string {
-	content := string(manifestData)
-
-	if strings.Contains(content, "runs-on:") || strings.Contains(content, "uses:") || strings.Contains(content, "actions/") {
-		return "github-actions"
-	}
-
-	if strings.Contains(content, "stages:") || strings.Contains(content, "script:") || strings.Contains(content, "before_script:") {
-		return "gitlab-ci"
-	}
-
-	if strings.Contains(content, "trigger:") || strings.Contains(content, "pool:") || strings.Contains(content, "steps:") {
-		return "azure-pipelines"
-	}
-
-	if strings.Contains(content, "apiVersion: tekton.dev") || strings.Contains(content, "kind: PipelineRun") {
-		return "tekton"
-	}
-
-	return "github-actions"
 }
 
 func (a *Analyzer) getManifestFilename(manifestType string) string {
