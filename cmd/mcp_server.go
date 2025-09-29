@@ -303,7 +303,15 @@ func handleAnalyzeManifest(ctx context.Context, request mcp.CallToolRequest) (*m
 		return mcp.NewToolResultError(fmt.Sprintf("failed to analyze manifest: %v", err)), nil
 	}
 
-	resultData, err := json.Marshal(analysisResults)
+	combinedResponse := struct {
+		Findings []results.Finding       `json:"findings"`
+		Rules    map[string]results.Rule `json:"rules"`
+	}{
+		Findings: analysisResults.FindingsResults.Findings,
+		Rules:    analysisResults.FindingsResults.Rules,
+	}
+
+	resultData, err := json.Marshal(combinedResponse)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to marshal results: %v", err)), nil
 	}
