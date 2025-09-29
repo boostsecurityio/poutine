@@ -11,6 +11,7 @@ import (
 
 	"github.com/boostsecurityio/poutine/analyze"
 	"github.com/boostsecurityio/poutine/formatters/json"
+	"github.com/boostsecurityio/poutine/formatters/noop"
 	"github.com/boostsecurityio/poutine/formatters/pretty"
 	"github.com/boostsecurityio/poutine/formatters/sarif"
 	"github.com/boostsecurityio/poutine/models"
@@ -166,6 +167,8 @@ func GetFormatter(opaClient *opa.Opa) analyze.Formatter {
 		return &pretty.Format{}
 	case "sarif":
 		return sarif.NewFormat(os.Stdout, Version)
+	case "noop":
+		return &noop.Format{}
 	}
 
 	return json.NewFormat(opaClient, Format, os.Stdout)
