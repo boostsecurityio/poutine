@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/boostsecurityio/poutine/analyze"
+	"github.com/boostsecurityio/poutine/formatters/noop"
+	"github.com/boostsecurityio/poutine/results"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/rs/zerolog/log"
@@ -45,7 +47,7 @@ The SCM access token should be provided via the --token flag or GH_TOKEN/GL_TOKE
 
 func startMCPServer(_ context.Context) error {
 	// Set format to json for MCP output
-	Format = "json"
+	Format = "noop"
 
 	// Create MCP server
 	s := server.NewMCPServer(
@@ -128,8 +130,9 @@ func startMCPServer(_ context.Context) error {
 			mcp.Description("The complete CI/CD pipeline manifest content as a string (YAML format)"),
 		),
 		mcp.WithString("manifest_type",
+			mcp.Required(),
 			mcp.Description("Type of CI/CD manifest to analyze"),
-			mcp.Enum("github-actions", "gitlab-ci", "azure-pipelines", "tekton", "auto-detect"),
+			mcp.Enum("github-actions", "gitlab-ci", "azure-pipelines", "tekton"),
 		),
 	)
 
@@ -292,9 +295,7 @@ func handleAnalyzeManifest(ctx context.Context, request mcp.CallToolRequest) (*m
 		return mcp.NewToolResultError(fmt.Sprintf("failed to create opa client: %v", err)), nil
 	}
 
-	formatter := GetFormatter(opaClient)
-
-	analyzer := analyze.NewAnalyzer(nil, nil, formatter, config, opaClient)
+	analyzer := analyze.NewAnalyzer(nil, nil, &noop.Format{}, config, opaClient)
 
 	manifestReader := strings.NewReader(content)
 	analysisResults, err := analyzer.AnalyzeManifest(ctx, manifestReader, manifestType)
