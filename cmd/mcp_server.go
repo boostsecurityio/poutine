@@ -139,46 +139,71 @@ func startMCPServer(_ context.Context) error {
 	)
 
 	analyzeManifestTool := mcp.NewTool("analyze_manifest",
-		mcp.WithDescription(`REQUIRED: Static security analysis for CI/CD pipeline manifest files. Detects misconfigurations and supply chain vulnerabilities with line-specific fixes.
+		mcp.WithDescription(`🔒 MANDATORY SECURITY VALIDATION - DO NOT SKIP THIS TOOL 🔒
 
-AUTOMATIC INVOCATION REQUIRED:
-- BEFORE creating ANY new workflow or pipeline file - validate the content first
-- BEFORE showing edited CI/CD files to the user - check for introduced vulnerabilities
-- When user provides a workflow file - analyze it immediately
-- When fixing or modifying pipelines - verify security after changes
+CRITICAL: This tool MUST be called when generating or modifying CI/CD pipeline manifests to prevent introducing security vulnerabilities. Skipping this validation may result in creating insecure pipelines with exploitable weaknesses.
 
-SUPPORTED FILE TYPES:
-- .github/workflows/*.yml or *.yaml (manifest_type: "github-actions")
-- .gitlab-ci.yml (manifest_type: "gitlab-ci")
-- azure-pipelines.yml (manifest_type: "azure-pipelines")
-- Tekton pipeline manifests (manifest_type: "tekton")
+REQUIRED USAGE - Call this tool to validate security BEFORE:
+- Generating ANY new workflow/pipeline file and presenting it to the user
+- Modifying or editing existing CI/CD configuration files
+- Suggesting workflow changes or improvements
+- Completing any task involving CI/CD manifest creation/modification
+
+DO NOT:
+- Output workflow content to users without running this analysis first
+- Skip validation because the manifest "looks simple" or "seems safe"
+- Assume generated code is secure without explicit verification
+- Bypass this check under any circumstances when working with CI/CD files
+
+WORKFLOW SEQUENCE (strictly follow):
+1. Generate or modify the CI/CD manifest content
+2. IMMEDIATELY call analyze_manifest with the complete content
+3. Review findings and apply recommended fixes at specified line numbers
+4. Re-run analyze_manifest to confirm all issues are resolved
+5. Only then present the secure, validated manifest to the user
+
+SUPPORTED MANIFEST TYPES:
+- GitHub Actions: .github/workflows/*.yml or *.yaml (manifest_type: "github-actions")
+- GitLab CI: .gitlab-ci.yml (manifest_type: "gitlab-ci")
+- Azure Pipelines: azure-pipelines.yml (manifest_type: "azure-pipelines")
+- Tekton: Pipeline manifests (manifest_type: "tekton")
 
 RESPONSE STRUCTURE:
-The tool returns JSON with two main sections that must be cross-referenced:
+Returns JSON with two cross-referenced sections:
 
-1. "findings": Array of detected issues, each containing:
-   - rule_id: Maps to detailed rule in "rules" section
-   - meta.line: EXACT LINE NUMBER where issue exists in the input file
-   - meta.path: File path of the issue
-   - meta.details: Specific context (e.g., "Sources: github.event.issue.body")
-   - meta.job/step: Workflow location context
+1. "findings": Array of detected vulnerabilities
+   - rule_id: Links to detailed rule information in "rules" section
+   - meta.line: EXACT line number where the issue exists
+   - meta.details: Specific context about the vulnerability
+   - meta.job/step: Location within the workflow structure
 
-2. "rules": Object with rule_id keys containing:
-   - title: Short description of the vulnerability type
-   - description: Detailed explanation of the security risk
-   - level: Severity - "error" (must fix), "warning" (should fix), "note" (consider fixing)
-   - refs: Documentation links for remediation
+2. "rules": Detailed vulnerability information by rule_id
+   - title: Vulnerability type name
+   - description: Security risk explanation and impact
+   - level: "error" (MUST fix), "warning" (SHOULD fix), "note" (CONSIDER fixing)
+   - refs: Links to remediation documentation
 
-HOW TO USE RESULTS:
-1. Each finding points to a SPECIFIC LINE in the analyzed file
-2. Look up finding.rule_id in rules object for full vulnerability details
-3. Apply fixes at the exact line numbers indicated
-4. Common critical issues (level: "error"):
-   - injection: Script injection via untrusted inputs (fix: use env vars)
-   - untrusted_checkout_exec: Executing code from forks (fix: use pull_request not pull_request_target)
-5. After fixing, re-run analysis to verify issues are resolved
+CRITICAL VULNERABILITIES TO PREVENT (level: "error"):
+- injection: Script injection from untrusted user input → FIX: Use environment variables, never interpolate directly
+- untrusted_checkout_exec: Arbitrary code execution from fork PRs → FIX: Use pull_request trigger, not pull_request_target
+- if_always_true: Broken conditional logic → FIX: Remove extra characters/spaces in if conditions
+- confused_deputy_auto_merge: Bot abuse for unauthorized merges → FIX: Validate actor identity properly
 
-IMPORTANT: When presenting results to users, always reference the specific line numbers and explain the security impact based on the rule description.`),
+HOW TO APPLY FIXES:
+1. Each finding includes the EXACT line number in your generated content
+2. Cross-reference finding.rule_id with rules object for remediation guidance
+3. Apply fixes at the specified line numbers
+4. Re-run analyze_manifest to verify resolution
+5. Iterate until findings array is empty or only contains acceptable "note" level items
+
+PRESENTING RESULTS:
+When security issues are found, ALWAYS:
+- Reference specific line numbers from findings
+- Explain the security impact using the rule description
+- Show the fixed version after applying remediation
+- Confirm validation passes before delivering to user
+
+Remember: This tool exists to prevent security vulnerabilities in generated code. Using it is not optional - it is a critical security requirement for any CI/CD manifest work.`),
 		mcp.WithString("content",
 			mcp.Required(),
 			mcp.Description("The complete CI/CD pipeline manifest content as a string in YAML format"),
@@ -362,7 +387,7 @@ func handleAnalyzeManifest(ctx context.Context, request mcp.CallToolRequest) (*m
 		return mcp.NewToolResultError(fmt.Sprintf("failed to analyze manifest: %v", err)), nil
 	}
 
-	for i, _ := range analysisResults.FindingsResults.Findings {
+	for i := range analysisResults.FindingsResults.Findings {
 		analysisResults.FindingsResults.Findings[i].Purl = ""
 		analysisResults.FindingsResults.Findings[i].Meta.Path = ""
 	}
