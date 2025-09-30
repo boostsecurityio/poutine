@@ -59,7 +59,7 @@ func startMCPServer(_ context.Context) error {
 
 	// Create analyze_org tool
 	analyzeOrgTool := mcp.NewTool("analyze_org",
-		mcp.WithDescription("Analyze an organization's repositories for supply chain vulnerabilities"),
+		mcp.WithDescription("Scan all repositories in an organization for CI/CD pipeline misconfigurations and supply chain security vulnerabilities"),
 		mcp.WithString("org",
 			mcp.Required(),
 			mcp.Description("Organization name to analyze"),
@@ -77,11 +77,16 @@ func startMCPServer(_ context.Context) error {
 		mcp.WithBoolean("ignore_forks",
 			mcp.Description("Ignore forked repositories"),
 		),
+		mcp.WithTitleAnnotation("CI/CD Pipeline Security Scan - Organization"),
+		mcp.WithReadOnlyHintAnnotation(true),
+		mcp.WithDestructiveHintAnnotation(false),
+		mcp.WithIdempotentHintAnnotation(false),
+		mcp.WithOpenWorldHintAnnotation(true),
 	)
 
 	// Create analyze_repo tool
 	analyzeRepoTool := mcp.NewTool("analyze_repo",
-		mcp.WithDescription("Analyze a remote repository for supply chain vulnerabilities"),
+		mcp.WithDescription("Scan a single repository for CI/CD pipeline misconfigurations and supply chain security vulnerabilities"),
 		mcp.WithString("repo",
 			mcp.Required(),
 			mcp.Description("Repository name in format 'org/repo'"),
@@ -96,11 +101,16 @@ func startMCPServer(_ context.Context) error {
 		mcp.WithString("ref",
 			mcp.Description("Commit or branch to analyze"),
 		),
+		mcp.WithTitleAnnotation("CI/CD Pipeline Security Scan - Repository"),
+		mcp.WithReadOnlyHintAnnotation(true),
+		mcp.WithDestructiveHintAnnotation(false),
+		mcp.WithIdempotentHintAnnotation(false),
+		mcp.WithOpenWorldHintAnnotation(true),
 	)
 
 	// Create analyze_repo_stale_branches tool
 	analyzeStaleBranchesTool := mcp.NewTool("analyze_repo_stale_branches",
-		mcp.WithDescription("Analyze a remote repository for pull_request_target vulnerabilities in stale branches"),
+		mcp.WithDescription("Scan repository branches for pull_request_target vulnerabilities that allow arbitrary code execution from untrusted code changes"),
 		mcp.WithString("repo",
 			mcp.Required(),
 			mcp.Description("Repository name in format 'org/repo'"),
@@ -121,14 +131,19 @@ func startMCPServer(_ context.Context) error {
 		mcp.WithString("regex",
 			mcp.Description("Regex to check if the workflow is accessible in stale branches"),
 		),
+		mcp.WithTitleAnnotation("CI/CD Pipeline Security Scan - Stale Branches"),
+		mcp.WithReadOnlyHintAnnotation(true),
+		mcp.WithDestructiveHintAnnotation(false),
+		mcp.WithIdempotentHintAnnotation(false),
+		mcp.WithOpenWorldHintAnnotation(true),
 	)
 
 	analyzeManifestTool := mcp.NewTool("analyze_manifest",
-		mcp.WithDescription(`REQUIRED: Static security analysis for CI/CD pipeline files. Returns line-specific vulnerabilities that must be fixed.
+		mcp.WithDescription(`REQUIRED: Static security analysis for CI/CD pipeline manifest files. Detects misconfigurations and supply chain vulnerabilities with line-specific fixes.
 
 AUTOMATIC INVOCATION REQUIRED:
 - BEFORE creating ANY new workflow or pipeline file - validate the content first
-- BEFORE showing edited CI/CD files to the user - check for introduced vulnerabilities  
+- BEFORE showing edited CI/CD files to the user - check for introduced vulnerabilities
 - When user provides a workflow file - analyze it immediately
 - When fixing or modifying pipelines - verify security after changes
 
@@ -173,6 +188,11 @@ IMPORTANT: When presenting results to users, always reference the specific line 
 			mcp.Description("Type of CI/CD manifest: 'github-actions' for GitHub Actions workflows, 'gitlab-ci' for GitLab CI, 'azure-pipelines' for Azure Pipelines, 'tekton' for Tekton pipelines"),
 			mcp.Enum("github-actions", "gitlab-ci", "azure-pipelines", "tekton"),
 		),
+		mcp.WithTitleAnnotation("CI/CD Pipeline Security Scan - Manifest"),
+		mcp.WithReadOnlyHintAnnotation(true),
+		mcp.WithDestructiveHintAnnotation(false),
+		mcp.WithIdempotentHintAnnotation(true),
+		mcp.WithOpenWorldHintAnnotation(false),
 	)
 
 	// Add tool handlers
