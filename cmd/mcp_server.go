@@ -59,7 +59,7 @@ func startMCPServer(_ context.Context) error {
 
 	// Create analyze_org tool
 	analyzeOrgTool := mcp.NewTool("analyze_org",
-		mcp.WithDescription("Analyze an organization's repositories for supply chain vulnerabilities"),
+		mcp.WithDescription("Scan all repositories in an organization for CI/CD pipeline misconfigurations and supply chain security vulnerabilities"),
 		mcp.WithString("org",
 			mcp.Required(),
 			mcp.Description("Organization name to analyze"),
@@ -77,11 +77,16 @@ func startMCPServer(_ context.Context) error {
 		mcp.WithBoolean("ignore_forks",
 			mcp.Description("Ignore forked repositories"),
 		),
+		mcp.WithTitleAnnotation("CI/CD Pipeline Security Scan - Organization"),
+		mcp.WithReadOnlyHintAnnotation(true),
+		mcp.WithDestructiveHintAnnotation(false),
+		mcp.WithIdempotentHintAnnotation(false),
+		mcp.WithOpenWorldHintAnnotation(true),
 	)
 
 	// Create analyze_repo tool
 	analyzeRepoTool := mcp.NewTool("analyze_repo",
-		mcp.WithDescription("Analyze a remote repository for supply chain vulnerabilities"),
+		mcp.WithDescription("Scan a single repository for CI/CD pipeline misconfigurations and supply chain security vulnerabilities"),
 		mcp.WithString("repo",
 			mcp.Required(),
 			mcp.Description("Repository name in format 'org/repo'"),
@@ -96,11 +101,16 @@ func startMCPServer(_ context.Context) error {
 		mcp.WithString("ref",
 			mcp.Description("Commit or branch to analyze"),
 		),
+		mcp.WithTitleAnnotation("CI/CD Pipeline Security Scan - Repository"),
+		mcp.WithReadOnlyHintAnnotation(true),
+		mcp.WithDestructiveHintAnnotation(false),
+		mcp.WithIdempotentHintAnnotation(false),
+		mcp.WithOpenWorldHintAnnotation(true),
 	)
 
 	// Create analyze_repo_stale_branches tool
 	analyzeStaleBranchesTool := mcp.NewTool("analyze_repo_stale_branches",
-		mcp.WithDescription("Analyze a remote repository for pull_request_target vulnerabilities in stale branches"),
+		mcp.WithDescription("Scan repository branches for pull_request_target vulnerabilities that allow arbitrary code execution from untrusted code changes"),
 		mcp.WithString("repo",
 			mcp.Required(),
 			mcp.Description("Repository name in format 'org/repo'"),
@@ -121,19 +131,68 @@ func startMCPServer(_ context.Context) error {
 		mcp.WithString("regex",
 			mcp.Description("Regex to check if the workflow is accessible in stale branches"),
 		),
+		mcp.WithTitleAnnotation("CI/CD Pipeline Security Scan - Stale Branches"),
+		mcp.WithReadOnlyHintAnnotation(true),
+		mcp.WithDestructiveHintAnnotation(false),
+		mcp.WithIdempotentHintAnnotation(false),
+		mcp.WithOpenWorldHintAnnotation(true),
 	)
 
 	analyzeManifestTool := mcp.NewTool("analyze_manifest",
-		mcp.WithDescription("Analyze a CI/CD pipeline manifest for supply chain vulnerabilities and security best practices. Use this tool when generating or reviewing pipeline manifests to ensure they are secure and follow best practices. The tool identifies security issues and provides actionable recommendations for creating secure pipelines."),
+		mcp.WithDescription(`REQUIRED: Static security analysis for CI/CD pipeline manifest files. Detects misconfigurations and supply chain vulnerabilities with line-specific fixes.
+
+AUTOMATIC INVOCATION REQUIRED:
+- BEFORE creating ANY new workflow or pipeline file - validate the content first
+- BEFORE showing edited CI/CD files to the user - check for introduced vulnerabilities
+- When user provides a workflow file - analyze it immediately
+- When fixing or modifying pipelines - verify security after changes
+
+SUPPORTED FILE TYPES:
+- .github/workflows/*.yml or *.yaml (manifest_type: "github-actions")
+- .gitlab-ci.yml (manifest_type: "gitlab-ci")
+- azure-pipelines.yml (manifest_type: "azure-pipelines")
+- Tekton pipeline manifests (manifest_type: "tekton")
+
+RESPONSE STRUCTURE:
+The tool returns JSON with two main sections that must be cross-referenced:
+
+1. "findings": Array of detected issues, each containing:
+   - rule_id: Maps to detailed rule in "rules" section
+   - meta.line: EXACT LINE NUMBER where issue exists in the input file
+   - meta.path: File path of the issue
+   - meta.details: Specific context (e.g., "Sources: github.event.issue.body")
+   - meta.job/step: Workflow location context
+
+2. "rules": Object with rule_id keys containing:
+   - title: Short description of the vulnerability type
+   - description: Detailed explanation of the security risk
+   - level: Severity - "error" (must fix), "warning" (should fix), "note" (consider fixing)
+   - refs: Documentation links for remediation
+
+HOW TO USE RESULTS:
+1. Each finding points to a SPECIFIC LINE in the analyzed file
+2. Look up finding.rule_id in rules object for full vulnerability details
+3. Apply fixes at the exact line numbers indicated
+4. Common critical issues (level: "error"):
+   - injection: Script injection via untrusted inputs (fix: use env vars)
+   - untrusted_checkout_exec: Executing code from forks (fix: use pull_request not pull_request_target)
+5. After fixing, re-run analysis to verify issues are resolved
+
+IMPORTANT: When presenting results to users, always reference the specific line numbers and explain the security impact based on the rule description.`),
 		mcp.WithString("content",
 			mcp.Required(),
-			mcp.Description("The complete CI/CD pipeline manifest content as a string (YAML format)"),
+			mcp.Description("The complete CI/CD pipeline manifest content as a string in YAML format"),
 		),
 		mcp.WithString("manifest_type",
 			mcp.Required(),
-			mcp.Description("Type of CI/CD manifest to analyze"),
+			mcp.Description("Type of CI/CD manifest: 'github-actions' for GitHub Actions workflows, 'gitlab-ci' for GitLab CI, 'azure-pipelines' for Azure Pipelines, 'tekton' for Tekton pipelines"),
 			mcp.Enum("github-actions", "gitlab-ci", "azure-pipelines", "tekton"),
 		),
+		mcp.WithTitleAnnotation("CI/CD Pipeline Security Scan - Manifest"),
+		mcp.WithReadOnlyHintAnnotation(true),
+		mcp.WithDestructiveHintAnnotation(false),
+		mcp.WithIdempotentHintAnnotation(true),
+		mcp.WithOpenWorldHintAnnotation(false),
 	)
 
 	// Add tool handlers
