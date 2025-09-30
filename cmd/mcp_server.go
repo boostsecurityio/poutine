@@ -303,6 +303,11 @@ func handleAnalyzeManifest(ctx context.Context, request mcp.CallToolRequest) (*m
 		return mcp.NewToolResultError(fmt.Sprintf("failed to analyze manifest: %v", err)), nil
 	}
 
+	for i, _ := range analysisResults.FindingsResults.Findings {
+		analysisResults.FindingsResults.Findings[i].Purl = ""
+		analysisResults.FindingsResults.Findings[i].Meta.Path = ""
+	}
+
 	combinedResponse := struct {
 		Findings []results.Finding       `json:"findings"`
 		Rules    map[string]results.Rule `json:"rules"`
