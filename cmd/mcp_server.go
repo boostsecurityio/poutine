@@ -52,7 +52,7 @@ func startMCPServer(_ context.Context) error {
 	// Create MCP server
 	s := server.NewMCPServer(
 		"Poutine Security Scanner",
-		"1.0.0",
+		Version,
 		server.WithToolCapabilities(false),
 		server.WithRecovery(),
 	)
@@ -359,13 +359,15 @@ func handleAnalyzeManifest(ctx context.Context, request mcp.CallToolRequest) (*m
 
 	manifestType := request.GetString("manifest_type", "github-actions")
 
-	opaClient, err := newOpa(ctx)
+	requestConfig := *config
+
+	opaClient, err := newOpaWithConfig(ctx, &requestConfig)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create OPA client")
 		return mcp.NewToolResultError(fmt.Sprintf("failed to create opa client: %v", err)), nil
 	}
 
-	analyzer := analyze.NewAnalyzer(nil, nil, &noop.Format{}, config, opaClient)
+	analyzer := analyze.NewAnalyzer(nil, nil, &noop.Format{}, &requestConfig, opaClient)
 
 	manifestReader := strings.NewReader(content)
 	analysisResults, err := analyzer.AnalyzeManifest(ctx, manifestReader, manifestType)
