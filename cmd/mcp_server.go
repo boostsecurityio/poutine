@@ -45,9 +45,17 @@ The SCM access token should be provided via the --token flag or GH_TOKEN/GL_TOKE
 	},
 }
 
-func startMCPServer(_ context.Context) error {
+func startMCPServer(ctx context.Context) error {
 	// Set format to json for MCP output
 	Format = "noop"
+
+	manifestConfig := *config
+	manifestOpaClient, err := newOpaWithConfig(ctx, &manifestConfig)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create manifest OPA client")
+		return fmt.Errorf("failed to create manifest opa client: %w", err)
+	}
+	manifestAnalyzer := analyze.NewAnalyzer(nil, nil, &noop.Format{}, &manifestConfig, manifestOpaClient)
 
 	// Create MCP server
 	s := server.NewMCPServer(
@@ -223,12 +231,14 @@ Remember: This tool exists to prevent security vulnerabilities in generated code
 	s.AddTool(analyzeOrgTool, handleAnalyzeOrg)
 	s.AddTool(analyzeRepoTool, handleAnalyzeRepo)
 	s.AddTool(analyzeStaleBranchesTool, handleAnalyzeStaleBranches)
-	s.AddTool(analyzeManifestTool, handleAnalyzeManifest)
+	s.AddTool(analyzeManifestTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return handleAnalyzeManifest(ctx, request, manifestAnalyzer)
+	})
 
 	log.Info().Msg("Starting Poutine MCP server on stdio")
 
 	// Start the server
-	err := server.ServeStdio(s)
+	err = server.ServeStdio(s)
 	if err != nil {
 		log.Error().Err(err).Msg("MCP server error")
 		return fmt.Errorf("mcp server error: %w", err)
@@ -351,23 +361,13 @@ func handleAnalyzeStaleBranches(ctx context.Context, request mcp.CallToolRequest
 	return mcp.NewToolResultText(string(resultData)), nil
 }
 
-func handleAnalyzeManifest(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func handleAnalyzeManifest(ctx context.Context, request mcp.CallToolRequest, analyzer *analyze.Analyzer) (*mcp.CallToolResult, error) {
 	content, err := request.RequireString("content")
 	if err != nil {
 		return mcp.NewToolResultError("content parameter is required"), nil
 	}
 
 	manifestType := request.GetString("manifest_type", "github-actions")
-
-	requestConfig := *config
-
-	opaClient, err := newOpaWithConfig(ctx, &requestConfig)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to create OPA client")
-		return mcp.NewToolResultError(fmt.Sprintf("failed to create opa client: %v", err)), nil
-	}
-
-	analyzer := analyze.NewAnalyzer(nil, nil, &noop.Format{}, &requestConfig, opaClient)
 
 	manifestReader := strings.NewReader(content)
 	analysisResults, err := analyzer.AnalyzeManifest(ctx, manifestReader, manifestType)

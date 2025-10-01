@@ -5,11 +5,23 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/boostsecurityio/poutine/analyze"
+	"github.com/boostsecurityio/poutine/formatters/noop"
 	"github.com/boostsecurityio/poutine/results"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// createTestAnalyzer creates an analyzer instance for testing
+func createTestAnalyzer(ctx context.Context) (*analyze.Analyzer, error) {
+	testConfig := *config
+	opaClient, err := newOpaWithConfig(ctx, &testConfig)
+	if err != nil {
+		return nil, err
+	}
+	return analyze.NewAnalyzer(nil, nil, &noop.Format{}, &testConfig, opaClient), nil
+}
 
 func NewCallToolRequest(name string, args map[string]interface{}) mcp.CallToolRequest {
 	return mcp.CallToolRequest{
@@ -26,6 +38,9 @@ func NewCallToolRequest(name string, args map[string]interface{}) mcp.CallToolRe
 func TestHandleAnalyzeManifestBasic(t *testing.T) {
 	ctx := context.Background()
 
+	analyzer, err := createTestAnalyzer(ctx)
+	require.NoError(t, err)
+
 	t.Run("valid github actions manifest", func(t *testing.T) {
 		request := NewCallToolRequest("analyze_manifest", map[string]interface{}{
 			"content": `name: Test Workflow
@@ -41,7 +56,7 @@ jobs:
 			"manifest_type": "github-actions",
 		})
 
-		result, err := handleAnalyzeManifest(ctx, request)
+		result, err := handleAnalyzeManifest(ctx, request, analyzer)
 
 		require.NoError(t, err)
 		require.NotNil(t, result)
@@ -71,7 +86,7 @@ jobs:
 			// missing content
 		})
 
-		result, err := handleAnalyzeManifest(ctx, request)
+		result, err := handleAnalyzeManifest(ctx, request, analyzer)
 
 		require.NoError(t, err)
 		require.NotNil(t, result)
@@ -91,14 +106,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@main
-      - name: Vulnerable command  
+      - name: Vulnerable command
         run: |
           curl -fsSL https://example.com/script.sh | bash
           echo "${{ github.event.pull_request.title }}" | bash`,
 			"manifest_type": "github-actions",
 		})
 
-		result, err := handleAnalyzeManifest(ctx, request)
+		result, err := handleAnalyzeManifest(ctx, request, analyzer)
 
 		require.NoError(t, err)
 		require.NotNil(t, result)
@@ -125,6 +140,9 @@ jobs:
 func TestHandleAnalyzeManifestDifferentTypes(t *testing.T) {
 	ctx := context.Background()
 
+	analyzer, err := createTestAnalyzer(ctx)
+	require.NoError(t, err)
+
 	t.Run("gitlab ci manifest", func(t *testing.T) {
 		request := NewCallToolRequest("analyze_manifest", map[string]interface{}{
 			"content": `stages:
@@ -143,7 +161,7 @@ test_job:
 			"manifest_type": "gitlab-ci",
 		})
 
-		result, err := handleAnalyzeManifest(ctx, request)
+		result, err := handleAnalyzeManifest(ctx, request, analyzer)
 
 		require.NoError(t, err)
 		require.NotNil(t, result)
@@ -177,7 +195,7 @@ steps:
 			"manifest_type": "azure-pipelines",
 		})
 
-		result, err := handleAnalyzeManifest(ctx, request)
+		result, err := handleAnalyzeManifest(ctx, request, analyzer)
 
 		require.NoError(t, err)
 		require.NotNil(t, result)
@@ -217,6 +235,9 @@ func extractTextFromContent(t *testing.T, content mcp.Content) string {
 func TestHandleAnalyzeManifestEndToEnd(t *testing.T) {
 	ctx := context.Background()
 
+	analyzer, err := createTestAnalyzer(ctx)
+	require.NoError(t, err)
+
 	// Test a realistic scenario
 	request := NewCallToolRequest("analyze_manifest", map[string]interface{}{
 		"content": `
@@ -253,7 +274,7 @@ jobs:
 		"manifest_type": "github-actions",
 	})
 
-	result, err := handleAnalyzeManifest(ctx, request)
+	result, err := handleAnalyzeManifest(ctx, request, analyzer)
 
 	require.NoError(t, err)
 	require.NotNil(t, result)
