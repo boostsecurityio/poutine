@@ -1,2 +1,4 @@
 /poutine
 dist/
+.claude/
+.smoke-test/
