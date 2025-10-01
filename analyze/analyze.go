@@ -3,6 +3,7 @@ package analyze
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -494,7 +495,7 @@ func (a *Analyzer) AnalyzeManifest(ctx context.Context, manifestReader io.Reader
 	}
 
 	if manifestType == "" {
-		return nil, fmt.Errorf("invalid manifest type: %s", manifestType)
+		return nil, errors.New("invalid manifest type")
 	}
 
 	filename := a.getManifestFilename(manifestType)

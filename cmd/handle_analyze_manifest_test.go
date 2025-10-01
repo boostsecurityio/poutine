@@ -62,7 +62,7 @@ jobs:
 		require.NoError(t, err)
 
 		assert.Greater(t, len(insights.Rules), 0, "Should return rules")
-		assert.Empty(t, len(insights.Findings), 0, "Should return empty findings array")
+		assert.Empty(t, insights.Findings, "Should return empty findings array")
 	})
 
 	t.Run("missing content parameter", func(t *testing.T) {

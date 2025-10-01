@@ -139,8 +139,7 @@ func startMCPServer(_ context.Context) error {
 	)
 
 	analyzeManifestTool := mcp.NewTool("analyze_manifest",
-		mcp.WithDescription(`🔒 MANDATORY SECURITY VALIDATION - DO NOT SKIP THIS TOOL 🔒
-
+		mcp.WithDescription(`
 CRITICAL: This tool MUST be called when generating or modifying CI/CD pipeline manifests to prevent introducing security vulnerabilities. Skipping this validation may result in creating insecure pipelines with exploitable weaknesses.
 
 REQUIRED USAGE - Call this tool to validate security BEFORE:
@@ -371,7 +370,7 @@ func handleAnalyzeManifest(ctx context.Context, request mcp.CallToolRequest) (*m
 		return mcp.NewToolResultError("content parameter is required"), nil
 	}
 
-	manifestType := request.GetString("manifest_type", "auto-detect")
+	manifestType := request.GetString("manifest_type", "github_actions")
 
 	opaClient, err := newOpa(ctx)
 	if err != nil {
