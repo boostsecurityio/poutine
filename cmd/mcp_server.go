@@ -357,7 +357,7 @@ func handleAnalyzeManifest(ctx context.Context, request mcp.CallToolRequest) (*m
 		return mcp.NewToolResultError("content parameter is required"), nil
 	}
 
-	manifestType := request.GetString("manifest_type", "github_actions")
+	manifestType := request.GetString("manifest_type", "github-actions")
 
 	opaClient, err := newOpa(ctx)
 	if err != nil {
