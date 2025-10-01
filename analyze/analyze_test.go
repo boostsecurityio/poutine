@@ -50,7 +50,7 @@ jobs:
 				assert.Equal(t, "manifest", insights.SourceScmType)
 				assert.Contains(t, insights.Purl, "pkg:generic/github-actions-workflow")
 				assert.Equal(t, "YAML", insights.PrimaryLanguage)
-				assert.Equal(t, len(insights.GithubActionsWorkflows), 1, "Should detect GitHub Actions workflow")
+				assert.Equal(t, 1, len(insights.GithubActionsWorkflows), "Should detect GitHub Actions workflow")
 			},
 		},
 		{
@@ -76,7 +76,7 @@ test_job:
 			validateResult: func(t *testing.T, insights *models.PackageInsights) {
 				assert.Equal(t, "manifest", insights.SourceScmType)
 				assert.Contains(t, insights.Purl, "pkg:generic/gitlab-ci-config")
-				assert.Equal(t, len(insights.GitlabciConfigs), 1, "Should detect GitLab CI config")
+				assert.Equal(t, 1, len(insights.GitlabciConfigs), "Should detect GitLab CI config")
 			},
 		},
 		{
@@ -97,7 +97,7 @@ jobs:
 			expectedType: "github-actions",
 			validateResult: func(t *testing.T, insights *models.PackageInsights) {
 				assert.Contains(t, insights.Purl, "pkg:generic/github-actions-workflow")
-				assert.Equal(t, len(insights.GithubActionsWorkflows), 1, "Should detect workflow")
+				assert.Equal(t, 1, len(insights.GithubActionsWorkflows), "Should detect workflow")
 
 				workflow := insights.GithubActionsWorkflows[0]
 				assert.Equal(t, "Vulnerable Workflow", workflow.Name)

@@ -564,7 +564,7 @@ func (a *Analyzer) createManifestPackageInsights(manifestType string) *models.Pa
 		LastCommitedAt:     time.Now().Format(time.RFC3339),
 		Purl:               purl.String(),
 		SourceScmType:      "manifest",
-		SourceGitRepo:      fmt.Sprintf("workflow/%s", manifestType),
+		SourceGitRepo:      "workflow/" + manifestType,
 		SourceGitRef:       "HEAD",
 		SourceGitCommitSha: "unknown",
 		OrgID:              0,

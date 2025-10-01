@@ -228,7 +228,12 @@ Remember: This tool exists to prevent security vulnerabilities in generated code
 	log.Info().Msg("Starting Poutine MCP server on stdio")
 
 	// Start the server
-	return server.ServeStdio(s)
+	err := server.ServeStdio(s)
+	if err != nil {
+		log.Error().Err(err).Msg("MCP server error")
+		return fmt.Errorf("mcp server error: %w", err)
+	}
+	return nil
 }
 
 func handleAnalyzeOrg(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {

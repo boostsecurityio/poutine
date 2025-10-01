@@ -61,7 +61,7 @@ jobs:
 		err = json.Unmarshal([]byte(contentText), &insights)
 		require.NoError(t, err)
 
-		assert.Greater(t, len(insights.Rules), 0, "Should return rules")
+		assert.NotEmpty(t, insights.Rules, "Should return rules")
 		assert.Empty(t, insights.Findings, "Should return empty findings array")
 	})
 
@@ -117,7 +117,7 @@ jobs:
 
 		// Should detect vulnerabilities
 		assert.Len(t, response.Findings, 3, "Should detect security vulnerabilities")
-		assert.Greater(t, len(response.Rules), 0)
+		assert.NotEmpty(t, response.Rules)
 	})
 
 }
@@ -157,7 +157,7 @@ test_job:
 		err = json.Unmarshal([]byte(contentText), &insights)
 		require.NoError(t, err)
 
-		assert.Greater(t, len(insights.Rules), 0)
+		assert.NotEmpty(t, insights.Rules)
 		assert.Len(t, insights.Findings, 0, "Should parse GitLab CI config")
 	})
 
