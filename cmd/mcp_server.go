@@ -46,7 +46,6 @@ The SCM access token should be provided via the --token flag or GH_TOKEN/GL_TOKE
 }
 
 func startMCPServer(ctx context.Context) error {
-	// Set format to json for MCP output
 	Format = "noop"
 
 	manifestConfig := *config
