@@ -2,6 +2,7 @@ package analyze
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -17,7 +18,7 @@ func newTestOpa(ctx context.Context) (*opa.Opa, error) {
 	config := models.DefaultConfig()
 	opaClient, err := opa.NewOpa(ctx, config)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create opa client: %w", err)
 	}
 	return opaClient, nil
 }
@@ -50,7 +51,7 @@ jobs:
 				assert.Equal(t, "manifest", insights.SourceScmType)
 				assert.Contains(t, insights.Purl, "pkg:generic/github-actions-workflow")
 				assert.Equal(t, "YAML", insights.PrimaryLanguage)
-				assert.Equal(t, 1, len(insights.GithubActionsWorkflows), "Should detect GitHub Actions workflow")
+				assert.Len(t, insights.GithubActionsWorkflows, 1, "Should detect GitHub Actions workflow")
 			},
 		},
 		{
@@ -76,7 +77,7 @@ test_job:
 			validateResult: func(t *testing.T, insights *models.PackageInsights) {
 				assert.Equal(t, "manifest", insights.SourceScmType)
 				assert.Contains(t, insights.Purl, "pkg:generic/gitlab-ci-config")
-				assert.Equal(t, 1, len(insights.GitlabciConfigs), "Should detect GitLab CI config")
+				assert.Len(t, insights.GitlabciConfigs, 1, "Should detect GitLab CI config")
 			},
 		},
 		{
@@ -97,12 +98,12 @@ jobs:
 			expectedType: "github-actions",
 			validateResult: func(t *testing.T, insights *models.PackageInsights) {
 				assert.Contains(t, insights.Purl, "pkg:generic/github-actions-workflow")
-				assert.Equal(t, 1, len(insights.GithubActionsWorkflows), "Should detect workflow")
+				assert.Len(t, insights.GithubActionsWorkflows, 1, "Should detect workflow")
 
 				workflow := insights.GithubActionsWorkflows[0]
 				assert.Equal(t, "Vulnerable Workflow", workflow.Name)
 
-				assert.Equal(t, len(insights.FindingsResults.Findings), 3, "May have security findings for vulnerable workflow")
+				assert.Len(t, insights.FindingsResults.Findings, 3, "May have security findings for vulnerable workflow")
 			},
 		},
 		{

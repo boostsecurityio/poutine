@@ -158,7 +158,7 @@ test_job:
 		require.NoError(t, err)
 
 		assert.NotEmpty(t, insights.Rules)
-		assert.Len(t, insights.Findings, 0, "Should parse GitLab CI config")
+		assert.Empty(t, insights.Findings, "Should parse GitLab CI config")
 	})
 
 	t.Run("azure pipelines manifest", func(t *testing.T) {
@@ -191,8 +191,8 @@ steps:
 		err = json.Unmarshal([]byte(contentText), &insights)
 		require.NoError(t, err)
 
-		assert.Greater(t, len(insights.Rules), 0)
-		assert.Len(t, insights.Findings, 0, "Should parse Azure Pipeline")
+		assert.NotEmpty(t, insights.Rules)
+		assert.Empty(t, insights.Findings, "Should parse Azure Pipeline")
 	})
 }
 
