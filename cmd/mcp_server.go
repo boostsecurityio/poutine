@@ -252,16 +252,10 @@ func handleAnalyzeOrg(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 	threads := int(request.GetFloat("threads", 2))
 	ignoreForks := request.GetBool("ignore_forks", false)
 
-	Token = token
-	ScmProvider = scmProvider
-	if scmBaseURLStr != "" {
-		if err := ScmBaseURL.Set(scmBaseURLStr); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("invalid scm_base_url: %v", err)), nil
-		}
-	}
-	config.IgnoreForks = ignoreForks
+	requestConfig := *config
+	requestConfig.IgnoreForks = ignoreForks
 
-	analyzer, err := GetAnalyzer(ctx, "analyze_org")
+	analyzer, err := GetAnalyzerWithConfig(ctx, "analyze_org", scmProvider, scmBaseURLStr, token, &requestConfig)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to create analyzer: %v", err)), nil
 	}
@@ -294,15 +288,9 @@ func handleAnalyzeRepo(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 	scmBaseURLStr := request.GetString("scm_base_url", "")
 	ref := request.GetString("ref", "HEAD")
 
-	Token = token
-	ScmProvider = scmProvider
-	if scmBaseURLStr != "" {
-		if err := ScmBaseURL.Set(scmBaseURLStr); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("invalid scm_base_url: %v", err)), nil
-		}
-	}
+	requestConfig := *config
 
-	analyzer, err := GetAnalyzer(ctx, "analyze_repo")
+	analyzer, err := GetAnalyzerWithConfig(ctx, "analyze_repo", scmProvider, scmBaseURLStr, token, &requestConfig)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to create analyzer: %v", err)), nil
 	}
@@ -337,21 +325,15 @@ func handleAnalyzeStaleBranches(ctx context.Context, request mcp.CallToolRequest
 	expand := request.GetBool("expand", false)
 	regexStr := request.GetString("regex", "pull_request_target")
 
-	Token = token
-	ScmProvider = scmProvider
-	if scmBaseURLStr != "" {
-		if err := ScmBaseURL.Set(scmBaseURLStr); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("invalid scm_base_url: %v", err)), nil
-		}
-	}
-
 	// Compile the regex
 	reg, err := regexp.Compile(regexStr)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("error compiling regex: %v", err)), nil
 	}
 
-	analyzer, err := GetAnalyzer(ctx, "analyze_repo_stale_branches")
+	requestConfig := *config
+
+	analyzer, err := GetAnalyzerWithConfig(ctx, "analyze_repo_stale_branches", scmProvider, scmBaseURLStr, token, &requestConfig)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to create analyzer: %v", err)), nil
 	}

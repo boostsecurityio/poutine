@@ -193,6 +193,26 @@ func GetAnalyzer(ctx context.Context, command string) (*analyze.Analyzer, error)
 	return analyzer, nil
 }
 
+// GetAnalyzerWithConfig creates an analyzer
+func GetAnalyzerWithConfig(ctx context.Context, command, scmProvider, scmBaseURL, token string, cfg *models.Config) (*analyze.Analyzer, error) {
+	scmClient, err := scm.NewScmClient(ctx, scmProvider, scmBaseURL, token, command)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create SCM client: %w", err)
+	}
+
+	opaClient, err := newOpaWithConfig(ctx, cfg)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create OPA client")
+		return nil, err
+	}
+
+	formatter := GetFormatter(opaClient)
+	gitClient := gitops.NewGitClient(nil)
+
+	analyzer := analyze.NewAnalyzer(scmClient, gitClient, formatter, cfg, opaClient)
+	return analyzer, nil
+}
+
 func newOpa(ctx context.Context) (*opa.Opa, error) {
 	if len(skipRules) > 0 {
 		config.Skip = append(config.Skip, models.ConfigSkip{Rule: skipRules})
@@ -204,6 +224,17 @@ func newOpa(ctx context.Context) (*opa.Opa, error) {
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create OPA client")
 		return nil, err
+	}
+
+	return opaClient, nil
+}
+
+// newOpaWithConfig creates an OPA client with request-scoped configuration
+func newOpaWithConfig(ctx context.Context, cfg *models.Config) (*opa.Opa, error) {
+	opaClient, err := opa.NewOpa(ctx, cfg)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create OPA client")
+		return nil, fmt.Errorf("failed to create OPA client: %w", err)
 	}
 
 	return opaClient, nil
