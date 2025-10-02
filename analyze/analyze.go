@@ -3,7 +3,9 @@ package analyze
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -476,6 +478,118 @@ func (a *Analyzer) AnalyzeLocalRepo(ctx context.Context, repoPath string) (*mode
 	}
 
 	return scannedPackage, nil
+}
+
+func (a *Analyzer) AnalyzeManifest(ctx context.Context, manifestReader io.Reader, manifestType string) (*models.PackageInsights, error) {
+	provider := "manifest"
+	providerVersion := "unknown"
+
+	pkgSupplyClient := pkgsupply.NewStaticClient()
+	inventory := scanner.NewInventory(a.Opa, pkgSupplyClient, provider, providerVersion)
+
+	log.Debug().Msg("Starting manifest analysis")
+
+	manifestData, err := io.ReadAll(manifestReader)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read manifest: %w", err)
+	}
+
+	if manifestType == "" {
+		return nil, errors.New("invalid manifest type")
+	}
+
+	filename := a.getManifestFilename(manifestType)
+
+	pkg := a.createManifestPackageInsights(manifestType)
+
+	inventoryScanner := scanner.InventoryScannerMem{
+		Files: map[string][]byte{
+			filename: manifestData,
+		},
+		Parsers: []scanner.MemParser{
+			scanner.NewGithubActionWorkflowParser(),
+			scanner.NewGithubActionsMetadataParser(),
+			scanner.NewGitlabCiParser(),
+			scanner.NewAzurePipelinesParser(),
+			scanner.NewPipelineAsCodeTektonParser(),
+		},
+	}
+
+	scannedPackage, err := inventory.ScanPackageScanner(ctx, *pkg, &inventoryScanner)
+	if err != nil {
+		return nil, fmt.Errorf("failed to scan manifest: %w", err)
+	}
+
+	err = a.finalizeAnalysis(ctx, []*models.PackageInsights{scannedPackage})
+	if err != nil {
+		return nil, err
+	}
+
+	return scannedPackage, nil
+}
+
+func (a *Analyzer) getManifestFilename(manifestType string) string {
+	switch manifestType {
+	case "github-actions":
+		return ".github/workflows/manifest.yml"
+	case "gitlab-ci":
+		return ".gitlab-ci.yml"
+	case "azure-pipelines":
+		return "azure-pipelines.yml"
+	case "tekton":
+		return ".tekton/manifest.yml"
+	default:
+		return ".github/workflows/manifest.yml"
+	}
+}
+
+func (a *Analyzer) createManifestPackageInsights(manifestType string) *models.PackageInsights {
+	var purlString string
+	switch manifestType {
+	case "github-actions":
+		purlString = "pkg:generic/github-actions-workflow"
+	case "gitlab-ci":
+		purlString = "pkg:generic/gitlab-ci-config"
+	case "azure-pipelines":
+		purlString = "pkg:generic/azure-pipelines-config"
+	case "tekton":
+		purlString = "pkg:generic/tekton-pipeline"
+	default:
+		purlString = "pkg:generic/ci-workflow"
+	}
+
+	purl, _ := models.NewPurl(purlString)
+
+	pkg := &models.PackageInsights{
+		LastCommitedAt:     time.Now().Format(time.RFC3339),
+		Purl:               purl.String(),
+		SourceScmType:      "manifest",
+		SourceGitRepo:      "workflow/" + manifestType,
+		SourceGitRef:       "HEAD",
+		SourceGitCommitSha: "unknown",
+		OrgID:              0,
+		RepoID:             0,
+		RepoSize:           0,
+		DefaultBranch:      "main",
+		IsFork:             false,
+		IsEmpty:            false,
+		ForksCount:         0,
+		StarsCount:         0,
+		IsTemplate:         false,
+		HasIssues:          false,
+		OpenIssuesCount:    0,
+		HasWiki:            false,
+		HasDiscussions:     false,
+		PrimaryLanguage:    "YAML",
+		License:            "",
+	}
+
+	err := pkg.NormalizePurl()
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to normalize purl for manifest")
+	}
+
+	return pkg
 }
 
 type Formatter interface {
