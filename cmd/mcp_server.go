@@ -9,6 +9,10 @@ import (
 
 	"github.com/boostsecurityio/poutine/analyze"
 	"github.com/boostsecurityio/poutine/formatters/noop"
+	"github.com/boostsecurityio/poutine/models"
+	"github.com/boostsecurityio/poutine/opa"
+	"github.com/boostsecurityio/poutine/providers/gitops"
+	"github.com/boostsecurityio/poutine/providers/local"
 	"github.com/boostsecurityio/poutine/results"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -16,6 +20,12 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
+
+type mcpAnalysisResponse struct {
+	*models.PackageInsights
+	Findings []results.Finding       `json:"findings"`
+	Rules    map[string]results.Rule `json:"rules"`
+}
 
 var mcpServerCmd = &cobra.Command{
 	Use:   "mcp-server",
@@ -27,6 +37,7 @@ tools to analyze repositories and organizations for supply chain vulnerabilities
 The server communicates via JSON-RPC over stdio and provides these tools:
 - analyze_org: Analyze all repositories in an organization
 - analyze_repo: Analyze a specific repository
+- analyze_local: Analyze a local repository by file path
 - analyze_repo_stale_branches: Analyze stale branches for pull_request_target vulnerabilities
 - analyze_manifest: Analyze CI/CD pipeline manifests for security issues with actionable recommendations (ideal for agents generating secure pipelines)
 
@@ -48,13 +59,13 @@ The SCM access token should be provided via the --token flag or GH_TOKEN/GL_TOKE
 func startMCPServer(ctx context.Context) error {
 	Format = "noop"
 
-	manifestConfig := *config
-	manifestOpaClient, err := newOpaWithConfig(ctx, &manifestConfig)
+	defaultConfig := *config
+	opaClient, err := newOpaWithConfig(ctx, &defaultConfig)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create manifest OPA client")
 		return fmt.Errorf("failed to create manifest opa client: %w", err)
 	}
-	manifestAnalyzer := analyze.NewAnalyzer(nil, nil, &noop.Format{}, &manifestConfig, manifestOpaClient)
+	manifestAnalyzer := analyze.NewAnalyzer(nil, nil, &noop.Format{}, &defaultConfig, opaClient)
 
 	// Create MCP server
 	s := server.NewMCPServer(
@@ -145,6 +156,20 @@ func startMCPServer(ctx context.Context) error {
 		mcp.WithOpenWorldHintAnnotation(true),
 	)
 
+	// Create analyze_local tool
+	analyzeLocalTool := mcp.NewTool("analyze_local",
+		mcp.WithDescription("Analyze a local repository for CI/CD pipeline misconfigurations and supply chain security vulnerabilities by providing a file system path"),
+		mcp.WithString("path",
+			mcp.Required(),
+			mcp.Description("Local file system path to the repository"),
+		),
+		mcp.WithTitleAnnotation("CI/CD Pipeline Security Scan - Local Repository"),
+		mcp.WithReadOnlyHintAnnotation(true),
+		mcp.WithDestructiveHintAnnotation(false),
+		mcp.WithIdempotentHintAnnotation(true),
+		mcp.WithOpenWorldHintAnnotation(false),
+	)
+
 	analyzeManifestTool := mcp.NewTool("analyze_manifest",
 		mcp.WithDescription(`
 CRITICAL: This tool MUST be called when generating or modifying CI/CD pipeline manifests to prevent introducing security vulnerabilities. Skipping this validation may result in creating insecure pipelines with exploitable weaknesses.
@@ -229,6 +254,9 @@ Remember: This tool exists to prevent security vulnerabilities in generated code
 	// Add tool handlers
 	s.AddTool(analyzeOrgTool, handleAnalyzeOrg)
 	s.AddTool(analyzeRepoTool, handleAnalyzeRepo)
+	s.AddTool(analyzeLocalTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return handleAnalyzeLocal(ctx, request, opaClient)
+	})
 	s.AddTool(analyzeStaleBranchesTool, handleAnalyzeStaleBranches)
 	s.AddTool(analyzeManifestTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		return handleAnalyzeManifest(ctx, request, manifestAnalyzer)
@@ -274,7 +302,16 @@ func handleAnalyzeOrg(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 		return mcp.NewToolResultError(fmt.Sprintf("failed to analyze org %s: %v", org, err)), nil
 	}
 
-	resultData, err := json.Marshal(analysisResults)
+	combinedResponses := make([]mcpAnalysisResponse, 0, len(analysisResults))
+	for _, pkgInsights := range analysisResults {
+		combinedResponses = append(combinedResponses, mcpAnalysisResponse{
+			Findings:        pkgInsights.FindingsResults.Findings,
+			Rules:           pkgInsights.FindingsResults.Rules,
+			PackageInsights: pkgInsights,
+		})
+	}
+
+	resultData, err := json.Marshal(combinedResponses)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to marshal results: %v", err)), nil
 	}
@@ -309,7 +346,51 @@ func handleAnalyzeRepo(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 		return mcp.NewToolResultError(fmt.Sprintf("failed to analyze repo %s: %v", repo, err)), nil
 	}
 
-	resultData, err := json.Marshal(analysisResults)
+	combinedResponse := mcpAnalysisResponse{
+		Findings:        analysisResults.FindingsResults.Findings,
+		Rules:           analysisResults.FindingsResults.Rules,
+		PackageInsights: analysisResults,
+	}
+
+	resultData, err := json.Marshal(combinedResponse)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("failed to marshal results: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(string(resultData)), nil
+}
+
+func handleAnalyzeLocal(ctx context.Context, request mcp.CallToolRequest, opaClient *opa.Opa) (*mcp.CallToolResult, error) {
+	path, err := request.RequireString("path")
+	if err != nil {
+		return mcp.NewToolResultError("path parameter is required"), nil
+	}
+
+	requestConfig := *config
+
+	localScmClient, err := local.NewGitSCMClient(ctx, path, nil)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("failed to create local SCM client: %v", err)), nil
+	}
+
+	localGitClient := gitops.NewLocalGitClient(nil)
+
+	formatter := &noop.Format{}
+
+	analyzer := analyze.NewAnalyzer(localScmClient, localGitClient, formatter, &requestConfig, opaClient)
+
+	analysisResults, err := analyzer.AnalyzeLocalRepo(ctx, path)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("failed to analyze local repo at %s: %v", path, err)), nil
+	}
+
+	combinedResponse := mcpAnalysisResponse{
+		Findings:        analysisResults.FindingsResults.Findings,
+		Rules:           analysisResults.FindingsResults.Rules,
+		PackageInsights: analysisResults,
+	}
+
+	resultData, err := json.Marshal(combinedResponse)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to marshal results: %v", err)), nil
 	}
@@ -352,7 +433,13 @@ func handleAnalyzeStaleBranches(ctx context.Context, request mcp.CallToolRequest
 		return mcp.NewToolResultError(fmt.Sprintf("failed to analyze repo %s: %v", repo, err)), nil
 	}
 
-	resultData, err := json.Marshal(analysisResults)
+	combinedResponse := mcpAnalysisResponse{
+		Findings:        analysisResults.FindingsResults.Findings,
+		Rules:           analysisResults.FindingsResults.Rules,
+		PackageInsights: analysisResults,
+	}
+
+	resultData, err := json.Marshal(combinedResponse)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to marshal results: %v", err)), nil
 	}
