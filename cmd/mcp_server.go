@@ -9,6 +9,7 @@ import (
 
 	"github.com/boostsecurityio/poutine/analyze"
 	"github.com/boostsecurityio/poutine/formatters/noop"
+	"github.com/boostsecurityio/poutine/models"
 	"github.com/boostsecurityio/poutine/opa"
 	"github.com/boostsecurityio/poutine/providers/gitops"
 	"github.com/boostsecurityio/poutine/providers/local"
@@ -19,6 +20,12 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
+
+type mcpAnalysisResponse struct {
+	*models.PackageInsights
+	Findings []results.Finding       `json:"findings"`
+	Rules    map[string]results.Rule `json:"rules"`
+}
 
 var mcpServerCmd = &cobra.Command{
 	Use:   "mcp-server",
@@ -295,7 +302,16 @@ func handleAnalyzeOrg(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 		return mcp.NewToolResultError(fmt.Sprintf("failed to analyze org %s: %v", org, err)), nil
 	}
 
-	resultData, err := json.Marshal(analysisResults)
+	combinedResponses := make([]mcpAnalysisResponse, 0, len(analysisResults))
+	for _, pkgInsights := range analysisResults {
+		combinedResponses = append(combinedResponses, mcpAnalysisResponse{
+			Findings:        pkgInsights.FindingsResults.Findings,
+			Rules:           pkgInsights.FindingsResults.Rules,
+			PackageInsights: pkgInsights,
+		})
+	}
+
+	resultData, err := json.Marshal(combinedResponses)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to marshal results: %v", err)), nil
 	}
@@ -330,7 +346,13 @@ func handleAnalyzeRepo(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 		return mcp.NewToolResultError(fmt.Sprintf("failed to analyze repo %s: %v", repo, err)), nil
 	}
 
-	resultData, err := json.Marshal(analysisResults)
+	combinedResponse := mcpAnalysisResponse{
+		Findings:        analysisResults.FindingsResults.Findings,
+		Rules:           analysisResults.FindingsResults.Rules,
+		PackageInsights: analysisResults,
+	}
+
+	resultData, err := json.Marshal(combinedResponse)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to marshal results: %v", err)), nil
 	}
@@ -362,7 +384,13 @@ func handleAnalyzeLocal(ctx context.Context, request mcp.CallToolRequest, opaCli
 		return mcp.NewToolResultError(fmt.Sprintf("failed to analyze local repo at %s: %v", path, err)), nil
 	}
 
-	resultData, err := json.Marshal(analysisResults)
+	combinedResponse := mcpAnalysisResponse{
+		Findings:        analysisResults.FindingsResults.Findings,
+		Rules:           analysisResults.FindingsResults.Rules,
+		PackageInsights: analysisResults,
+	}
+
+	resultData, err := json.Marshal(combinedResponse)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to marshal results: %v", err)), nil
 	}
@@ -405,7 +433,13 @@ func handleAnalyzeStaleBranches(ctx context.Context, request mcp.CallToolRequest
 		return mcp.NewToolResultError(fmt.Sprintf("failed to analyze repo %s: %v", repo, err)), nil
 	}
 
-	resultData, err := json.Marshal(analysisResults)
+	combinedResponse := mcpAnalysisResponse{
+		Findings:        analysisResults.FindingsResults.Findings,
+		Rules:           analysisResults.FindingsResults.Rules,
+		PackageInsights: analysisResults,
+	}
+
+	resultData, err := json.Marshal(combinedResponse)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to marshal results: %v", err)), nil
 	}
