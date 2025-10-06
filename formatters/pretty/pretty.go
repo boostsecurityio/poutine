@@ -137,7 +137,10 @@ func (f *Format) printFindingsPerWorkflow(out io.Writer, results map[string]map[
 			}
 		}
 
-		table.Bulk(blobshaTable)
+		err := table.Bulk(blobshaTable)
+		if err != nil {
+			return fmt.Errorf("failed to bulk insert into table: %w", err)
+		}
 		table.Append([]string{"", "", "", ""})
 	}
 
