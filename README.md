@@ -117,6 +117,18 @@ poutine analyze_org my-org/project --token "$GL_TOKEN" --scm gitlab --scm-base-u
 
 See [.poutine.sample.yml](.poutine.sample.yml) for an example configuration file.
 
+## AI Coding Assistant Integration (MCP)
+
+`poutine` can be integrated with AI coding assistants like Claude Code, Gemini, etc. through the Model Context Protocol (MCP). This allows AI assistants to analyze repositories and validate CI/CD pipelines directly from your development environment.
+
+**Quick Start:**
+```bash
+# Start the MCP server
+poutine mcp-server --token "$(gh auth token)"
+```
+
+For detailed setup instructions for your specific AI coding tool, see the [MCP Integration Guide](MCP_INTEGRATION.md).
+
 ## Building from source
 
 Building `poutine` requires Go 1.25+.
