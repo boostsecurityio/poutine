@@ -112,17 +112,6 @@ func NewOpaWithEmbeddedRules(ctx context.Context, config *models.Config, customF
 	return newOpa, nil
 }
 
-// AddEmbeddedRules adds custom embedded Rego rules to the Opa instance.
-// This method can be called multiple times to add rules from different embedded sources.
-// Call this before Compile() to include the rules in compilation.
-//
-// Parameters:
-//   - customFS: An embed.FS containing custom Rego rules
-//   - customRoot: The root directory within customFS to search for .rego files
-func (o *Opa) AddEmbeddedRules(customFS embed.FS, customRoot string) {
-	o.customEmbeddedRules = append(o.customEmbeddedRules, embeddedSource{fs: customFS, root: customRoot})
-}
-
 func (o *Opa) Print(ctx print.Context, s string) error {
 	log.Debug().Ctx(ctx.Context).Str("location", ctx.Location.String()).Msg(s)
 	return nil

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"os"
 	"os/signal"
@@ -36,6 +37,8 @@ var (
 	Date    string
 )
 var Token string
+var CustomEmbeddedRules *embed.FS
+var CustomEmbeddedRulesRoot string
 var cfgFile string
 var config *models.Config = models.DefaultConfig()
 var skipRules []string
@@ -220,7 +223,16 @@ func newOpa(ctx context.Context) (*opa.Opa, error) {
 	if len(allowedRules) > 0 {
 		config.AllowedRules = allowedRules
 	}
-	opaClient, err := opa.NewOpa(ctx, config)
+
+	var opaClient *opa.Opa
+	var err error
+
+	if CustomEmbeddedRules != nil {
+		opaClient, err = opa.NewOpaWithEmbeddedRules(ctx, config, *CustomEmbeddedRules, CustomEmbeddedRulesRoot)
+	} else {
+		opaClient, err = opa.NewOpa(ctx, config)
+	}
+
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create OPA client")
 		return nil, err
@@ -231,7 +243,15 @@ func newOpa(ctx context.Context) (*opa.Opa, error) {
 
 // newOpaWithConfig creates an OPA client with request-scoped configuration
 func newOpaWithConfig(ctx context.Context, cfg *models.Config) (*opa.Opa, error) {
-	opaClient, err := opa.NewOpa(ctx, cfg)
+	var opaClient *opa.Opa
+	var err error
+
+	if CustomEmbeddedRules != nil {
+		opaClient, err = opa.NewOpaWithEmbeddedRules(ctx, cfg, *CustomEmbeddedRules, CustomEmbeddedRulesRoot)
+	} else {
+		opaClient, err = opa.NewOpa(ctx, cfg)
+	}
+
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create OPA client")
 		return nil, fmt.Errorf("failed to create OPA client: %w", err)

@@ -290,29 +290,6 @@ func TestNewOpaWithEmbeddedRules(t *testing.T) {
 	assert.NotNil(t, builtinRule)
 }
 
-func TestAddEmbeddedRules(t *testing.T) {
-	ctx := context.TODO()
-
-	// Create Opa instance with standard constructor
-	opa, err := NewOpa(ctx, &models.Config{
-		Include: []models.ConfigInclude{},
-	})
-	noOpaErrors(t, err)
-
-	// Add embedded rules using AddEmbeddedRules method
-	opa.AddEmbeddedRules(testEmbeddedRules, "testdata/embedded")
-
-	// Recompile to load the newly added rules
-	err = opa.Compile(ctx, []string{}, []string{})
-	noOpaErrors(t, err)
-
-	// Verify the custom rule is now available
-	var customRule map[string]interface{}
-	err = opa.Eval(ctx, "data.custom.rule", nil, &customRule)
-	noOpaErrors(t, err)
-	assert.Equal(t, "Custom Test Rule", customRule["title"])
-}
-
 func TestEmbeddedRulesWithSkipAndAllowed(t *testing.T) {
 	ctx := context.TODO()
 
