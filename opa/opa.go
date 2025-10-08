@@ -171,8 +171,7 @@ func (o *Opa) Compile(ctx context.Context, skip []string, allowed []string) erro
 	}
 
 	// Load custom embedded rules
-	for i, source := range o.customEmbeddedRules {
-		sourcePrefix := fmt.Sprintf("custom/%d/", i)
+	for _, source := range o.customEmbeddedRules {
 		err := fs.WalkDir(source.fs, ".", func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return err
@@ -191,7 +190,7 @@ func (o *Opa) Compile(ctx context.Context, skip []string, allowed []string) erro
 				return fmt.Errorf("failed to read custom embedded rule %s: %w", path, err)
 			}
 
-			modules[sourcePrefix+path] = string(content)
+			modules["custom/"+path] = string(content)
 			return nil
 		})
 		if err != nil {
