@@ -206,14 +206,14 @@ func (o *Opa) Compile(ctx context.Context, skip []string, allowed []string) erro
 
 			content, err := source.fs.ReadFile(path)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to read custom embedded rule %s: %w", path, err)
 			}
 
 			modules[sourcePrefix+path] = string(content)
 			return nil
 		})
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to load custom embedded rules: %w", err)
 		}
 	}
 
