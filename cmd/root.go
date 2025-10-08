@@ -38,7 +38,6 @@ var (
 )
 var Token string
 var CustomEmbeddedRules *embed.FS
-var CustomEmbeddedRulesRoot string
 var cfgFile string
 var config *models.Config = models.DefaultConfig()
 var skipRules []string
@@ -228,7 +227,7 @@ func newOpa(ctx context.Context) (*opa.Opa, error) {
 	var err error
 
 	if CustomEmbeddedRules != nil {
-		opaClient, err = opa.NewOpaWithEmbeddedRules(ctx, config, *CustomEmbeddedRules, CustomEmbeddedRulesRoot)
+		opaClient, err = opa.NewOpaWithEmbeddedRules(ctx, config, *CustomEmbeddedRules)
 	} else {
 		opaClient, err = opa.NewOpa(ctx, config)
 	}
@@ -247,7 +246,7 @@ func newOpaWithConfig(ctx context.Context, cfg *models.Config) (*opa.Opa, error)
 	var err error
 
 	if CustomEmbeddedRules != nil {
-		opaClient, err = opa.NewOpaWithEmbeddedRules(ctx, cfg, *CustomEmbeddedRules, CustomEmbeddedRulesRoot)
+		opaClient, err = opa.NewOpaWithEmbeddedRules(ctx, cfg, *CustomEmbeddedRules)
 	} else {
 		opaClient, err = opa.NewOpa(ctx, cfg)
 	}

@@ -261,7 +261,7 @@ func TestNewOpaWithEmbeddedRules(t *testing.T) {
 	// Test NewOpaWithEmbeddedRules constructor
 	opa, err := NewOpaWithEmbeddedRules(ctx, &models.Config{
 		Include: []models.ConfigInclude{},
-	}, testEmbeddedRules, "testdata/embedded")
+	}, testEmbeddedRules)
 	noOpaErrors(t, err)
 	assert.NotNil(t, opa)
 
@@ -296,7 +296,7 @@ func TestEmbeddedRulesWithSkipAndAllowed(t *testing.T) {
 	// Test that skip rules work with embedded custom rules
 	opa, err := NewOpaWithEmbeddedRules(ctx, &models.Config{
 		Include: []models.ConfigInclude{},
-	}, testEmbeddedRules, "testdata/embedded")
+	}, testEmbeddedRules)
 	noOpaErrors(t, err)
 
 	// Verify both rules are loaded initially
