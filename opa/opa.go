@@ -27,10 +27,16 @@ var regoFs embed.FS
 //go:embed capabilities.json
 var capabilitiesJson []byte
 
+type embeddedSource struct {
+	fs   embed.FS
+	root string
+}
+
 type Opa struct {
-	Compiler  *ast.Compiler
-	Store     storage.Store
-	LoadPaths []string
+	Compiler            *ast.Compiler
+	Store               storage.Store
+	LoadPaths           []string
+	customEmbeddedRules []embeddedSource
 }
 
 func NewOpa(ctx context.Context, config *models.Config) (*Opa, error) {
@@ -59,6 +65,62 @@ func NewOpa(ctx context.Context, config *models.Config) (*Opa, error) {
 	}
 
 	return newOpa, nil
+}
+
+// NewOpaWithEmbeddedRules creates a new Opa instance with custom embedded Rego rules.
+// This allows library consumers to embed their own Rego rules directly in their binaries
+// alongside Poutine's built-in rules, creating fully self-contained deployments.
+//
+// Parameters:
+//   - ctx: Context for the operation
+//   - config: Poutine configuration
+//   - customFS: An embed.FS containing custom Rego rules
+//   - customRoot: The root directory within customFS to search for .rego files (e.g., "." or "rules")
+//
+// Example usage:
+//
+//	//go:embed rules/*.rego
+//	var CustomRules embed.FS
+//
+//	opa, err := poutineOpa.NewOpaWithEmbeddedRules(ctx, config, CustomRules, "rules")
+func NewOpaWithEmbeddedRules(ctx context.Context, config *models.Config, customFS embed.FS, customRoot string) (*Opa, error) {
+	registerBuiltinFunctions()
+
+	newOpa := &Opa{
+		Store: inmem.NewFromObject(map[string]interface {
+		}{
+			"config": models.DefaultConfig(),
+		}),
+		customEmbeddedRules: []embeddedSource{{fs: customFS, root: customRoot}},
+	}
+
+	if err := newOpa.WithConfig(ctx, config); err != nil {
+		return nil, fmt.Errorf("failed to set opa with config: %w", err)
+	}
+
+	subset := []string{}
+	for _, skip := range config.Skip {
+		if skip.HasOnlyRule() {
+			subset = append(subset, skip.Rule...)
+		}
+	}
+
+	if err := newOpa.Compile(ctx, subset, config.AllowedRules); err != nil {
+		return nil, fmt.Errorf("failed to initialize opa compiler: %w", err)
+	}
+
+	return newOpa, nil
+}
+
+// AddEmbeddedRules adds custom embedded Rego rules to the Opa instance.
+// This method can be called multiple times to add rules from different embedded sources.
+// Call this before Compile() to include the rules in compilation.
+//
+// Parameters:
+//   - customFS: An embed.FS containing custom Rego rules
+//   - customRoot: The root directory within customFS to search for .rego files
+func (o *Opa) AddEmbeddedRules(customFS embed.FS, customRoot string) {
+	o.customEmbeddedRules = append(o.customEmbeddedRules, embeddedSource{fs: customFS, root: customRoot})
 }
 
 func (o *Opa) Print(ctx print.Context, s string) error {
@@ -103,6 +165,8 @@ func skipRule(path string, skip []string, allowed []string) bool {
 
 func (o *Opa) Compile(ctx context.Context, skip []string, allowed []string) error {
 	modules := make(map[string]string)
+
+	// Load Poutine's built-in rules
 	err := fs.WalkDir(regoFs, "rego", func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() {
 			return err
@@ -124,6 +188,36 @@ func (o *Opa) Compile(ctx context.Context, skip []string, allowed []string) erro
 		return err
 	}
 
+	// Load custom embedded rules
+	for i, source := range o.customEmbeddedRules {
+		sourcePrefix := fmt.Sprintf("custom/%d/", i)
+		err := fs.WalkDir(source.fs, source.root, func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+
+			if d.IsDir() {
+				return nil
+			}
+
+			if skipRule(path, skip, allowed) {
+				return nil
+			}
+
+			content, err := source.fs.ReadFile(path)
+			if err != nil {
+				return err
+			}
+
+			modules[sourcePrefix+path] = string(content)
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	// Load rules from filesystem paths
 	result, err := loader.NewFileLoader().
 		WithProcessAnnotation(true).
 		WithRegoVersion(ast.RegoV0CompatV1).
