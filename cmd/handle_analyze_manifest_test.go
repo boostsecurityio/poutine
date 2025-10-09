@@ -340,7 +340,7 @@ jobs:
 
 		// Should have multiple findings including injection
 		assert.Greater(t, len(insights.Findings), 1, "Should have multiple findings without filter")
-		
+
 		// Verify injection rule is present
 		hasInjection := false
 		for _, finding := range insights.Findings {
@@ -379,7 +379,7 @@ jobs:
 		// Should have only injection finding
 		assert.Len(t, insights.Findings, 1, "Should have only one finding with filter")
 		assert.Equal(t, "injection", insights.Findings[0].RuleId, "Should only have injection finding")
-		
+
 		// Should have only injection rule
 		assert.Len(t, insights.Rules, 1, "Should have only one rule with filter")
 		_, hasInjectionRule := insights.Rules["injection"]
@@ -411,8 +411,8 @@ jobs:
 		require.NoError(t, err)
 
 		// Should have no findings
-		assert.Len(t, insights.Findings, 0, "Should have no findings with non-existent rule filter")
-		assert.Len(t, insights.Rules, 0, "Should have no rules with non-existent rule filter")
+		assert.Empty(t, insights.Findings, "Should have no findings with non-existent rule filter")
+		assert.Empty(t, insights.Rules, "Should have no rules with non-existent rule filter")
 
 		t.Logf("Found %d findings with non-existent rule filter", len(insights.Findings))
 	})

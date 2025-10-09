@@ -513,12 +513,12 @@ func handleAnalyzeManifest(ctx context.Context, request mcp.CallToolRequest, ana
 	if len(allowedRulesParam) > 0 {
 		requestConfig := *config
 		requestConfig.AllowedRules = allowedRulesParam
-		
+
 		requestOpaClient, err := newOpaWithConfig(ctx, &requestConfig)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("failed to create OPA client with allowed rules: %v", err)), nil
 		}
-		
+
 		requestAnalyzer = analyze.NewAnalyzer(nil, nil, &noop.Format{}, &requestConfig, requestOpaClient)
 	} else {
 		requestAnalyzer = analyzer
