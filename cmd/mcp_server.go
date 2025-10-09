@@ -59,17 +59,18 @@ The SCM access token should be provided via the --token flag or GH_TOKEN/GL_TOKE
 func startMCPServer(ctx context.Context) error {
 	Format = "noop"
 
-	defaultConfig := *config
+	// Create default config with global allowedRules applied
+	mcpDefaultConfig := *config
 	// Apply global allowedRules setting to MCP server config
 	if len(allowedRules) > 0 {
-		defaultConfig.AllowedRules = allowedRules
+		mcpDefaultConfig.AllowedRules = allowedRules
 	}
-	opaClient, err := newOpaWithConfig(ctx, &defaultConfig)
+	opaClient, err := newOpaWithConfig(ctx, &mcpDefaultConfig)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create manifest OPA client")
 		return fmt.Errorf("failed to create manifest opa client: %w", err)
 	}
-	manifestAnalyzer := analyze.NewAnalyzer(nil, nil, &noop.Format{}, &defaultConfig, opaClient)
+	manifestAnalyzer := analyze.NewAnalyzer(nil, nil, &noop.Format{}, &mcpDefaultConfig, opaClient)
 
 	// Create MCP server
 	s := server.NewMCPServer(
@@ -276,12 +277,18 @@ Remember: This tool exists to prevent security vulnerabilities in generated code
 	)
 
 	// Add tool handlers
-	s.AddTool(analyzeOrgTool, handleAnalyzeOrg)
-	s.AddTool(analyzeRepoTool, handleAnalyzeRepo)
-	s.AddTool(analyzeLocalTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		return handleAnalyzeLocal(ctx, request, opaClient)
+	s.AddTool(analyzeOrgTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return handleAnalyzeOrg(ctx, request, &mcpDefaultConfig)
 	})
-	s.AddTool(analyzeStaleBranchesTool, handleAnalyzeStaleBranches)
+	s.AddTool(analyzeRepoTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return handleAnalyzeRepo(ctx, request, &mcpDefaultConfig)
+	})
+	s.AddTool(analyzeLocalTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return handleAnalyzeLocal(ctx, request, opaClient, &mcpDefaultConfig)
+	})
+	s.AddTool(analyzeStaleBranchesTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return handleAnalyzeStaleBranches(ctx, request, &mcpDefaultConfig)
+	})
 	s.AddTool(analyzeManifestTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		return handleAnalyzeManifest(ctx, request, manifestAnalyzer)
 	})
@@ -297,7 +304,7 @@ Remember: This tool exists to prevent security vulnerabilities in generated code
 	return nil
 }
 
-func handleAnalyzeOrg(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func handleAnalyzeOrg(ctx context.Context, request mcp.CallToolRequest, defaultConfig *models.Config) (*mcp.CallToolResult, error) {
 	token := viper.GetString("token")
 	if token == "" {
 		return mcp.NewToolResultError("SCM access token is required. Please provide it via --token flag or GH_TOKEN/GL_TOKEN environment variable"), nil
@@ -314,7 +321,7 @@ func handleAnalyzeOrg(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 	ignoreForks := request.GetBool("ignore_forks", false)
 	allowedRulesParam := request.GetStringSlice("allowed_rules", []string{})
 
-	requestConfig := *config
+	requestConfig := *defaultConfig
 	requestConfig.IgnoreForks = ignoreForks
 	if len(allowedRulesParam) > 0 {
 		requestConfig.AllowedRules = allowedRulesParam
@@ -347,7 +354,7 @@ func handleAnalyzeOrg(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 	return mcp.NewToolResultText(string(resultData)), nil
 }
 
-func handleAnalyzeRepo(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func handleAnalyzeRepo(ctx context.Context, request mcp.CallToolRequest, defaultConfig *models.Config) (*mcp.CallToolResult, error) {
 	token := viper.GetString("token")
 	if token == "" {
 		return mcp.NewToolResultError("SCM access token is required. Please provide it via --token flag or GH_TOKEN/GL_TOKEN environment variable"), nil
@@ -363,7 +370,7 @@ func handleAnalyzeRepo(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 	ref := request.GetString("ref", "HEAD")
 	allowedRulesParam := request.GetStringSlice("allowed_rules", []string{})
 
-	requestConfig := *config
+	requestConfig := *defaultConfig
 	if len(allowedRulesParam) > 0 {
 		requestConfig.AllowedRules = allowedRulesParam
 	}
@@ -392,7 +399,7 @@ func handleAnalyzeRepo(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 	return mcp.NewToolResultText(string(resultData)), nil
 }
 
-func handleAnalyzeLocal(ctx context.Context, request mcp.CallToolRequest, opaClient *opa.Opa) (*mcp.CallToolResult, error) {
+func handleAnalyzeLocal(ctx context.Context, request mcp.CallToolRequest, opaClient *opa.Opa, defaultConfig *models.Config) (*mcp.CallToolResult, error) {
 	path, err := request.RequireString("path")
 	if err != nil {
 		return mcp.NewToolResultError("path parameter is required"), nil
@@ -400,7 +407,7 @@ func handleAnalyzeLocal(ctx context.Context, request mcp.CallToolRequest, opaCli
 
 	allowedRulesParam := request.GetStringSlice("allowed_rules", []string{})
 
-	requestConfig := *config
+	requestConfig := *defaultConfig
 	if len(allowedRulesParam) > 0 {
 		requestConfig.AllowedRules = allowedRulesParam
 	}
@@ -446,7 +453,7 @@ func handleAnalyzeLocal(ctx context.Context, request mcp.CallToolRequest, opaCli
 	return mcp.NewToolResultText(string(resultData)), nil
 }
 
-func handleAnalyzeStaleBranches(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func handleAnalyzeStaleBranches(ctx context.Context, request mcp.CallToolRequest, defaultConfig *models.Config) (*mcp.CallToolResult, error) {
 	token := viper.GetString("token")
 	if token == "" {
 		return mcp.NewToolResultError("SCM access token is required. Please provide it via --token flag or GH_TOKEN/GL_TOKEN environment variable"), nil
@@ -470,7 +477,7 @@ func handleAnalyzeStaleBranches(ctx context.Context, request mcp.CallToolRequest
 		return mcp.NewToolResultError(fmt.Sprintf("error compiling regex: %v", err)), nil
 	}
 
-	requestConfig := *config
+	requestConfig := *defaultConfig
 	if len(allowedRulesParam) > 0 {
 		requestConfig.AllowedRules = allowedRulesParam
 	}

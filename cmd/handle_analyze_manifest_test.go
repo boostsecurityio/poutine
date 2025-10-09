@@ -417,3 +417,71 @@ jobs:
 		t.Logf("Found %d findings with non-existent rule filter", len(insights.Findings))
 	})
 }
+
+func TestMCPServerGlobalAllowedRules(t *testing.T) {
+	ctx := context.Background()
+
+	// Save original state
+	originalAllowedRules := allowedRules
+	defer func() {
+		allowedRules = originalAllowedRules
+	}()
+
+	// Simulate global --allowed-rules injection flag
+	allowedRules = []string{"injection"}
+
+	// Create analyzer with global allowed rules (simulating startMCPServer behavior)
+	testConfig := *config
+	if len(allowedRules) > 0 {
+		testConfig.AllowedRules = allowedRules
+	}
+
+	vulnerableManifest := `name: Test Workflow
+on:
+  pull_request_target:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Run test
+        run: echo "Testing ${{ github.event.pull_request.head.ref }}"`
+
+	t.Run("handleAnalyzeManifest respects global allowed rules", func(t *testing.T) {
+		opaClient, err := newOpaWithConfig(ctx, &testConfig)
+		require.NoError(t, err)
+		manifestAnalyzer := analyze.NewAnalyzer(nil, nil, &noop.Format{}, &testConfig, opaClient)
+
+		// Call without allowed_rules parameter (should inherit global)
+		request := NewCallToolRequest("analyze_manifest", map[string]interface{}{
+			"content":       vulnerableManifest,
+			"manifest_type": "github-actions",
+		})
+
+		result, err := handleAnalyzeManifest(ctx, request, manifestAnalyzer)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		assert.False(t, result.IsError)
+
+		contentText := extractTextFromContent(t, result.Content[0])
+		require.NotEmpty(t, contentText)
+
+		var insights struct {
+			Findings []results.Finding       `json:"findings"`
+			Rules    map[string]results.Rule `json:"rules"`
+		}
+		err = json.Unmarshal([]byte(contentText), &insights)
+		require.NoError(t, err)
+
+		// Should have only injection finding due to global allowed rules
+		assert.Len(t, insights.Findings, 1, "Should have only injection finding with global allowed rules")
+		assert.Equal(t, "injection", insights.Findings[0].RuleId, "Should only have injection finding")
+
+		t.Logf("Global allowed rules test: Found %d findings", len(insights.Findings))
+	})
+}
