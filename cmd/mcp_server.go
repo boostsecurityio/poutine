@@ -59,13 +59,18 @@ The SCM access token should be provided via the --token flag or GH_TOKEN/GL_TOKE
 func startMCPServer(ctx context.Context) error {
 	Format = "noop"
 
-	defaultConfig := *config
-	opaClient, err := newOpaWithConfig(ctx, &defaultConfig)
+	// Create default config with global allowedRules applied
+	mcpDefaultConfig := *config
+	// Apply global allowedRules setting to MCP server config
+	if len(allowedRules) > 0 {
+		mcpDefaultConfig.AllowedRules = allowedRules
+	}
+	opaClient, err := newOpaWithConfig(ctx, &mcpDefaultConfig)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create manifest OPA client")
 		return fmt.Errorf("failed to create manifest opa client: %w", err)
 	}
-	manifestAnalyzer := analyze.NewAnalyzer(nil, nil, &noop.Format{}, &defaultConfig, opaClient)
+	manifestAnalyzer := analyze.NewAnalyzer(nil, nil, &noop.Format{}, &mcpDefaultConfig, opaClient)
 
 	// Create MCP server
 	s := server.NewMCPServer(
@@ -95,6 +100,10 @@ func startMCPServer(ctx context.Context) error {
 		mcp.WithBoolean("ignore_forks",
 			mcp.Description("Ignore forked repositories"),
 		),
+		mcp.WithArray("allowed_rules",
+			mcp.Description("Filter to only run specified rules (optional)"),
+			mcp.WithStringItems(),
+		),
 		mcp.WithTitleAnnotation("CI/CD Pipeline Security Scan - Organization"),
 		mcp.WithReadOnlyHintAnnotation(true),
 		mcp.WithDestructiveHintAnnotation(false),
@@ -118,6 +127,10 @@ func startMCPServer(ctx context.Context) error {
 		),
 		mcp.WithString("ref",
 			mcp.Description("Commit or branch to analyze"),
+		),
+		mcp.WithArray("allowed_rules",
+			mcp.Description("Filter to only run specified rules (optional)"),
+			mcp.WithStringItems(),
 		),
 		mcp.WithTitleAnnotation("CI/CD Pipeline Security Scan - Repository"),
 		mcp.WithReadOnlyHintAnnotation(true),
@@ -149,6 +162,10 @@ func startMCPServer(ctx context.Context) error {
 		mcp.WithString("regex",
 			mcp.Description("Regex to check if the workflow is accessible in stale branches"),
 		),
+		mcp.WithArray("allowed_rules",
+			mcp.Description("Filter to only run specified rules (optional)"),
+			mcp.WithStringItems(),
+		),
 		mcp.WithTitleAnnotation("CI/CD Pipeline Security Scan - Stale Branches"),
 		mcp.WithReadOnlyHintAnnotation(true),
 		mcp.WithDestructiveHintAnnotation(false),
@@ -162,6 +179,10 @@ func startMCPServer(ctx context.Context) error {
 		mcp.WithString("path",
 			mcp.Required(),
 			mcp.Description("Local file system path to the repository"),
+		),
+		mcp.WithArray("allowed_rules",
+			mcp.Description("Filter to only run specified rules (optional)"),
+			mcp.WithStringItems(),
 		),
 		mcp.WithTitleAnnotation("CI/CD Pipeline Security Scan - Local Repository"),
 		mcp.WithReadOnlyHintAnnotation(true),
@@ -244,6 +265,10 @@ Remember: This tool exists to prevent security vulnerabilities in generated code
 			mcp.Description("Type of CI/CD manifest: 'github-actions' for GitHub Actions workflows, 'gitlab-ci' for GitLab CI, 'azure-pipelines' for Azure Pipelines, 'tekton' for Tekton pipelines"),
 			mcp.Enum("github-actions", "gitlab-ci", "azure-pipelines", "tekton"),
 		),
+		mcp.WithArray("allowed_rules",
+			mcp.Description("Filter to only run specified rules (optional)"),
+			mcp.WithStringItems(),
+		),
 		mcp.WithTitleAnnotation("CI/CD Pipeline Security Scan - Manifest"),
 		mcp.WithReadOnlyHintAnnotation(true),
 		mcp.WithDestructiveHintAnnotation(false),
@@ -252,12 +277,18 @@ Remember: This tool exists to prevent security vulnerabilities in generated code
 	)
 
 	// Add tool handlers
-	s.AddTool(analyzeOrgTool, handleAnalyzeOrg)
-	s.AddTool(analyzeRepoTool, handleAnalyzeRepo)
-	s.AddTool(analyzeLocalTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		return handleAnalyzeLocal(ctx, request, opaClient)
+	s.AddTool(analyzeOrgTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return handleAnalyzeOrg(ctx, request, &mcpDefaultConfig)
 	})
-	s.AddTool(analyzeStaleBranchesTool, handleAnalyzeStaleBranches)
+	s.AddTool(analyzeRepoTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return handleAnalyzeRepo(ctx, request, &mcpDefaultConfig)
+	})
+	s.AddTool(analyzeLocalTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return handleAnalyzeLocal(ctx, request, opaClient, &mcpDefaultConfig)
+	})
+	s.AddTool(analyzeStaleBranchesTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return handleAnalyzeStaleBranches(ctx, request, &mcpDefaultConfig)
+	})
 	s.AddTool(analyzeManifestTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		return handleAnalyzeManifest(ctx, request, manifestAnalyzer)
 	})
@@ -273,7 +304,7 @@ Remember: This tool exists to prevent security vulnerabilities in generated code
 	return nil
 }
 
-func handleAnalyzeOrg(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func handleAnalyzeOrg(ctx context.Context, request mcp.CallToolRequest, defaultConfig *models.Config) (*mcp.CallToolResult, error) {
 	token := viper.GetString("token")
 	if token == "" {
 		return mcp.NewToolResultError("SCM access token is required. Please provide it via --token flag or GH_TOKEN/GL_TOKEN environment variable"), nil
@@ -288,9 +319,13 @@ func handleAnalyzeOrg(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 	scmBaseURLStr := request.GetString("scm_base_url", "")
 	threads := int(request.GetFloat("threads", 2))
 	ignoreForks := request.GetBool("ignore_forks", false)
+	allowedRulesParam := request.GetStringSlice("allowed_rules", []string{})
 
-	requestConfig := *config
+	requestConfig := *defaultConfig
 	requestConfig.IgnoreForks = ignoreForks
+	if len(allowedRulesParam) > 0 {
+		requestConfig.AllowedRules = allowedRulesParam
+	}
 
 	analyzer, err := GetAnalyzerWithConfig(ctx, "analyze_org", scmProvider, scmBaseURLStr, token, &requestConfig)
 	if err != nil {
@@ -319,7 +354,7 @@ func handleAnalyzeOrg(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 	return mcp.NewToolResultText(string(resultData)), nil
 }
 
-func handleAnalyzeRepo(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func handleAnalyzeRepo(ctx context.Context, request mcp.CallToolRequest, defaultConfig *models.Config) (*mcp.CallToolResult, error) {
 	token := viper.GetString("token")
 	if token == "" {
 		return mcp.NewToolResultError("SCM access token is required. Please provide it via --token flag or GH_TOKEN/GL_TOKEN environment variable"), nil
@@ -333,8 +368,12 @@ func handleAnalyzeRepo(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 	scmProvider := request.GetString("scm_provider", "github")
 	scmBaseURLStr := request.GetString("scm_base_url", "")
 	ref := request.GetString("ref", "HEAD")
+	allowedRulesParam := request.GetStringSlice("allowed_rules", []string{})
 
-	requestConfig := *config
+	requestConfig := *defaultConfig
+	if len(allowedRulesParam) > 0 {
+		requestConfig.AllowedRules = allowedRulesParam
+	}
 
 	analyzer, err := GetAnalyzerWithConfig(ctx, "analyze_repo", scmProvider, scmBaseURLStr, token, &requestConfig)
 	if err != nil {
@@ -360,13 +399,29 @@ func handleAnalyzeRepo(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 	return mcp.NewToolResultText(string(resultData)), nil
 }
 
-func handleAnalyzeLocal(ctx context.Context, request mcp.CallToolRequest, opaClient *opa.Opa) (*mcp.CallToolResult, error) {
+func handleAnalyzeLocal(ctx context.Context, request mcp.CallToolRequest, opaClient *opa.Opa, defaultConfig *models.Config) (*mcp.CallToolResult, error) {
 	path, err := request.RequireString("path")
 	if err != nil {
 		return mcp.NewToolResultError("path parameter is required"), nil
 	}
 
-	requestConfig := *config
+	allowedRulesParam := request.GetStringSlice("allowed_rules", []string{})
+
+	requestConfig := *defaultConfig
+	if len(allowedRulesParam) > 0 {
+		requestConfig.AllowedRules = allowedRulesParam
+	}
+
+	// Create a new OPA client with the request-specific config if allowed_rules is specified
+	var requestOpaClient *opa.Opa
+	if len(allowedRulesParam) > 0 {
+		requestOpaClient, err = newOpaWithConfig(ctx, &requestConfig)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("failed to create OPA client with allowed rules: %v", err)), nil
+		}
+	} else {
+		requestOpaClient = opaClient
+	}
 
 	localScmClient, err := local.NewGitSCMClient(ctx, path, nil)
 	if err != nil {
@@ -377,7 +432,7 @@ func handleAnalyzeLocal(ctx context.Context, request mcp.CallToolRequest, opaCli
 
 	formatter := &noop.Format{}
 
-	analyzer := analyze.NewAnalyzer(localScmClient, localGitClient, formatter, &requestConfig, opaClient)
+	analyzer := analyze.NewAnalyzer(localScmClient, localGitClient, formatter, &requestConfig, requestOpaClient)
 
 	analysisResults, err := analyzer.AnalyzeLocalRepo(ctx, path)
 	if err != nil {
@@ -398,7 +453,7 @@ func handleAnalyzeLocal(ctx context.Context, request mcp.CallToolRequest, opaCli
 	return mcp.NewToolResultText(string(resultData)), nil
 }
 
-func handleAnalyzeStaleBranches(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func handleAnalyzeStaleBranches(ctx context.Context, request mcp.CallToolRequest, defaultConfig *models.Config) (*mcp.CallToolResult, error) {
 	token := viper.GetString("token")
 	if token == "" {
 		return mcp.NewToolResultError("SCM access token is required. Please provide it via --token flag or GH_TOKEN/GL_TOKEN environment variable"), nil
@@ -414,6 +469,7 @@ func handleAnalyzeStaleBranches(ctx context.Context, request mcp.CallToolRequest
 	threads := int(request.GetFloat("threads", 5))
 	expand := request.GetBool("expand", false)
 	regexStr := request.GetString("regex", "pull_request_target")
+	allowedRulesParam := request.GetStringSlice("allowed_rules", []string{})
 
 	// Compile the regex
 	reg, err := regexp.Compile(regexStr)
@@ -421,7 +477,10 @@ func handleAnalyzeStaleBranches(ctx context.Context, request mcp.CallToolRequest
 		return mcp.NewToolResultError(fmt.Sprintf("error compiling regex: %v", err)), nil
 	}
 
-	requestConfig := *config
+	requestConfig := *defaultConfig
+	if len(allowedRulesParam) > 0 {
+		requestConfig.AllowedRules = allowedRulesParam
+	}
 
 	analyzer, err := GetAnalyzerWithConfig(ctx, "analyze_repo_stale_branches", scmProvider, scmBaseURLStr, token, &requestConfig)
 	if err != nil {
@@ -454,9 +513,26 @@ func handleAnalyzeManifest(ctx context.Context, request mcp.CallToolRequest, ana
 	}
 
 	manifestType := request.GetString("manifest_type", "github-actions")
+	allowedRulesParam := request.GetStringSlice("allowed_rules", []string{})
+
+	// Create a new analyzer with allowed rules if specified
+	var requestAnalyzer *analyze.Analyzer
+	if len(allowedRulesParam) > 0 {
+		requestConfig := *config
+		requestConfig.AllowedRules = allowedRulesParam
+
+		requestOpaClient, err := newOpaWithConfig(ctx, &requestConfig)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("failed to create OPA client with allowed rules: %v", err)), nil
+		}
+
+		requestAnalyzer = analyze.NewAnalyzer(nil, nil, &noop.Format{}, &requestConfig, requestOpaClient)
+	} else {
+		requestAnalyzer = analyzer
+	}
 
 	manifestReader := strings.NewReader(content)
-	analysisResults, err := analyzer.AnalyzeManifest(ctx, manifestReader, manifestType)
+	analysisResults, err := requestAnalyzer.AnalyzeManifest(ctx, manifestReader, manifestType)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to analyze manifest: %v", err)), nil
 	}
