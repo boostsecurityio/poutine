@@ -14,7 +14,7 @@ import (
 // and don't include heavy fields like github_actions_workflows
 func TestLightweightMCPResponse(t *testing.T) {
 	ctx := context.Background()
-	
+
 	analyzer, err := createTestAnalyzer(ctx)
 	require.NoError(t, err)
 
@@ -36,7 +36,7 @@ jobs:
 		assert.False(t, result.IsError)
 
 		contentText := extractTextFromContent(t, result.Content[0])
-		
+
 		// Verify it doesn't contain heavy fields
 		assert.NotContains(t, contentText, "github_actions_workflows")
 		assert.NotContains(t, contentText, "github_actions_metadata")
@@ -44,22 +44,22 @@ jobs:
 		assert.NotContains(t, contentText, "gitlabci_configs")
 		assert.NotContains(t, contentText, "package_dependencies")
 		assert.NotContains(t, contentText, "build_dependencies")
-		
+
 		// Verify it contains the essential fields
 		assert.Contains(t, contentText, "findings")
 		assert.Contains(t, contentText, "rules")
-		
+
 		// Parse and verify structure
 		var response map[string]interface{}
 		err = json.Unmarshal([]byte(contentText), &response)
 		require.NoError(t, err)
-		
+
 		// Should only have findings and rules
 		expectedFields := map[string]bool{
 			"findings": true,
 			"rules":    true,
 		}
-		
+
 		for key := range response {
 			_, expected := expectedFields[key]
 			assert.True(t, expected, "Unexpected field '%s' in lightweight response", key)
@@ -78,12 +78,12 @@ func TestMCPResponseStructure(t *testing.T) {
 		CommitSha:  "abc123",
 		LastCommit: "2023-01-01T00:00:00Z",
 	}
-	
+
 	data, err := json.Marshal(response)
 	require.NoError(t, err)
-	
+
 	jsonStr := string(data)
-	
+
 	// Verify lightweight structure
 	assert.Contains(t, jsonStr, "\"findings\":")
 	assert.Contains(t, jsonStr, "\"rules\":")
@@ -91,7 +91,7 @@ func TestMCPResponseStructure(t *testing.T) {
 	assert.Contains(t, jsonStr, "\"ref\":")
 	assert.Contains(t, jsonStr, "\"commit_sha\":")
 	assert.Contains(t, jsonStr, "\"last_commit\":")
-	
+
 	// Verify it doesn't contain heavy fields
 	assert.NotContains(t, jsonStr, "github_actions_workflows")
 	assert.NotContains(t, jsonStr, "package_dependencies")
@@ -108,18 +108,18 @@ func TestMCPResponseOmitsEmptyFields(t *testing.T) {
 		Rules:    map[string]results.Rule{},
 		// Leave repository metadata fields empty
 	}
-	
+
 	data, err := json.Marshal(response)
 	require.NoError(t, err)
-	
+
 	jsonStr := string(data)
-	
+
 	// These fields should be omitted when empty due to omitempty tag
 	assert.NotContains(t, jsonStr, "\"repository\":")
 	assert.NotContains(t, jsonStr, "\"ref\":")
 	assert.NotContains(t, jsonStr, "\"commit_sha\":")
 	assert.NotContains(t, jsonStr, "\"last_commit\":")
-	
+
 	// These required fields should always be present
 	assert.Contains(t, jsonStr, "\"findings\":")
 	assert.Contains(t, jsonStr, "\"rules\":")
@@ -129,7 +129,7 @@ func TestMCPResponseOmitsEmptyFields(t *testing.T) {
 func TestMCPResponseSizeReduction(t *testing.T) {
 	// This test documents the reduction in response size
 	// by comparing what the old response would have contained vs new response
-	
+
 	lightweightResponse := mcpAnalysisResponse{
 		Findings:   []results.Finding{},
 		Rules:      map[string]results.Rule{},
@@ -138,13 +138,13 @@ func TestMCPResponseSizeReduction(t *testing.T) {
 		CommitSha:  "abc123",
 		LastCommit: "2023-01-01T00:00:00Z",
 	}
-	
+
 	lightweightData, err := json.Marshal(lightweightResponse)
 	require.NoError(t, err)
-	
+
 	t.Logf("Lightweight response size: %d bytes", len(lightweightData))
 	t.Logf("Lightweight response: %s", string(lightweightData))
-	
+
 	// The lightweight response should be significantly smaller than a full PackageInsights response
 	// which would include many more fields like workflows, dependencies, repo stats, etc.
 	assert.Less(t, len(lightweightData), 1000, "Lightweight response should be under 1KB for empty findings")
