@@ -9,7 +9,6 @@ import (
 
 	"github.com/boostsecurityio/poutine/analyze"
 	"github.com/boostsecurityio/poutine/formatters/noop"
-	"github.com/boostsecurityio/poutine/models"
 	"github.com/boostsecurityio/poutine/opa"
 	"github.com/boostsecurityio/poutine/providers/gitops"
 	"github.com/boostsecurityio/poutine/providers/local"
@@ -21,10 +20,16 @@ import (
 	"github.com/spf13/viper"
 )
 
+// mcpAnalysisResponse provides a lightweight response for MCP tools
+// that includes only the essential security findings and minimal repository metadata
 type mcpAnalysisResponse struct {
-	*models.PackageInsights
 	Findings []results.Finding       `json:"findings"`
 	Rules    map[string]results.Rule `json:"rules"`
+	// Essential repository metadata
+	Repository  string `json:"repository,omitempty"`
+	Ref         string `json:"ref,omitempty"`
+	CommitSha   string `json:"commit_sha,omitempty"`
+	LastCommit  string `json:"last_commit,omitempty"`
 }
 
 var mcpServerCmd = &cobra.Command{
@@ -305,9 +310,12 @@ func handleAnalyzeOrg(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 	combinedResponses := make([]mcpAnalysisResponse, 0, len(analysisResults))
 	for _, pkgInsights := range analysisResults {
 		combinedResponses = append(combinedResponses, mcpAnalysisResponse{
-			Findings:        pkgInsights.FindingsResults.Findings,
-			Rules:           pkgInsights.FindingsResults.Rules,
-			PackageInsights: pkgInsights,
+			Findings:    pkgInsights.FindingsResults.Findings,
+			Rules:       pkgInsights.FindingsResults.Rules,
+			Repository:  pkgInsights.SourceGitRepo,
+			Ref:         pkgInsights.SourceGitRef,
+			CommitSha:   pkgInsights.SourceGitCommitSha,
+			LastCommit:  pkgInsights.LastCommitedAt,
 		})
 	}
 
@@ -347,9 +355,12 @@ func handleAnalyzeRepo(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 	}
 
 	combinedResponse := mcpAnalysisResponse{
-		Findings:        analysisResults.FindingsResults.Findings,
-		Rules:           analysisResults.FindingsResults.Rules,
-		PackageInsights: analysisResults,
+		Findings:    analysisResults.FindingsResults.Findings,
+		Rules:       analysisResults.FindingsResults.Rules,
+		Repository:  analysisResults.SourceGitRepo,
+		Ref:         analysisResults.SourceGitRef,
+		CommitSha:   analysisResults.SourceGitCommitSha,
+		LastCommit:  analysisResults.LastCommitedAt,
 	}
 
 	resultData, err := json.Marshal(combinedResponse)
@@ -385,9 +396,12 @@ func handleAnalyzeLocal(ctx context.Context, request mcp.CallToolRequest, opaCli
 	}
 
 	combinedResponse := mcpAnalysisResponse{
-		Findings:        analysisResults.FindingsResults.Findings,
-		Rules:           analysisResults.FindingsResults.Rules,
-		PackageInsights: analysisResults,
+		Findings:    analysisResults.FindingsResults.Findings,
+		Rules:       analysisResults.FindingsResults.Rules,
+		Repository:  analysisResults.SourceGitRepo,
+		Ref:         analysisResults.SourceGitRef,
+		CommitSha:   analysisResults.SourceGitCommitSha,
+		LastCommit:  analysisResults.LastCommitedAt,
 	}
 
 	resultData, err := json.Marshal(combinedResponse)
@@ -434,9 +448,12 @@ func handleAnalyzeStaleBranches(ctx context.Context, request mcp.CallToolRequest
 	}
 
 	combinedResponse := mcpAnalysisResponse{
-		Findings:        analysisResults.FindingsResults.Findings,
-		Rules:           analysisResults.FindingsResults.Rules,
-		PackageInsights: analysisResults,
+		Findings:    analysisResults.FindingsResults.Findings,
+		Rules:       analysisResults.FindingsResults.Rules,
+		Repository:  analysisResults.SourceGitRepo,
+		Ref:         analysisResults.SourceGitRef,
+		CommitSha:   analysisResults.SourceGitCommitSha,
+		LastCommit:  analysisResults.LastCommitedAt,
 	}
 
 	resultData, err := json.Marshal(combinedResponse)
