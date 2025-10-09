@@ -26,8 +26,10 @@ type mcpAnalysisResponse struct {
 	Findings []results.Finding       `json:"findings"`
 	Rules    map[string]results.Rule `json:"rules"`
 	// Essential repository metadata
+	Purl       string `json:"purl,omitempty"`
 	Repository string `json:"repository,omitempty"`
-	Ref        string `json:"ref,omitempty"`
+	ScmType    string `json:"scm_type,omitempty"`
+	GitRef     string `json:"git_ref,omitempty"`
 	CommitSha  string `json:"commit_sha,omitempty"`
 	LastCommit string `json:"last_commit,omitempty"`
 }
@@ -312,8 +314,10 @@ func handleAnalyzeOrg(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 		combinedResponses = append(combinedResponses, mcpAnalysisResponse{
 			Findings:   pkgInsights.FindingsResults.Findings,
 			Rules:      pkgInsights.FindingsResults.Rules,
+			Purl:       pkgInsights.Purl,
 			Repository: pkgInsights.SourceGitRepo,
-			Ref:        pkgInsights.SourceGitRef,
+			ScmType:    pkgInsights.SourceScmType,
+			GitRef:     pkgInsights.SourceGitRef,
 			CommitSha:  pkgInsights.SourceGitCommitSha,
 			LastCommit: pkgInsights.LastCommitedAt,
 		})
@@ -357,8 +361,10 @@ func handleAnalyzeRepo(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 	combinedResponse := mcpAnalysisResponse{
 		Findings:   analysisResults.FindingsResults.Findings,
 		Rules:      analysisResults.FindingsResults.Rules,
+		Purl:       analysisResults.Purl,
 		Repository: analysisResults.SourceGitRepo,
-		Ref:        analysisResults.SourceGitRef,
+		ScmType:    analysisResults.SourceScmType,
+		GitRef:     analysisResults.SourceGitRef,
 		CommitSha:  analysisResults.SourceGitCommitSha,
 		LastCommit: analysisResults.LastCommitedAt,
 	}
@@ -398,8 +404,10 @@ func handleAnalyzeLocal(ctx context.Context, request mcp.CallToolRequest, opaCli
 	combinedResponse := mcpAnalysisResponse{
 		Findings:   analysisResults.FindingsResults.Findings,
 		Rules:      analysisResults.FindingsResults.Rules,
+		Purl:       analysisResults.Purl,
 		Repository: analysisResults.SourceGitRepo,
-		Ref:        analysisResults.SourceGitRef,
+		ScmType:    analysisResults.SourceScmType,
+		GitRef:     analysisResults.SourceGitRef,
 		CommitSha:  analysisResults.SourceGitCommitSha,
 		LastCommit: analysisResults.LastCommitedAt,
 	}
@@ -450,8 +458,10 @@ func handleAnalyzeStaleBranches(ctx context.Context, request mcp.CallToolRequest
 	combinedResponse := mcpAnalysisResponse{
 		Findings:   analysisResults.FindingsResults.Findings,
 		Rules:      analysisResults.FindingsResults.Rules,
+		Purl:       analysisResults.Purl,
 		Repository: analysisResults.SourceGitRepo,
-		Ref:        analysisResults.SourceGitRef,
+		ScmType:    analysisResults.SourceScmType,
+		GitRef:     analysisResults.SourceGitRef,
 		CommitSha:  analysisResults.SourceGitCommitSha,
 		LastCommit: analysisResults.LastCommitedAt,
 	}

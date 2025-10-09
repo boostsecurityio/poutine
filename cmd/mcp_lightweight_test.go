@@ -73,8 +73,10 @@ func TestMCPResponseStructure(t *testing.T) {
 	response := mcpAnalysisResponse{
 		Findings:   []results.Finding{},
 		Rules:      map[string]results.Rule{},
+		Purl:       "pkg:github/owner/repo@main",
 		Repository: "owner/repo",
-		Ref:        "main",
+		ScmType:    "github",
+		GitRef:     "main",
 		CommitSha:  "abc123",
 		LastCommit: "2023-01-01T00:00:00Z",
 	}
@@ -87,8 +89,10 @@ func TestMCPResponseStructure(t *testing.T) {
 	// Verify lightweight structure
 	assert.Contains(t, jsonStr, "\"findings\":")
 	assert.Contains(t, jsonStr, "\"rules\":")
+	assert.Contains(t, jsonStr, "\"purl\":")
 	assert.Contains(t, jsonStr, "\"repository\":")
-	assert.Contains(t, jsonStr, "\"ref\":")
+	assert.Contains(t, jsonStr, "\"scm_type\":")
+	assert.Contains(t, jsonStr, "\"git_ref\":")
 	assert.Contains(t, jsonStr, "\"commit_sha\":")
 	assert.Contains(t, jsonStr, "\"last_commit\":")
 
@@ -115,8 +119,10 @@ func TestMCPResponseOmitsEmptyFields(t *testing.T) {
 	jsonStr := string(data)
 
 	// These fields should be omitted when empty due to omitempty tag
+	assert.NotContains(t, jsonStr, "\"purl\":")
 	assert.NotContains(t, jsonStr, "\"repository\":")
-	assert.NotContains(t, jsonStr, "\"ref\":")
+	assert.NotContains(t, jsonStr, "\"scm_type\":")
+	assert.NotContains(t, jsonStr, "\"git_ref\":")
 	assert.NotContains(t, jsonStr, "\"commit_sha\":")
 	assert.NotContains(t, jsonStr, "\"last_commit\":")
 
@@ -133,8 +139,10 @@ func TestMCPResponseSizeReduction(t *testing.T) {
 	lightweightResponse := mcpAnalysisResponse{
 		Findings:   []results.Finding{},
 		Rules:      map[string]results.Rule{},
+		Purl:       "pkg:github/test/repo@main",
 		Repository: "test/repo",
-		Ref:        "main",
+		ScmType:    "github",
+		GitRef:     "main",
 		CommitSha:  "abc123",
 		LastCommit: "2023-01-01T00:00:00Z",
 	}
