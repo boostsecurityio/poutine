@@ -2,6 +2,7 @@ package opa
 
 import (
 	"context"
+	"embed"
 	"github.com/boostsecurityio/poutine/models"
 	"github.com/boostsecurityio/poutine/results"
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -10,6 +11,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
+
+//go:embed testdata/embedded
+var testEmbeddedRules embed.FS
 
 func noOpaErrors(t *testing.T, err error) {
 	if err == nil {
@@ -249,4 +253,74 @@ func TestWithRulesConfig(t *testing.T) {
 	noOpaErrors(t, err)
 	assert.Equal(t, []interface{}{}, rule.Config["allowed_runners"].Default)
 	assert.Equal(t, []interface{}{"self-hosted"}, rule.Config["allowed_runners"].Value)
+}
+
+func TestNewOpaWithEmbeddedRules(t *testing.T) {
+	ctx := context.TODO()
+
+	// Test NewOpaWithEmbeddedRules constructor
+	opa, err := NewOpaWithEmbeddedRules(ctx, &models.Config{
+		Include: []models.ConfigInclude{},
+	}, testEmbeddedRules)
+	noOpaErrors(t, err)
+	assert.NotNil(t, opa)
+
+	// Verify that the custom rule was loaded and can be evaluated
+	var customRule map[string]interface{}
+	err = opa.Eval(ctx, "data.custom.rule", nil, &customRule)
+	noOpaErrors(t, err)
+	assert.Equal(t, "Custom Test Rule", customRule["title"])
+	assert.Equal(t, "warning", customRule["level"])
+
+	// Test that the custom rule logic works
+	var results []map[string]interface{}
+	input := map[string]interface{}{
+		"test_value": "test data",
+	}
+	err = opa.Eval(ctx, "data.custom.results", input, &results)
+	noOpaErrors(t, err)
+	assert.Len(t, results, 1)
+	assert.Equal(t, "Custom rule executed successfully", results[0]["message"])
+	assert.Equal(t, "test data", results[0]["details"])
+
+	// Verify built-in Poutine rules are still loaded
+	var builtinRule interface{}
+	err = opa.Eval(ctx, "data.rules.pr_runs_on_self_hosted.rule", nil, &builtinRule)
+	noOpaErrors(t, err)
+	assert.NotNil(t, builtinRule)
+}
+
+func TestEmbeddedRulesWithSkipAndAllowed(t *testing.T) {
+	ctx := context.TODO()
+
+	// Test that skip rules work with embedded custom rules
+	opa, err := NewOpaWithEmbeddedRules(ctx, &models.Config{
+		Include: []models.ConfigInclude{},
+	}, testEmbeddedRules)
+	noOpaErrors(t, err)
+
+	// Verify both rules are loaded initially
+	var customRule map[string]interface{}
+	err = opa.Eval(ctx, "data.custom.rule", nil, &customRule)
+	noOpaErrors(t, err)
+	assert.Equal(t, "Custom Test Rule", customRule["title"])
+
+	var skippableRule map[string]interface{}
+	err = opa.Eval(ctx, "data.custom.rules.skippable_rule", nil, &skippableRule)
+	noOpaErrors(t, err)
+	assert.NotNil(t, skippableRule)
+	assert.Equal(t, "Skippable Test Rule", skippableRule["title"])
+
+	// Now recompile with skip rule
+	err = opa.Compile(ctx, []string{"skippable_rule"}, []string{})
+	noOpaErrors(t, err)
+
+	// The non-skipped rule should still be available
+	err = opa.Eval(ctx, "data.custom.rule", nil, &customRule)
+	noOpaErrors(t, err)
+	assert.Equal(t, "Custom Test Rule", customRule["title"])
+
+	// The skipped rule should not be available
+	err = opa.Eval(ctx, "data.custom.rules.skippable_rule", nil, &skippableRule)
+	assert.Error(t, err)
 }
