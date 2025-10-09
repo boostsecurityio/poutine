@@ -294,3 +294,126 @@ jobs:
 
 	t.Logf("Successfully analyzed manifest with %d findings", len(insights.Findings))
 }
+
+func TestHandleAnalyzeManifestWithAllowedRules(t *testing.T) {
+	ctx := context.Background()
+
+	analyzer, err := createTestAnalyzer(ctx)
+	require.NoError(t, err)
+
+	vulnerableManifest := `name: Test Workflow
+on:
+  pull_request_target:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Run test
+        run: echo "Testing ${{ github.event.pull_request.head.ref }}"`
+
+	t.Run("without allowed_rules filter", func(t *testing.T) {
+		request := NewCallToolRequest("analyze_manifest", map[string]interface{}{
+			"content":       vulnerableManifest,
+			"manifest_type": "github-actions",
+		})
+
+		result, err := handleAnalyzeManifest(ctx, request, analyzer)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		assert.False(t, result.IsError)
+
+		contentText := extractTextFromContent(t, result.Content[0])
+		require.NotEmpty(t, contentText)
+
+		var insights struct {
+			Findings []results.Finding       `json:"findings"`
+			Rules    map[string]results.Rule `json:"rules"`
+		}
+		err = json.Unmarshal([]byte(contentText), &insights)
+		require.NoError(t, err)
+
+		// Should have multiple findings including injection
+		assert.Greater(t, len(insights.Findings), 1, "Should have multiple findings without filter")
+		
+		// Verify injection rule is present
+		hasInjection := false
+		for _, finding := range insights.Findings {
+			if finding.RuleId == "injection" {
+				hasInjection = true
+				break
+			}
+		}
+		assert.True(t, hasInjection, "Should have injection finding")
+
+		t.Logf("Found %d findings without filter", len(insights.Findings))
+	})
+
+	t.Run("with allowed_rules filter for injection only", func(t *testing.T) {
+		request := NewCallToolRequest("analyze_manifest", map[string]interface{}{
+			"content":       vulnerableManifest,
+			"manifest_type": "github-actions",
+			"allowed_rules": []string{"injection"},
+		})
+
+		result, err := handleAnalyzeManifest(ctx, request, analyzer)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		assert.False(t, result.IsError)
+
+		contentText := extractTextFromContent(t, result.Content[0])
+		require.NotEmpty(t, contentText)
+
+		var insights struct {
+			Findings []results.Finding       `json:"findings"`
+			Rules    map[string]results.Rule `json:"rules"`
+		}
+		err = json.Unmarshal([]byte(contentText), &insights)
+		require.NoError(t, err)
+
+		// Should have only injection finding
+		assert.Len(t, insights.Findings, 1, "Should have only one finding with filter")
+		assert.Equal(t, "injection", insights.Findings[0].RuleId, "Should only have injection finding")
+		
+		// Should have only injection rule
+		assert.Len(t, insights.Rules, 1, "Should have only one rule with filter")
+		_, hasInjectionRule := insights.Rules["injection"]
+		assert.True(t, hasInjectionRule, "Should have injection rule in rules map")
+
+		t.Logf("Found %d findings with allowed_rules filter", len(insights.Findings))
+	})
+
+	t.Run("with allowed_rules filter for non-existent rule", func(t *testing.T) {
+		request := NewCallToolRequest("analyze_manifest", map[string]interface{}{
+			"content":       vulnerableManifest,
+			"manifest_type": "github-actions",
+			"allowed_rules": []string{"non_existent_rule"},
+		})
+
+		result, err := handleAnalyzeManifest(ctx, request, analyzer)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		assert.False(t, result.IsError)
+
+		contentText := extractTextFromContent(t, result.Content[0])
+		require.NotEmpty(t, contentText)
+
+		var insights struct {
+			Findings []results.Finding       `json:"findings"`
+			Rules    map[string]results.Rule `json:"rules"`
+		}
+		err = json.Unmarshal([]byte(contentText), &insights)
+		require.NoError(t, err)
+
+		// Should have no findings
+		assert.Len(t, insights.Findings, 0, "Should have no findings with non-existent rule filter")
+		assert.Len(t, insights.Rules, 0, "Should have no rules with non-existent rule filter")
+
+		t.Logf("Found %d findings with non-existent rule filter", len(insights.Findings))
+	})
+}
