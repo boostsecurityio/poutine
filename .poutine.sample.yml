@@ -1,3 +1,11 @@
+# Include custom Rego rules from specified directories
+# Each path should contain *.rego files with package names following: package rules.<rule_name>
+# For more details, see: https://github.com/boost-rnd/poutine-rules
+# default: []
+# include:
+# - path: ./custom_rules
+# - path: ./github_actions
+
 # When using analyze_org, ignore forked repositories in the organization
 # default: false
 ignoreForks: true
