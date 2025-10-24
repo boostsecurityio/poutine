@@ -2,10 +2,12 @@ package scanner
 
 import (
 	"context"
+	"testing"
+
 	"github.com/boostsecurityio/poutine/models"
 	"github.com/boostsecurityio/poutine/opa"
 	"github.com/stretchr/testify/assert"
-	"testing"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGithubWorkflows(t *testing.T) {
@@ -85,7 +87,7 @@ func TestGithubWorkflowsWithAnchors(t *testing.T) {
 	s := NewInventoryScanner("testdata")
 	pkgInsights := &models.PackageInsights{}
 	err := s.Run(pkgInsights)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	workflows := pkgInsights.GithubActionsWorkflows
 
