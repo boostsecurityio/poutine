@@ -29,6 +29,9 @@ func TestGithubWorkflows(t *testing.T) {
 		".github/workflows/workflow_run_valid.yml",
 		".github/workflows/workflow_run_reusable.yml",
 		".github/workflows/allowed_pr_runner.yml",
+		".github/workflows/anchors_env.yml",
+		".github/workflows/anchors_job.yml",
+		".github/workflows/anchors_multiple.yml",
 	})
 }
 
@@ -76,6 +79,69 @@ func TestRun(t *testing.T) {
 	assert.Contains(t, scannedPackage.PackageDependencies, "pkg:githubactions/actions/github-script@main")
 	assert.Contains(t, scannedPackage.PackageDependencies, "pkg:docker/alpine%3Alatest")
 	assert.Equal(t, 3, len(scannedPackage.GitlabciConfigs))
+}
+
+func TestGithubWorkflowsWithAnchors(t *testing.T) {
+	s := NewInventoryScanner("testdata")
+	pkgInsights := &models.PackageInsights{}
+	err := s.Run(pkgInsights)
+	assert.NoError(t, err)
+
+	workflows := pkgInsights.GithubActionsWorkflows
+
+	// Find and validate the anchor workflows
+	var envWorkflow, jobWorkflow, multipleWorkflow *models.GithubActionsWorkflow
+	for i := range workflows {
+		switch workflows[i].Path {
+		case ".github/workflows/anchors_env.yml":
+			envWorkflow = &workflows[i]
+		case ".github/workflows/anchors_job.yml":
+			jobWorkflow = &workflows[i]
+		case ".github/workflows/anchors_multiple.yml":
+			multipleWorkflow = &workflows[i]
+		}
+	}
+
+	// Verify anchors_env.yml parsed correctly
+	assert.NotNil(t, envWorkflow, "anchors_env.yml should be found")
+	assert.Equal(t, "Anchors - Environment Variables", envWorkflow.Name)
+	assert.Len(t, envWorkflow.Jobs, 2)
+
+	// Both jobs should have the same environment variables (anchor was reused)
+	job1 := envWorkflow.Jobs[0]
+	job2 := envWorkflow.Jobs[1]
+	assert.Len(t, job1.Env, 2)
+	assert.Len(t, job2.Env, 2)
+	assert.Contains(t, job1.Env, models.GithubActionsEnv{Name: "NODE_ENV", Value: "production"})
+	assert.Contains(t, job2.Env, models.GithubActionsEnv{Name: "NODE_ENV", Value: "production"})
+
+	// Verify anchors_job.yml parsed correctly
+	assert.NotNil(t, jobWorkflow, "anchors_job.yml should be found")
+	assert.Equal(t, "Anchors - Complete Job", jobWorkflow.Name)
+	assert.Len(t, jobWorkflow.Jobs, 2)
+
+	// Both jobs should be identical (complete job anchor reused)
+	testJob := jobWorkflow.Jobs[0]
+	altTestJob := jobWorkflow.Jobs[1]
+	assert.Equal(t, "test", testJob.ID)
+	assert.Equal(t, "alt-test", altTestJob.ID)
+	assert.Equal(t, testJob.RunsOn, altTestJob.RunsOn)
+	assert.Equal(t, testJob.Env, altTestJob.Env)
+	assert.Len(t, testJob.Steps, 3)
+	assert.Len(t, altTestJob.Steps, 3)
+	assert.Equal(t, "actions/checkout@v5", testJob.Steps[0].Uses)
+	assert.Equal(t, "actions/checkout@v5", altTestJob.Steps[0].Uses)
+
+	// Verify anchors_multiple.yml parsed correctly
+	assert.NotNil(t, multipleWorkflow, "anchors_multiple.yml should be found")
+	assert.Equal(t, "Anchors - Multiple References", multipleWorkflow.Name)
+	assert.Len(t, multipleWorkflow.Jobs, 3)
+
+	// All three jobs should use the same runner and container (multiple anchors reused)
+	for i := 0; i < 3; i++ {
+		assert.Equal(t, models.GithubActionsJobRunsOn{"ubuntu-latest"}, multipleWorkflow.Jobs[i].RunsOn)
+		assert.Equal(t, "node:18", multipleWorkflow.Jobs[i].Container.Image)
+	}
 }
 
 func TestPipelineAsCodeTekton(t *testing.T) {

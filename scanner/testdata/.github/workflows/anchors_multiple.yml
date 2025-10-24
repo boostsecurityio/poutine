@@ -1,0 +1,28 @@
+# Test fixture for multiple anchors in same workflow
+name: Anchors - Multiple References
+on: push
+
+jobs:
+  build:
+    runs-on: &runner ubuntu-latest
+    container: &container node:18
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm install
+      - run: npm run build
+
+  test:
+    runs-on: *runner
+    container: *container
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm install
+      - run: npm test
+
+  lint:
+    runs-on: *runner
+    container: *container
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm install
+      - run: npm run lint

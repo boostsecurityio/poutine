@@ -1,0 +1,19 @@
+# Test fixture for YAML anchors with environment variables
+# Based on: https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations
+name: Anchors - Environment Variables
+on: push
+
+jobs:
+  job1:
+    runs-on: ubuntu-latest
+    env: &env_vars
+      NODE_ENV: production
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - run: echo "Using production settings"
+
+  job2:
+    runs-on: ubuntu-latest
+    env: *env_vars
+    steps:
+      - run: echo "Same environment variables here"

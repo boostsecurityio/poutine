@@ -50,9 +50,11 @@ func TestPurls(t *testing.T) {
 		"pkg:azurepipelinestask/DownloadPipelineArtifact@2",
 		"pkg:azurepipelinestask/Cache@2",
 		"pkg:githubactions/org/owner@main#.github/workflows/ci.yml",
+		"pkg:githubactions/actions/checkout@v5",
+		"pkg:docker/node%3A18",
 	}
 	assert.ElementsMatch(t, i.Purls(*scannedPackage), purls)
-	assert.Len(t, scannedPackage.BuildDependencies, 20)
+	assert.Len(t, scannedPackage.BuildDependencies, 22)
 	assert.Equal(t, 4, len(scannedPackage.PackageDependencies))
 }
 

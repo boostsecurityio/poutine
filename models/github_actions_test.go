@@ -594,3 +594,222 @@ runs:
 	assert.Equal(t, "koi", actionMetadata.Runs.Steps[0].With[0].Value)
 	assert.Equal(t, 17, actionMetadata.Runs.Steps[0].Lines["uses"])
 }
+
+// TestGithubActionsWorkflowWithAnchors tests YAML 1.2 anchor support
+// GitHub Actions now supports YAML anchors as of 2025-09-18
+// https://github.blog/changelog/2025-09-18-actions-yaml-anchors-and-non-public-workflow-templates/
+func TestGithubActionsWorkflowWithAnchors(t *testing.T) {
+	t.Run("simple anchor and alias", func(t *testing.T) {
+		workflow := `
+name: CI
+on: push
+
+jobs:
+  build: &build_template
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+  test:
+    <<: *build_template
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm test
+`
+		var wf GithubActionsWorkflow
+		err := yaml.Unmarshal([]byte(workflow), &wf)
+		require.NoError(t, err)
+		assert.Equal(t, "CI", wf.Name)
+		assert.Len(t, wf.Jobs, 2)
+		assert.Equal(t, "build", wf.Jobs[0].ID)
+		assert.Equal(t, "test", wf.Jobs[1].ID)
+		assert.Equal(t, GithubActionsJobRunsOn{"ubuntu-latest"}, wf.Jobs[1].RunsOn)
+	})
+
+	t.Run("anchor for environment configuration", func(t *testing.T) {
+		workflow := `
+name: Deploy
+on: push
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    environment: &env_config
+      name: staging
+      url: https://staging.example.com
+    steps:
+      - run: echo "deploying"
+
+  deploy-prod:
+    runs-on: ubuntu-latest
+    environment:
+      <<: *env_config
+      name: production
+      url: https://prod.example.com
+    steps:
+      - run: echo "deploying"
+`
+		var wf GithubActionsWorkflow
+		err := yaml.Unmarshal([]byte(workflow), &wf)
+		require.NoError(t, err)
+		assert.Len(t, wf.Jobs, 2)
+		assert.Equal(t, "staging", wf.Jobs[0].Environment[0].Name)
+		assert.Equal(t, "https://staging.example.com", wf.Jobs[0].Environment[0].Url)
+		assert.Equal(t, "production", wf.Jobs[1].Environment[0].Name)
+		assert.Equal(t, "https://prod.example.com", wf.Jobs[1].Environment[0].Url)
+	})
+
+	t.Run("anchor for steps configuration", func(t *testing.T) {
+		workflow := `
+name: Test
+on: push
+
+jobs:
+  test-node-14:
+    runs-on: ubuntu-latest
+    steps: &test_steps
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '14'
+      - run: npm test
+
+  test-node-16:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '16'
+      - run: npm test
+`
+		var wf GithubActionsWorkflow
+		err := yaml.Unmarshal([]byte(workflow), &wf)
+		require.NoError(t, err)
+		assert.Len(t, wf.Jobs, 2)
+		assert.Len(t, wf.Jobs[0].Steps, 3)
+		assert.Equal(t, "actions/checkout@v4", wf.Jobs[0].Steps[0].Uses)
+		assert.Equal(t, "actions/setup-node@v4", wf.Jobs[0].Steps[1].Uses)
+	})
+
+	t.Run("anchor for permissions", func(t *testing.T) {
+		workflow := `
+name: Security
+on: push
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions: &security_perms
+      contents: read
+      security-events: write
+    steps:
+      - run: echo "scanning"
+
+  report:
+    runs-on: ubuntu-latest
+    permissions: *security_perms
+    steps:
+      - run: echo "reporting"
+`
+		var wf GithubActionsWorkflow
+		err := yaml.Unmarshal([]byte(workflow), &wf)
+		require.NoError(t, err)
+		assert.Len(t, wf.Jobs, 2)
+		assert.Len(t, wf.Jobs[0].Permissions, 2)
+		assert.Contains(t, wf.Jobs[0].Permissions, GithubActionsPermission{Scope: "contents", Permission: "read"})
+		assert.Contains(t, wf.Jobs[0].Permissions, GithubActionsPermission{Scope: "security-events", Permission: "write"})
+		assert.Equal(t, wf.Jobs[0].Permissions, wf.Jobs[1].Permissions)
+	})
+
+	t.Run("multiple anchors in same workflow", func(t *testing.T) {
+		workflow := `
+name: Multi
+on: push
+
+jobs:
+  job1:
+    runs-on: &runner ubuntu-latest
+    container: &container_image alpine:latest
+    steps:
+      - run: echo "test"
+
+  job2:
+    runs-on: *runner
+    container: *container_image
+    steps:
+      - run: echo "test2"
+`
+		var wf GithubActionsWorkflow
+		err := yaml.Unmarshal([]byte(workflow), &wf)
+		require.NoError(t, err)
+		assert.Len(t, wf.Jobs, 2)
+		assert.Equal(t, GithubActionsJobRunsOn{"ubuntu-latest"}, wf.Jobs[0].RunsOn)
+		assert.Equal(t, GithubActionsJobRunsOn{"ubuntu-latest"}, wf.Jobs[1].RunsOn)
+		assert.Equal(t, "alpine:latest", wf.Jobs[0].Container.Image)
+		assert.Equal(t, "alpine:latest", wf.Jobs[1].Container.Image)
+	})
+
+	t.Run("anchor for env variables", func(t *testing.T) {
+		workflow := `
+name: Env Test
+on: push
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env: &common_env
+      NODE_ENV: production
+      CI: true
+    steps:
+      - run: echo "build"
+
+  test:
+    runs-on: ubuntu-latest
+    env:
+      <<: *common_env
+      TEST_ENV: test
+    steps:
+      - run: echo "test"
+`
+		var wf GithubActionsWorkflow
+		err := yaml.Unmarshal([]byte(workflow), &wf)
+		require.NoError(t, err)
+		assert.Len(t, wf.Jobs, 2)
+		assert.Len(t, wf.Jobs[0].Env, 2)
+		assert.Contains(t, wf.Jobs[0].Env, GithubActionsEnv{Name: "NODE_ENV", Value: "production"})
+		assert.Contains(t, wf.Jobs[0].Env, GithubActionsEnv{Name: "CI", Value: "true"})
+	})
+
+	t.Run("complex nested anchor with merge keys", func(t *testing.T) {
+		workflow := `
+name: Complex
+on: push
+
+jobs:
+  base: &base_job
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+  extended:
+    <<: *base_job
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm build
+`
+		var wf GithubActionsWorkflow
+		err := yaml.Unmarshal([]byte(workflow), &wf)
+		require.NoError(t, err)
+		assert.Len(t, wf.Jobs, 2)
+		assert.Equal(t, "base", wf.Jobs[0].ID)
+		assert.Equal(t, "extended", wf.Jobs[1].ID)
+		// The extended job should have the merged runs-on from base
+		assert.Equal(t, GithubActionsJobRunsOn{"ubuntu-latest"}, wf.Jobs[1].RunsOn)
+	})
+}
