@@ -117,6 +117,83 @@ poutine analyze_org my-org/project --token "$GL_TOKEN" --scm gitlab --scm-base-u
 
 See [.poutine.sample.yml](.poutine.sample.yml) for an example configuration file.
 
+### Custom Rules
+
+`poutine` supports custom Rego rules to extend its security scanning capabilities. You can write your own rules and include them at runtime.
+
+#### Configuration
+
+Create a `.poutine.yml` configuration file in your current working directory, or use a custom path with the `--config` flag:
+
+```bash
+poutine analyze_local . --config my-config.yml
+```
+
+In your configuration file, specify the path(s) to your custom rules using the `include` directive:
+
+```yaml
+include:
+  - path: ./custom_rules
+  - path: ./github_actions
+```
+
+#### Writing Custom Rules
+
+Custom Rego rules must:
+1. Be saved as `*.rego` files in the included directory
+2. Follow the package naming convention: `package rules.<rule_name>`
+3. Define a `rule` variable with metadata
+4. Define a `results` set containing findings
+
+**Example custom rule:**
+
+```rego
+package rules.custom_injection
+
+import data.poutine
+import rego.v1
+
+# METADATA
+# title: Custom Injection Detection
+# description: Detects potential injection vulnerabilities in workflows
+# custom:
+#   level: warning
+
+rule := poutine.rule(rego.metadata.chain())
+
+# Define pattern to detect (properly escaped for Rego)
+patterns.github contains `\\$\\{\\{[^\\}]+\\}\\}`
+
+results contains poutine.finding(rule, pkg.purl, {
+  "path": workflow.path,
+  "line": step.lines.run,
+  "job": job.id,
+  "step": i,
+  "details": "Potential injection found in step",
+}) if {
+  pkg := input.packages[_]
+  workflow := pkg.github_actions_workflows[_]
+  job := workflow.jobs[_]
+  step := job.steps[i]
+  step.run  # Ensure step has a run command
+  regex.match(patterns.github[_], step.run)
+}
+```
+
+**Key points:**
+- Use `import data.poutine` and `import rego.v1` for modern Rego syntax and poutine utilities
+- Use `rule := poutine.rule(rego.metadata.chain())` to extract metadata from METADATA comments
+- The `package` name determines the rule identifier (e.g., `package rules.custom_injection` → rule ID: `custom_injection`)
+- Add METADATA comments to describe the rule with `title`, `description`, and `level`
+- Set the severity `level` to `note`, `warning`, or `error`
+- Use `poutine.finding(rule, pkg.purl, {...})` to create findings that match the poutine schema
+- The `results` set should contain findings with fields like `path`, `line`, `job`, `step`, `details`
+
+For more examples, see:
+- [poutine-rules repository](https://github.com/boost-rnd/poutine-rules) - External rule examples
+- Built-in rules in [opa/rego/rules/](./opa/rego/rules/) directory
+- [.poutine.sample.yml](.poutine.sample.yml) - Configuration examples
+
 ## AI Coding Assistant Integration (MCP)
 
 `poutine` can be integrated with AI coding assistants like Claude Code, Gemini, etc. through the Model Context Protocol (MCP). This allows AI assistants to analyze repositories and validate CI/CD pipelines directly from your development environment.
