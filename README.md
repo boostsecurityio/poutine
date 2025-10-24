@@ -194,6 +194,48 @@ For more examples, see:
 - Built-in rules in [opa/rego/rules/](./opa/rego/rules/) directory
 - [.poutine.sample.yml](.poutine.sample.yml) - Configuration examples
 
+### Acknowledging Findings
+
+`poutine` supports skipping (acknowledging) specific findings that are not relevant in your context. This can be useful when:
+- A finding is a false positive
+- The security concern has been addressed through other means (e.g., hardened self-hosted runners)
+- You've accepted the risk for a particular finding
+
+To acknowledge findings, add a `skip` section to your `.poutine.yml` configuration file. Each skip rule can filter findings by:
+- `job`: Filter by job name
+- `level`: Filter by severity level (note, warning, error)
+- `path`: Filter by workflow file path
+- `rule`: Filter by rule name
+- `purl`: Filter by package URL
+- `osv_id`: Filter by OSV ID
+
+Example configuration:
+
+```yaml
+skip:
+  # Skip all note-level findings
+  - level: note
+
+  # Skip findings in a specific workflow
+  - path: .github/workflows/safe.yml
+
+  # Skip a specific rule everywhere
+  - rule: unpinnable_action
+
+  # Skip a rule for specific workflows
+  - rule: pr_runs_on_self_hosted
+    path:
+      - .github/workflows/pr.yml
+      - .github/workflows/deploy.yml
+
+  # Skip findings for specific packages
+  - rule: github_action_from_unverified_creator_used
+    purl:
+      - pkg:githubactions/dorny/paths-filter
+```
+
+For more examples, see [.poutine.sample.yml](.poutine.sample.yml).
+
 ## AI Coding Assistant Integration (MCP)
 
 `poutine` can be integrated with AI coding assistants like Claude Code, Gemini, etc. through the Model Context Protocol (MCP). This allows AI assistants to analyze repositories and validate CI/CD pipelines directly from your development environment.
