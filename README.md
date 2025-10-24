@@ -104,7 +104,7 @@ poutine analyze_org my-org/project --token "$GL_TOKEN" --scm gitlab --scm-base-u
 
 ### Configuration Options
 
-``` 
+```
 --token          SCM access token (required for the commands analyze_repo, analyze_org) (env: GH_TOKEN)
 --format         Output format (default: pretty, json, sarif)
 --ignore-forks   Ignore forked repositories in the organization(analyze_org)
@@ -112,6 +112,7 @@ poutine analyze_org my-org/project --token "$GL_TOKEN" --scm gitlab --scm-base-u
 --scm-base-url   Base URI of the self-hosted SCM instance
 --threads        Number of threads to use (default: 2)
 --config         Path to the configuration file (default: .poutine.yml)
+--skip           Add rules to the skip list for the current run (can be specified multiple times)
 --verbose        Enable debug logging
 ```
 
@@ -201,7 +202,13 @@ For more examples, see:
 - The security concern has been addressed through other means (e.g., hardened self-hosted runners)
 - You've accepted the risk for a particular finding
 
-To acknowledge findings, add a `skip` section to your `.poutine.yml` configuration file. Each skip rule can filter findings by:
+To acknowledge findings, you can either:
+1. Add a `skip` section to your `.poutine.yml` configuration file
+2. Use the `--skip` command-line flag (e.g., `--skip rule_name`) for one-time skipping
+
+#### Configuration File
+
+Add a `skip` section to your `.poutine.yml` configuration file. Each skip rule can filter findings by:
 - `job`: Filter by job name
 - `level`: Filter by severity level (note, warning, error)
 - `path`: Filter by workflow file path
@@ -235,6 +242,20 @@ skip:
 ```
 
 For more examples, see [.poutine.sample.yml](.poutine.sample.yml).
+
+#### Command Line
+
+You can also skip rules on the command line using the `--skip` flag. Note that the command-line flag only supports skipping rules by name globally and does not support the granular filtering options (job, path, level, etc.) available in the configuration file.
+
+```bash
+# Skip a single rule globally
+poutine analyze_repo org/repo --skip unpinnable_action
+
+# Skip multiple rules globally
+poutine analyze_repo org/repo --skip unpinnable_action --skip pr_runs_on_self_hosted
+```
+
+This is useful for one-time analysis or when you want to temporarily ignore specific rules without modifying your configuration file. For more granular control (e.g., skipping a rule only in specific workflows), use the configuration file instead.
 
 ## AI Coding Assistant Integration (MCP)
 
