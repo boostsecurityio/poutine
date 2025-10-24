@@ -621,9 +621,19 @@ jobs:
 		require.NoError(t, err)
 		assert.Equal(t, "CI", wf.Name)
 		assert.Len(t, wf.Jobs, 2)
+
+		// Verify the first job (with anchor definition)
 		assert.Equal(t, "build", wf.Jobs[0].ID)
+		assert.Equal(t, GithubActionsJobRunsOn{"ubuntu-latest"}, wf.Jobs[0].RunsOn)
+		assert.Len(t, wf.Jobs[0].Steps, 1)
+		assert.Equal(t, "actions/checkout@v4", wf.Jobs[0].Steps[0].Uses)
+
+		// Verify the second job inherited runs-on from the anchor
 		assert.Equal(t, "test", wf.Jobs[1].ID)
 		assert.Equal(t, GithubActionsJobRunsOn{"ubuntu-latest"}, wf.Jobs[1].RunsOn)
+		assert.Len(t, wf.Jobs[1].Steps, 2)
+		assert.Equal(t, "actions/checkout@v4", wf.Jobs[1].Steps[0].Uses)
+		assert.Equal(t, "npm test", wf.Jobs[1].Steps[1].Run)
 	})
 
 	t.Run("anchor for environment configuration", func(t *testing.T) {
@@ -676,20 +686,24 @@ jobs:
 
   test-node-16:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '16'
-      - run: npm test
+    steps: *test_steps
 `
 		var wf GithubActionsWorkflow
 		err := yaml.Unmarshal([]byte(workflow), &wf)
 		require.NoError(t, err)
 		assert.Len(t, wf.Jobs, 2)
+
+		// Verify both jobs have the same steps from the anchor
 		assert.Len(t, wf.Jobs[0].Steps, 3)
 		assert.Equal(t, "actions/checkout@v4", wf.Jobs[0].Steps[0].Uses)
 		assert.Equal(t, "actions/setup-node@v4", wf.Jobs[0].Steps[1].Uses)
+		assert.Equal(t, "npm test", wf.Jobs[0].Steps[2].Run)
+
+		// Verify the second job uses the anchor and has identical steps
+		assert.Len(t, wf.Jobs[1].Steps, 3)
+		assert.Equal(t, "actions/checkout@v4", wf.Jobs[1].Steps[0].Uses)
+		assert.Equal(t, "actions/setup-node@v4", wf.Jobs[1].Steps[1].Uses)
+		assert.Equal(t, "npm test", wf.Jobs[1].Steps[2].Run)
 	})
 
 	t.Run("anchor for permissions", func(t *testing.T) {
@@ -766,9 +780,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    env:
-      <<: *common_env
-      TEST_ENV: test
+    env: *common_env
     steps:
       - run: echo "test"
 `
@@ -776,9 +788,16 @@ jobs:
 		err := yaml.Unmarshal([]byte(workflow), &wf)
 		require.NoError(t, err)
 		assert.Len(t, wf.Jobs, 2)
+
+		// Verify the first job has the anchor env vars
 		assert.Len(t, wf.Jobs[0].Env, 2)
 		assert.Contains(t, wf.Jobs[0].Env, GithubActionsEnv{Name: "NODE_ENV", Value: "production"})
 		assert.Contains(t, wf.Jobs[0].Env, GithubActionsEnv{Name: "CI", Value: "true"})
+
+		// Verify the second job reuses the same env vars via alias
+		assert.Len(t, wf.Jobs[1].Env, 2)
+		assert.Contains(t, wf.Jobs[1].Env, GithubActionsEnv{Name: "NODE_ENV", Value: "production"})
+		assert.Contains(t, wf.Jobs[1].Env, GithubActionsEnv{Name: "CI", Value: "true"})
 	})
 
 	t.Run("complex nested anchor with merge keys", func(t *testing.T) {
@@ -807,9 +826,20 @@ jobs:
 		err := yaml.Unmarshal([]byte(workflow), &wf)
 		require.NoError(t, err)
 		assert.Len(t, wf.Jobs, 2)
+
+		// Verify the base job
 		assert.Equal(t, "base", wf.Jobs[0].ID)
+		assert.Equal(t, GithubActionsJobRunsOn{"ubuntu-latest"}, wf.Jobs[0].RunsOn)
+		assert.Len(t, wf.Jobs[0].Permissions, 1)
+		assert.Contains(t, wf.Jobs[0].Permissions, GithubActionsPermission{Scope: "contents", Permission: "read"})
+		assert.Len(t, wf.Jobs[0].Steps, 1)
+
+		// Verify the extended job inherited runs-on but overrode permissions
 		assert.Equal(t, "extended", wf.Jobs[1].ID)
-		// The extended job should have the merged runs-on from base
 		assert.Equal(t, GithubActionsJobRunsOn{"ubuntu-latest"}, wf.Jobs[1].RunsOn)
+		assert.Len(t, wf.Jobs[1].Permissions, 2)
+		assert.Contains(t, wf.Jobs[1].Permissions, GithubActionsPermission{Scope: "contents", Permission: "write"})
+		assert.Contains(t, wf.Jobs[1].Permissions, GithubActionsPermission{Scope: "issues", Permission: "write"})
+		assert.Len(t, wf.Jobs[1].Steps, 2)
 	})
 }

@@ -34,6 +34,7 @@ func TestGithubWorkflows(t *testing.T) {
 		".github/workflows/anchors_env.yml",
 		".github/workflows/anchors_job.yml",
 		".github/workflows/anchors_multiple.yml",
+		".github/workflows/anchors_with_vulnerability.yml",
 	})
 }
 

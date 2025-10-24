@@ -494,6 +494,38 @@ func TestFindings(t *testing.T) {
 				Details: "Sources: body.pull_request.body",
 			},
 		},
+		{
+			RuleId: "injection",
+			Purl:   purl,
+			Meta: results.FindingMeta{
+				Path:          ".github/workflows/anchors_with_vulnerability.yml",
+				Line:          15,
+				Job:           "base_job",
+				Step:          "1",
+				Details:       "Sources: github.head_ref",
+				EventTriggers: []string{"pull_request_target", "push"},
+			},
+		},
+		{
+			RuleId: "injection",
+			Purl:   purl,
+			Meta: results.FindingMeta{
+				Path:          ".github/workflows/anchors_with_vulnerability.yml",
+				Line:          15,
+				Job:           "test_job",
+				Step:          "1",
+				Details:       "Sources: github.head_ref",
+				EventTriggers: []string{"pull_request_target", "push"},
+			},
+		},
+		{
+			RuleId: "default_permissions_on_risky_events",
+			Purl:   purl,
+			Meta: results.FindingMeta{
+				Path:          ".github/workflows/anchors_with_vulnerability.yml",
+				EventTriggers: []string{"pull_request_target", "push"},
+			},
+		},
 	}
 
 	assert.Equal(t, len(findings), len(analysisResults.Findings))
