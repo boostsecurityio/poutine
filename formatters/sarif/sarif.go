@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/boostsecurityio/poutine/results"
@@ -46,11 +48,18 @@ func (f *Format) Format(ctx context.Context, packages []*models.PackageInsights)
 			"purl": pkg.Purl,
 		}
 
+		sourceGitRepoURI := pkg.GetSourceGitRepoURI()
+
+		versionControlProvenance := sarif.NewVersionControlDetails().
+			WithRevisionID(pkg.SourceGitCommitSha).
+			WithBranch(pkg.SourceGitRef)
+
+		if IsValidGitURL(sourceGitRepoURI) {
+			versionControlProvenance = versionControlProvenance.
+				WithRepositoryURI(sourceGitRepoURI)
+		}
 		run.AddVersionControlProvenance(
-			sarif.NewVersionControlDetails().
-				WithRepositoryURI(pkg.GetSourceGitRepoURI()).
-				WithRevisionID(pkg.SourceGitCommitSha).
-				WithBranch(pkg.SourceGitRef),
+			versionControlProvenance,
 		)
 
 		findingsByPurl := make(map[string][]results.Finding)
@@ -119,4 +128,26 @@ func (f *Format) Format(ctx context.Context, packages []*models.PackageInsights)
 
 func (f *Format) FormatWithPath(ctx context.Context, packages []*models.PackageInsights, pathAssociations map[string][]*models.RepoInfo) error {
 	return errors.New("not implemented")
+}
+
+// IsValidGitURL validates if a string is a valid Git URL (HTTP(S) or SSH format)
+func IsValidGitURL(gitURL string) bool {
+	if strings.HasPrefix(gitURL, "http://") || strings.HasPrefix(gitURL, "https://") {
+		parsedURL, err := url.Parse(gitURL)
+		if err != nil {
+			return false
+		}
+		return parsedURL.Host != "" && parsedURL.Path != ""
+	}
+
+	if strings.HasPrefix(gitURL, "ssh://") {
+		parsedURL, err := url.Parse(gitURL)
+		if err != nil {
+			return false
+		}
+		return parsedURL.Host != "" && parsedURL.Path != ""
+	}
+
+	sshPattern := regexp.MustCompile(`^[a-zA-Z0-9_-]+@[a-zA-Z0-9._-]+:[a-zA-Z0-9/._-]+$`)
+	return sshPattern.MatchString(gitURL)
 }
