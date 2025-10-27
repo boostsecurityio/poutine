@@ -50,9 +50,11 @@ func TestPurls(t *testing.T) {
 		"pkg:azurepipelinestask/DownloadPipelineArtifact@2",
 		"pkg:azurepipelinestask/Cache@2",
 		"pkg:githubactions/org/owner@main#.github/workflows/ci.yml",
+		"pkg:githubactions/actions/checkout@v5",
+		"pkg:docker/node%3A18",
 	}
 	assert.ElementsMatch(t, i.Purls(*scannedPackage), purls)
-	assert.Len(t, scannedPackage.BuildDependencies, 20)
+	assert.Len(t, scannedPackage.BuildDependencies, 22)
 	assert.Equal(t, 4, len(scannedPackage.PackageDependencies))
 }
 
@@ -490,6 +492,38 @@ func TestFindings(t *testing.T) {
 				Job:     "vale",
 				Step:    "1",
 				Details: "Sources: body.pull_request.body",
+			},
+		},
+		{
+			RuleId: "injection",
+			Purl:   purl,
+			Meta: results.FindingMeta{
+				Path:          ".github/workflows/anchors_with_vulnerability.yml",
+				Line:          15,
+				Job:           "base_job",
+				Step:          "1",
+				Details:       "Sources: github.head_ref",
+				EventTriggers: []string{"pull_request_target", "push"},
+			},
+		},
+		{
+			RuleId: "injection",
+			Purl:   purl,
+			Meta: results.FindingMeta{
+				Path:          ".github/workflows/anchors_with_vulnerability.yml",
+				Line:          15,
+				Job:           "test_job",
+				Step:          "1",
+				Details:       "Sources: github.head_ref",
+				EventTriggers: []string{"pull_request_target", "push"},
+			},
+		},
+		{
+			RuleId: "default_permissions_on_risky_events",
+			Purl:   purl,
+			Meta: results.FindingMeta{
+				Path:          ".github/workflows/anchors_with_vulnerability.yml",
+				EventTriggers: []string{"pull_request_target", "push"},
 			},
 		},
 	}
