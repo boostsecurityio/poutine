@@ -50,17 +50,15 @@ func (f *Format) Format(ctx context.Context, packages []*models.PackageInsights)
 
 		sourceGitRepoURI := pkg.GetSourceGitRepoURI()
 
-		versionControlProvenance := sarif.NewVersionControlDetails().
-			WithRevisionID(pkg.SourceGitCommitSha).
-			WithBranch(pkg.SourceGitRef)
-
 		if IsValidGitURL(sourceGitRepoURI) {
-			versionControlProvenance = versionControlProvenance.
+			versionControlProvenance := sarif.NewVersionControlDetails().
+				WithRevisionID(pkg.SourceGitCommitSha).
+				WithBranch(pkg.SourceGitRef).
 				WithRepositoryURI(sourceGitRepoURI)
+			run.AddVersionControlProvenance(
+				versionControlProvenance,
+			)
 		}
-		run.AddVersionControlProvenance(
-			versionControlProvenance,
-		)
 
 		findingsByPurl := make(map[string][]results.Finding)
 		for _, finding := range pkg.FindingsResults.Findings {
