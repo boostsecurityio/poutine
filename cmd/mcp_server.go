@@ -21,10 +21,18 @@ import (
 	"github.com/spf13/viper"
 )
 
+// mcpAnalysisResponse provides a lightweight response for MCP tools
+// that includes only the essential security findings and minimal repository metadata
 type mcpAnalysisResponse struct {
-	*models.PackageInsights
 	Findings []results.Finding       `json:"findings"`
 	Rules    map[string]results.Rule `json:"rules"`
+	// Essential repository metadata
+	Purl       string `json:"purl,omitempty"`
+	Repository string `json:"repository,omitempty"`
+	ScmType    string `json:"scm_type,omitempty"`
+	GitRef     string `json:"git_ref,omitempty"`
+	CommitSha  string `json:"commit_sha,omitempty"`
+	LastCommit string `json:"last_commit,omitempty"`
 }
 
 var mcpServerCmd = &cobra.Command{
@@ -340,9 +348,14 @@ func handleAnalyzeOrg(ctx context.Context, request mcp.CallToolRequest, defaultC
 	combinedResponses := make([]mcpAnalysisResponse, 0, len(analysisResults))
 	for _, pkgInsights := range analysisResults {
 		combinedResponses = append(combinedResponses, mcpAnalysisResponse{
-			Findings:        pkgInsights.FindingsResults.Findings,
-			Rules:           pkgInsights.FindingsResults.Rules,
-			PackageInsights: pkgInsights,
+			Findings:   pkgInsights.FindingsResults.Findings,
+			Rules:      pkgInsights.FindingsResults.Rules,
+			Purl:       pkgInsights.Purl,
+			Repository: pkgInsights.SourceGitRepo,
+			ScmType:    pkgInsights.SourceScmType,
+			GitRef:     pkgInsights.SourceGitRef,
+			CommitSha:  pkgInsights.SourceGitCommitSha,
+			LastCommit: pkgInsights.LastCommitedAt,
 		})
 	}
 
@@ -386,9 +399,14 @@ func handleAnalyzeRepo(ctx context.Context, request mcp.CallToolRequest, default
 	}
 
 	combinedResponse := mcpAnalysisResponse{
-		Findings:        analysisResults.FindingsResults.Findings,
-		Rules:           analysisResults.FindingsResults.Rules,
-		PackageInsights: analysisResults,
+		Findings:   analysisResults.FindingsResults.Findings,
+		Rules:      analysisResults.FindingsResults.Rules,
+		Purl:       analysisResults.Purl,
+		Repository: analysisResults.SourceGitRepo,
+		ScmType:    analysisResults.SourceScmType,
+		GitRef:     analysisResults.SourceGitRef,
+		CommitSha:  analysisResults.SourceGitCommitSha,
+		LastCommit: analysisResults.LastCommitedAt,
 	}
 
 	resultData, err := json.Marshal(combinedResponse)
@@ -440,9 +458,14 @@ func handleAnalyzeLocal(ctx context.Context, request mcp.CallToolRequest, opaCli
 	}
 
 	combinedResponse := mcpAnalysisResponse{
-		Findings:        analysisResults.FindingsResults.Findings,
-		Rules:           analysisResults.FindingsResults.Rules,
-		PackageInsights: analysisResults,
+		Findings:   analysisResults.FindingsResults.Findings,
+		Rules:      analysisResults.FindingsResults.Rules,
+		Purl:       analysisResults.Purl,
+		Repository: analysisResults.SourceGitRepo,
+		ScmType:    analysisResults.SourceScmType,
+		GitRef:     analysisResults.SourceGitRef,
+		CommitSha:  analysisResults.SourceGitCommitSha,
+		LastCommit: analysisResults.LastCommitedAt,
 	}
 
 	resultData, err := json.Marshal(combinedResponse)
@@ -493,9 +516,14 @@ func handleAnalyzeStaleBranches(ctx context.Context, request mcp.CallToolRequest
 	}
 
 	combinedResponse := mcpAnalysisResponse{
-		Findings:        analysisResults.FindingsResults.Findings,
-		Rules:           analysisResults.FindingsResults.Rules,
-		PackageInsights: analysisResults,
+		Findings:   analysisResults.FindingsResults.Findings,
+		Rules:      analysisResults.FindingsResults.Rules,
+		Purl:       analysisResults.Purl,
+		Repository: analysisResults.SourceGitRepo,
+		ScmType:    analysisResults.SourceScmType,
+		GitRef:     analysisResults.SourceGitRef,
+		CommitSha:  analysisResults.SourceGitCommitSha,
+		LastCommit: analysisResults.LastCommitedAt,
 	}
 
 	resultData, err := json.Marshal(combinedResponse)
