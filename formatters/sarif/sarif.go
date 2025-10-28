@@ -59,9 +59,23 @@ func (f *Format) Format(ctx context.Context, packages []*models.PackageInsights)
 	for _, pkg := range packages {
 		run := sarif.NewRunWithInformationURI("poutine", "https://github.com/boostsecurityio/poutine")
 		run.Tool.Driver.WithSemanticVersion(f.version)
+		run.Tool.Driver.WithOrganization("boostsecurity")
 		run.Properties = map[string]interface{}{
 			"purl": pkg.Purl,
 		}
+		version := "1.0.0"
+		organization := "boostsecurity"
+
+		taxonomy := &sarif.ToolComponent{
+			Name:         "boost/sast",
+			Version:      &version,
+			Organization: &organization,
+		}
+
+		taxonomyRef := sarif.NewToolComponentReference().WithName("boost/sast")
+		run.Tool.Driver.WithSupportedTaxonomies([]*sarif.ToolComponentReference{taxonomyRef})
+
+		run.WithTaxonomies([]*sarif.ToolComponent{taxonomy})
 
 		sourceGitRepoURI := pkg.GetSourceGitRepoURI()
 
