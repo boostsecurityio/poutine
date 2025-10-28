@@ -39,6 +39,21 @@ func (f *Format) Format(ctx context.Context, packages []*models.PackageInsights)
 		return parts[0]
 	}
 
+	levelToConfidence := func(level string) string {
+		switch level {
+		case "error":
+			return "high"
+		case "warning":
+			return "medium"
+		case "note":
+			return "low"
+		case "none":
+			return "not_set"
+		default:
+			return "not_set"
+		}
+	}
+
 	docs := docs.GetPagesContent()
 
 	for _, pkg := range packages {
@@ -98,23 +113,33 @@ func (f *Format) Format(ctx context.Context, packages []*models.PackageInsights)
 
 			run.AddDistinctArtifact(path)
 
-			run.CreateResultForRule(ruleId).
+			fingerprint := finding.GenerateFindingFingerprint()
+			confidence := levelToConfidence(rule.Level)
+
+			result := run.CreateResultForRule(ruleId).
 				WithLevel(rule.Level).
 				WithMessage(sarif.NewTextMessage(ruleDescription)).
 				WithPartialFingerPrints(map[string]interface{}{
-					"primaryLocationLineHash": finding.GenerateFindingFingerprint(),
-				}).
-				AddLocation(
-					sarif.NewLocationWithPhysicalLocation(
-						sarif.NewPhysicalLocation().
-							WithArtifactLocation(
-								sarif.NewSimpleArtifactLocation(path),
-							).
-							WithRegion(
-								sarif.NewSimpleRegion(line, line),
-							),
-					),
-				)
+					"primaryLocationLineHash": fingerprint,
+				})
+
+			result.AddLocation(
+				sarif.NewLocationWithPhysicalLocation(
+					sarif.NewPhysicalLocation().
+						WithArtifactLocation(
+							sarif.NewSimpleArtifactLocation(path),
+						).
+						WithRegion(
+							sarif.NewSimpleRegion(line, line),
+						),
+				),
+			)
+
+			result.AttachPropertyBag(&sarif.PropertyBag{
+				Properties: map[string]interface{}{
+					"boost/confidence": confidence,
+				},
+			})
 		}
 		sarifReport.AddRun(run)
 	}
