@@ -32,7 +32,7 @@ jobs:
       with:
         go-version: ${{ env.GO_VERSION }}
         cache: false
-    - uses: sigstore/cosign-installer@d58896d6a1865668819e1d91763c7751a165e159 # v3.9.2
+    - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
     - name: Login to GitHub Container Registry to allow cosign signature push
       run: echo "$DOCKER_PASSWORD" | docker login ghcr.io --username "$DOCKER_USERNAME" --password-stdin
       env:
