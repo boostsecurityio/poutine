@@ -277,4 +277,19 @@ advisories = {
 		"vulnerable_version_ranges": [">=4,<4.1.7"],
 		"vulnerable_commit_shas": [],
 	},
+	"GHSA-pwf7-47c3-mfhx": {
+		"osv_id": "GHSA-pwf7-47c3-mfhx",
+		"package_name": "j178/prek-action",
+		"published": "2025-09-29T17:51:19Z",
+		"aliases": [],
+		"summary": "j178/prek-action vulnerable to arbitrary code injection in composite action",
+		"severity": [{
+			"type": "CVSS_V3",
+			"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:H",
+		}],
+		"cwe_ids": ["CWE-94"],
+		"vulnerable_versions": [],
+		"vulnerable_version_ranges": [">=0,<=1.0.5"],
+		"vulnerable_commit_shas": [],
+	},
 }
