@@ -273,6 +273,7 @@ advisories = {
 			"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:U/C:H/I:H/A:N",
 		}],
 		"cwe_ids": [],
+		"non_vulnerable_exact_versions": ["v4"],
 		"vulnerable_versions": [],
 		"vulnerable_version_ranges": [">=4,<4.1.7"],
 		"vulnerable_commit_shas": [],
