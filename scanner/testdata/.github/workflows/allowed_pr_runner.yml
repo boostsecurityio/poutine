@@ -8,6 +8,11 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+  ubuntu_slim:
+    runs-on: ubuntu-slim
+    steps:
+    - uses: actions/checkout@v4
+
   group:
     runs-on:
       group: prdeploy
