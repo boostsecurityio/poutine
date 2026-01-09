@@ -70,9 +70,13 @@ func (f *Format) Format(ctx context.Context, packages []*models.PackageInsights)
 			Name:         "boost/sast",
 			Version:      &version,
 			Organization: &organization,
+			Rules:        []*sarif.ReportingDescriptor{},
 		}
 
-		taxonomyRef := sarif.NewToolComponentReference().WithName("boost/sast")
+		taxonomyRef := sarif.NewToolComponentReference().
+			WithName("boost/sast").
+			WithIndex(0).
+			WithGuid("00000000-0000-0000-0000-000000000000")
 		run.Tool.Driver.WithSupportedTaxonomies([]*sarif.ToolComponentReference{taxonomyRef})
 
 		run.WithTaxonomies([]*sarif.ToolComponent{taxonomy})
