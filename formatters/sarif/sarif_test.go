@@ -7,7 +7,9 @@ import (
 	"testing"
 
 	"github.com/boostsecurityio/poutine/models"
+	"github.com/boostsecurityio/poutine/opa"
 	"github.com/boostsecurityio/poutine/results"
+	. "github.com/boostsecurityio/poutine/scanner"
 	"github.com/stretchr/testify/require"
 )
 
@@ -142,43 +144,47 @@ func TestIsValidGitURL(t *testing.T) {
 }
 
 // TestSarifFormatIssue384 validates that the fix for issue #384 works correctly.
-// This test uses the exact workflow YAML from the issue report to ensure
+// This test scans the actual workflow YAML from the issue report to ensure
 // the SARIF output would be accepted by GitHub's CodeQL upload action.
 func TestSarifFormatIssue384(t *testing.T) {
-	// Create a test package with a finding in the workflow from issue #384
+	// Scan the testdata directory containing the workflow from issue #384
+	scanner := NewInventoryScanner("testdata")
 	pkg := &models.PackageInsights{
-		Purl:               "pkg:github/coveo/test-repo@1.0.0",
-		SourceGitRepo:      "coveo/test-repo",
-		SourceGitCommitSha: "fcd6c2d5b2c2d8366e13b7415780831017e0ecae",
-		SourceGitRef:       "refs/pull/482/merge",
-		SourceScmType:      "github",
-		FindingsResults: results.FindingsResult{
-			Findings: []results.Finding{
-				{
-					RuleId: "unsafe_checkout",
-					Purl:   "pkg:github/coveo/test-repo@1.0.0",
-					Meta: results.FindingMeta{
-						Path: "testdata/.github/workflows/issue-384.yml",
-						Line: 29,
-						Job:  "poutine",
-						Step: "3",
-					},
-				},
-			},
-			Rules: map[string]results.Rule{
-				"unsafe_checkout": {
-					Id:          "unsafe_checkout",
-					Title:       "Unsafe Checkout",
-					Description: "Potential code injection via untrusted checkout",
-					Level:       "warning",
-				},
-			},
-		},
+		Purl:          "pkg:github/coveo/test-repo",
+		SourceGitRepo: "coveo/test-repo",
+		SourceGitRef:  "refs/pull/482/merge",
+		SourceScmType: "github",
 	}
+	err := scanner.Run(pkg)
+	require.NoError(t, err)
 
+	// Verify the workflow was found
+	require.NotEmpty(t, pkg.GithubActionsWorkflows, "should have found the issue-384 workflow")
+
+	// Find the issue-384 workflow
+	var foundWorkflow bool
+	for _, wf := range pkg.GithubActionsWorkflows {
+		if wf.Path == ".github/workflows/issue-384.yml" {
+			foundWorkflow = true
+			break
+		}
+	}
+	require.True(t, foundWorkflow, "should have found issue-384.yml workflow")
+
+	// Analyze with OPA to generate findings (using a basic config)
+	opaInstance, err := opa.NewOpa(context.Background(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
+	require.NoError(t, err)
+
+	inventory := NewInventory(opaInstance, nil, "", "")
+	scannedPkg, err := inventory.ScanPackage(context.Background(), *pkg, "testdata")
+	require.NoError(t, err)
+
+	// Generate SARIF output
 	var buf bytes.Buffer
 	formatter := NewFormat(&buf, "1.0.0")
-	err := formatter.Format(context.Background(), []*models.PackageInsights{pkg})
+	err = formatter.Format(context.Background(), []*models.PackageInsights{scannedPkg})
 	require.NoError(t, err)
 
 	// Parse the generated SARIF
