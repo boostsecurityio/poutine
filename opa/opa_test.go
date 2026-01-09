@@ -115,6 +115,7 @@ func TestJobUsesSelfHostedRunner(t *testing.T) {
 		"ubuntu-latest":       false,
 		"ubuntu-22.04":        false,
 		"ubuntu-20.04":        false,
+		"ubuntu-slim":         false,
 		"macos-latest-large":  false,
 		"macos-14-large":      false,
 		"macos-latest":        false,
