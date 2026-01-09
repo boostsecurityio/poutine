@@ -290,7 +290,7 @@ func TestFindings(t *testing.T) {
 			Meta: results.FindingMeta{
 				Path:          ".github/workflows/allowed_pr_runner.yml",
 				Job:           "group",
-				Line:          13,
+				Line:          18,
 				Details:       "runs-on: group:prdeploy",
 				EventTriggers: []string{"pull_request"},
 			},
@@ -301,7 +301,7 @@ func TestFindings(t *testing.T) {
 			Meta: results.FindingMeta{
 				Path:          ".github/workflows/allowed_pr_runner.yml",
 				Job:           "labels",
-				Line:          19,
+				Line:          24,
 				Details:       "runs-on: label:linux",
 				EventTriggers: []string{"pull_request"},
 			},
