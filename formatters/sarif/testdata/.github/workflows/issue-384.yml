@@ -1,0 +1,33 @@
+name: Issue 384 - SARIF Upload Test
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  poutine:
+    name: Boost Security.io Poutine
+    runs-on:
+      # these are auto-generated
+      - runs-on=${{ github.run_id }}
+      - runner=default_ubuntu_24_arm64
+      - env=${{ vars.RUNS_ON_ENV_DEV }}/region=us-east-1
+
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+      - uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        with:
+          egress-policy: audit
+      - name: Setup self-hosted runner
+        uses: coveo-platform/setup-runner@v1.0.0
+      - uses: actions/checkout@v5.0.0
+      - name: poutine - GitHub Actions SAST
+        uses: boostsecurityio/poutine-action@61bf0017ee5853beb601609f85c94249b53c26ef
+      - name: Upload poutine SARIF file
+        uses: github/codeql-action/upload-sarif@4fa2a7953630fd2f3fb380f21be14ede0169dd4f # v3.25.12
+        with:
+          sarif_file: results.sarif
