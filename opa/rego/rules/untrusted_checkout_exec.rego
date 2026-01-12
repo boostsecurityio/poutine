@@ -99,10 +99,13 @@ build_commands[cmd] = {
 results contains poutine.finding(rule, pkg_purl, {
 	"path": workflow_path,
 	"line": step.lines.run,
+	"job": job_id,
+	"lotp_tool": cmd,
+	"_job": job_obj,
 	"details": sprintf("Detected usage of `%s`", [cmd]),
 	"event_triggers": workflow_events,
 }) if {
-	[pkg_purl, workflow_path, workflow_events, step] := _steps_after_untrusted_checkout[_]
+	[pkg_purl, workflow_path, workflow_events, step, job_id, job_obj] := _steps_after_untrusted_checkout[_]
 	regex.match(
 		sprintf("([^a-z]|^)(%v)", [concat("|", build_commands[cmd])]),
 		step.run,
@@ -112,10 +115,13 @@ results contains poutine.finding(rule, pkg_purl, {
 results contains poutine.finding(rule, pkg_purl, {
 	"path": workflow_path,
 	"line": step.lines.uses,
+	"job": job_id,
+	"lotp_action": step.action,
+	"_job": job_obj,
 	"details": sprintf("Detected usage the GitHub Action `%s`", [step.action]),
 	"event_triggers": workflow_events,
 }) if {
-	[pkg_purl, workflow_path, workflow_events, step] := _steps_after_untrusted_checkout[_]
+	[pkg_purl, workflow_path, workflow_events, step, job_id, job_obj] := _steps_after_untrusted_checkout[_]
 	regex.match(
 		sprintf("([^a-z]|^)(%v)@", [concat("|", build_github_actions[_])]),
 		step.uses,
@@ -126,17 +132,20 @@ results contains poutine.finding(rule, pkg_purl, {
 results contains poutine.finding(rule, pkg_purl, {
 	"path": workflow_path,
 	"line": step.lines.uses,
+	"job": job_id,
+	"lotp_action": step.action,
+	"_job": job_obj,
 	"details": sprintf("Detected usage of a Local GitHub Action at path: `%s`", [step.action]),
 	"event_triggers": workflow_events,
 }) if {
-	[pkg_purl, workflow_path, workflow_events, step] := _steps_after_untrusted_checkout[_]
+	[pkg_purl, workflow_path, workflow_events, step, job_id, job_obj] := _steps_after_untrusted_checkout[_]
 	regex.match(
 		`^\./`,
 		step.action,
 	)
 }
 
-_steps_after_untrusted_checkout contains [pkg.purl, workflow.path, events, s.step] if {
+_steps_after_untrusted_checkout contains [pkg.purl, workflow.path, events, s.step, workflow.jobs[s.job_idx].id, workflow.jobs[s.job_idx]] if {
 	pkg := input.packages[_]
 	workflow := pkg.github_actions_workflows[_]
 
@@ -147,7 +156,7 @@ _steps_after_untrusted_checkout contains [pkg.purl, workflow.path, events, s.ste
 	s := utils.workflow_steps_after(pr_checkout)[_]
 }
 
-_steps_after_untrusted_checkout contains [pkg_purl, workflow.path, events, s.step] if {
+_steps_after_untrusted_checkout contains [pkg_purl, workflow.path, events, s.step, workflow.jobs[s.job_idx].id, workflow.jobs[s.job_idx]] if {
 	[pkg_purl, workflow] := _workflows_runs_from_pr[_]
 
 	events := [event | event := workflow.events[i].name]
@@ -170,6 +179,7 @@ results contains poutine.finding(rule, pkg_purl, {
 	"job": job,
 	"step": s.step_idx,
 	"line": s.step.lines[attr],
+	"lotp_tool": cmd,
 	"details": sprintf("Detected usage of `%s`", [cmd]),
 }) if {
 	[pkg_purl, pipeline_path, s, job] := _steps_after_untrusted_checkout_ado[_]
@@ -213,6 +223,7 @@ results contains poutine.finding(rule, pkg.purl, {
 	"job": task.name,
 	"step": step_idx,
 	"line": step.lines.script,
+	"lotp_tool": cmd,
 	"details": sprintf("Detected usage of `%s`", [cmd]),
 }) if {
 	pkg := input.packages[_]
