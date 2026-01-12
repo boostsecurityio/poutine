@@ -9,6 +9,7 @@ import (
 	"github.com/boostsecurityio/poutine/models"
 	"github.com/boostsecurityio/poutine/opa"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPurls(t *testing.T) {
@@ -724,7 +725,7 @@ func TestStructuredFindingFields(t *testing.T) {
 	_ = pkg.NormalizePurl()
 
 	scannedPackage, err := i.ScanPackage(ctx, *pkg, "testdata")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Test injection_sources field - find the specific injection finding
 	var injectionFinding *results.Finding
