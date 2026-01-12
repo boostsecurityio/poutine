@@ -2,8 +2,8 @@ package results
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"strconv"
 
 	"github.com/rs/zerolog/log"
@@ -42,7 +42,7 @@ func (f *Finding) GenerateFindingFingerprint() string {
 	h := sha256.New()
 	h.Write([]byte(fingerprintString))
 	fingerprint := h.Sum(nil)
-	return fmt.Sprintf("%x", fingerprint)
+	return hex.EncodeToString(fingerprint)
 }
 
 func (m *FindingMeta) UnmarshalJSON(data []byte) error {
