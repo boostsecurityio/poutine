@@ -2,8 +2,8 @@ package results
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"strconv"
 
 	"github.com/rs/zerolog/log"
@@ -23,6 +23,12 @@ type FindingMeta struct {
 	Details       string   `json:"details,omitempty"`
 	EventTriggers []string `json:"event_triggers,omitempty"`
 	BlobSHA       string   `json:"blobsha,omitempty"`
+
+	// Structured fields for programmatic access
+	InjectionSources  []string `json:"injection_sources,omitempty"`  // Sources confirmed as injected into a sink
+	LOTPTool          string   `json:"lotp_tool,omitempty"`          // Living Off The Pipeline tool (e.g., npm, pip)
+	LOTPAction        string   `json:"lotp_action,omitempty"`        // Living Off The Pipeline GitHub Action
+	ReferencedSecrets []string `json:"referenced_secrets,omitempty"` // Secrets referenced in workflow (excludes GITHUB_TOKEN)
 }
 
 type Finding struct {
@@ -36,7 +42,7 @@ func (f *Finding) GenerateFindingFingerprint() string {
 	h := sha256.New()
 	h.Write([]byte(fingerprintString))
 	fingerprint := h.Sum(nil)
-	return fmt.Sprintf("%x", fingerprint)
+	return hex.EncodeToString(fingerprint)
 }
 
 func (m *FindingMeta) UnmarshalJSON(data []byte) error {

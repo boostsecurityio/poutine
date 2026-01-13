@@ -1,0 +1,43 @@
+name: test_new_fields
+on:
+  pull_request_target:
+
+jobs:
+  vulnerable_injection:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Injection vulnerability - should populate injection_sources
+      - name: Vulnerable echo
+        run: |
+          echo "${{ github.event.issue.title }}"
+
+  vulnerable_checkout:
+    runs-on: ubuntu-latest
+    # Secret in if expression
+    if: ${{ secrets.ENABLE_BUILD != '' }}
+    steps:
+      - name: Checkout PR code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      # LOTP - should populate lotp_tool and referenced_secrets
+      - name: Install dependencies
+        run: |
+          # Secret directly in run script
+          curl -H "Authorization: ${{ secrets.API_KEY }}" https://api.example.com
+          npm install
+        env:
+          # Secrets in env block
+          DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy
+        uses: some/action@v1
+        with:
+          # Secret in with block
+          token: ${{ secrets.DEPLOY_TOKEN }}
+          password: ${{ secrets.DATABASE_PASSWORD }}

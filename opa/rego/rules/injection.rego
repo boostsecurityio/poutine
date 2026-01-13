@@ -33,6 +33,8 @@ results contains poutine.finding(rule, pkg.purl, {
 	"job": job.id,
 	"step": i,
 	"details": sprintf("Sources: %s", [concat(" ", exprs)]),
+	"injection_sources": sort(exprs),
+	"_job": job,
 	"event_triggers": [event | event := workflow.events[j].name],
 }) if {
 	pkg = input.packages[_]
@@ -48,6 +50,7 @@ results contains poutine.finding(rule, pkg.purl, {
 	"line": line,
 	"step": i,
 	"details": sprintf("Sources: %s", [concat(" ", exprs)]),
+	"injection_sources": sort(exprs),
 	"event_triggers": [event | event := action.events[j].name],
 }) if {
 	pkg = input.packages[_]
@@ -69,6 +72,7 @@ results contains poutine.finding(rule, pkg.purl, {
 	"path": config.path,
 	"job": sprintf("%s.%s[%d]", [job.name, attr, i]),
 	"details": sprintf("Sources: %s", [concat(" ", exprs)]),
+	"injection_sources": sort(exprs),
 	"line": job[attr][i].line,
 }) if {
 	pkg = input.packages[_]
@@ -94,6 +98,7 @@ results contains poutine.finding(rule, pkg.purl, {
 	"step": step_id,
 	"line": step.lines[attr],
 	"details": sprintf("Sources: %s", [concat(" ", exprs)]),
+	"injection_sources": sort(exprs),
 }) if {
 	some attr in {"script", "powershell", "pwsh", "bash"}
 	pkg := input.packages[_]
@@ -117,6 +122,7 @@ results contains poutine.finding(rule, pkg.purl, {
 	"step": step_idx,
 	"line": step.lines.start,
 	"details": sprintf("Sources: %s", [concat(" ", exprs)]),
+	"injection_sources": sort(exprs),
 }) if {
 	pkg := input.packages[_]
 	pipeline := pkg.pipeline_as_code_tekton[_]

@@ -104,3 +104,41 @@ find_first_uses_in_job(job, uses) := xs if {
 		startswith(s.uses, sprintf("%v@", [uses[_]]))
 	}
 }
+
+########################################################################
+# extract_referenced_secrets
+# Extracts all secrets.* references from GitHub Actions expressions (${{ }})
+# Excludes GITHUB_TOKEN. Handles dot and bracket notation.
+########################################################################
+
+# Dot notation: ${{ secrets.FOO }} or ${{ format(secrets.FOO) }}
+_secrets_dot_notation(str) := {m[1] |
+	matches := regex.find_all_string_submatch_n("\\$\\{\\{[^}]*?secrets\\.([a-zA-Z_][a-zA-Z0-9_]*)", str, -1)
+	m := matches[_]
+	m[1] != "GITHUB_TOKEN"
+}
+
+# Bracket notation with single quotes: ${{ secrets['FOO'] }}
+_secrets_bracket_single(str) := {m[1] |
+	matches := regex.find_all_string_submatch_n("\\$\\{\\{[^}]*?secrets\\['([a-zA-Z_][a-zA-Z0-9_]*)'\\]", str, -1)
+	m := matches[_]
+	m[1] != "GITHUB_TOKEN"
+}
+
+# Bracket notation with double quotes: ${{ secrets["FOO"] }}
+# Also handles JSON-escaped quotes: secrets[\"FOO\"] (after json.marshal)
+_secrets_bracket_double(str) := {m[1] |
+	matches := regex.find_all_string_submatch_n("\\$\\{\\{[^}]*?secrets\\[\\\\?\"([a-zA-Z_][a-zA-Z0-9_]*)\\\\?\"\\]", str, -1)
+	m := matches[_]
+	m[1] != "GITHUB_TOKEN"
+}
+
+extract_referenced_secrets(str) := sort(secrets) if {
+	secrets := _secrets_dot_notation(str) | _secrets_bracket_single(str) | _secrets_bracket_double(str)
+}
+
+# Extract secrets from a job by marshaling to JSON and searching
+job_referenced_secrets(job) := secrets if {
+	job_json := json.marshal(job)
+	secrets := extract_referenced_secrets(job_json)
+}
