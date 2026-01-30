@@ -76,6 +76,59 @@ to_set(xs) = xs if {
 } else := {xs}
 
 ########################################################################
+# lotp_target resolution
+########################################################################
+
+lotp_static_targets := {
+	"ant": "build.xml",
+	"bundler": "Gemfile",
+	"cargo": "Cargo.toml",
+	"checkov": ".checkov.yml",
+	"docker": "Dockerfile",
+	"eslint": "eslint.config.js",
+	"golangci-lint": ".golangci.yml",
+	"gomplate": ".gomplate.yaml",
+	"goreleaser": ".goreleaser.yaml",
+	"gradle": "build.gradle",
+	"make": "Makefile",
+	"maven": "pom.xml",
+	"mkdocs": "mkdocs.yml",
+	"msbuild": "Directory.Build.props",
+	"mypy": "mypy.ini",
+	"npm": "package.json",
+	"phpstan": "phpstan.neon",
+	"pip": "requirements.txt",
+	"pre-commit": ".pre-commit-config.yaml",
+	"rake": "Rakefile",
+	"rubocop": ".rubocop.yml",
+	"sonar-scanner": "sonar-project.properties",
+	"stylelint": ".stylelintrc.js",
+	"terraform": "main.tf",
+	"tflint": ".tflint.hcl",
+	"tofu": "main.tf",
+	"vale": ".vale.ini",
+	"webpack": "webpack.config.js",
+	"yarn": "package.json",
+}
+
+lotp_dynamic_target_patterns := {
+	"bash": `(\S+\.sh)\b`,
+	"powershell": `(\S+\.ps1)\b`,
+	"python": `python3?\s+(\S+\.py)\b`,
+	"chmod": `chmod\s+\S+\s+(\S+)`,
+}
+
+resolve_lotp_targets(cmd, run_content) := [lotp_static_targets[cmd]] if {
+	lotp_static_targets[cmd]
+} else := targets if {
+	pattern := lotp_dynamic_target_patterns[cmd]
+	matches := regex.find_all_string_submatch_n(pattern, run_content, -1)
+	unique := {trim_left(m[1], "./") | m := matches[_]; not contains(m[1], "://")}
+	count(unique) > 0
+	targets := sort(unique)
+}
+
+########################################################################
 # job order utils
 ########################################################################
 
