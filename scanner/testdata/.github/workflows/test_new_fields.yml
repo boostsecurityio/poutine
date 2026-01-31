@@ -35,6 +35,11 @@ jobs:
           DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Run build scripts
+        run: |
+          chmod +x ./scripts/build.sh && ./scripts/build.sh
+          ./scripts/verify.sh
+
       - name: Deploy
         uses: some/action@v1
         with:

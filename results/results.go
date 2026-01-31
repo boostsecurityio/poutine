@@ -28,6 +28,7 @@ type FindingMeta struct {
 	InjectionSources  []string `json:"injection_sources,omitempty"`  // Sources confirmed as injected into a sink
 	LOTPTool          string   `json:"lotp_tool,omitempty"`          // Living Off The Pipeline tool (e.g., npm, pip)
 	LOTPAction        string   `json:"lotp_action,omitempty"`        // Living Off The Pipeline GitHub Action
+	LOTPTargets       []string `json:"lotp_targets,omitempty"`       // Target files for LOTP injection (e.g., ["Makefile"], ["build.sh", "verify.sh"])
 	ReferencedSecrets []string `json:"referenced_secrets,omitempty"` // Secrets referenced in workflow (excludes GITHUB_TOKEN)
 }
 
