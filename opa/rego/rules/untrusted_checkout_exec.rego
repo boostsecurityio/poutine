@@ -96,15 +96,18 @@ build_commands[cmd] = {
 	"yarn": {"yarn "},
 }[cmd]
 
-results contains poutine.finding(rule, pkg_purl, {
-	"path": workflow_path,
-	"line": step.lines.run,
-	"job": job_id,
-	"lotp_tool": cmd,
-	"_job": job_obj,
-	"details": sprintf("Detected usage of `%s`", [cmd]),
-	"event_triggers": workflow_events,
-}) if {
+results contains poutine.finding(rule, pkg_purl, object.union(
+	{
+		"path": workflow_path,
+		"line": step.lines.run,
+		"job": job_id,
+		"lotp_tool": cmd,
+		"_job": job_obj,
+		"details": sprintf("Detected usage of `%s`", [cmd]),
+		"event_triggers": workflow_events,
+	},
+	_lotp_targets_meta(cmd, step.run),
+)) if {
 	[pkg_purl, workflow_path, workflow_events, step, job_id, job_obj] := _steps_after_untrusted_checkout[_]
 	regex.match(
 		sprintf("([^a-z]|^)(%v)", [concat("|", build_commands[cmd])]),
@@ -145,6 +148,10 @@ results contains poutine.finding(rule, pkg_purl, {
 	)
 }
 
+_lotp_targets_meta(cmd, content) := {"lotp_targets": targets} if {
+	targets := utils.resolve_lotp_targets(cmd, content)
+} else := {}
+
 _steps_after_untrusted_checkout contains [pkg.purl, workflow.path, events, s.step, workflow.jobs[s.job_idx].id, workflow.jobs[s.job_idx]] if {
 	pkg := input.packages[_]
 	workflow := pkg.github_actions_workflows[_]
@@ -174,14 +181,17 @@ _workflows_runs_from_pr contains [pkg.purl, workflow] if {
 
 # Azure Devops
 
-results contains poutine.finding(rule, pkg_purl, {
-	"path": pipeline_path,
-	"job": job,
-	"step": s.step_idx,
-	"line": s.step.lines[attr],
-	"lotp_tool": cmd,
-	"details": sprintf("Detected usage of `%s`", [cmd]),
-}) if {
+results contains poutine.finding(rule, pkg_purl, object.union(
+	{
+		"path": pipeline_path,
+		"job": job,
+		"step": s.step_idx,
+		"line": s.step.lines[attr],
+		"lotp_tool": cmd,
+		"details": sprintf("Detected usage of `%s`", [cmd]),
+	},
+	_lotp_targets_meta(cmd, s.step[attr]),
+)) if {
 	[pkg_purl, pipeline_path, s, job] := _steps_after_untrusted_checkout_ado[_]
 	regex.match(
 		sprintf("([^a-z]|^)(%v)", [concat("|", build_commands[cmd])]),
@@ -218,14 +228,17 @@ find_ado_checkout(stage) := xs if {
 
 # Pipeline As Code Tekton
 
-results contains poutine.finding(rule, pkg.purl, {
-	"path": pipeline.path,
-	"job": task.name,
-	"step": step_idx,
-	"line": step.lines.script,
-	"lotp_tool": cmd,
-	"details": sprintf("Detected usage of `%s`", [cmd]),
-}) if {
+results contains poutine.finding(rule, pkg.purl, object.union(
+	{
+		"path": pipeline.path,
+		"job": task.name,
+		"step": step_idx,
+		"line": step.lines.script,
+		"lotp_tool": cmd,
+		"details": sprintf("Detected usage of `%s`", [cmd]),
+	},
+	_lotp_targets_meta(cmd, step.script),
+)) if {
 	pkg := input.packages[_]
 	pipeline := pkg.pipeline_as_code_tekton[_]
 	contains(pipeline.api_version, "tekton.dev")

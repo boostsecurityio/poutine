@@ -206,6 +206,7 @@ func TestFindings(t *testing.T) {
 				Line:              30,
 				Details:           "Detected usage of `npm`",
 				LOTPTool:          "npm",
+				LOTPTargets:       []string{"package.json"},
 				EventTriggers:     []string{"push", "pull_request_target"},
 				ReferencedSecrets: []string{},
 			},
@@ -232,6 +233,7 @@ func TestFindings(t *testing.T) {
 				Line:              60,
 				Details:           "Detected usage of `pre-commit`",
 				LOTPTool:          "pre-commit",
+				LOTPTargets:       []string{".pre-commit-config.yaml"},
 				EventTriggers:     []string{"push", "pull_request_target"},
 				ReferencedSecrets: []string{},
 			},
@@ -271,6 +273,7 @@ func TestFindings(t *testing.T) {
 				Line:              13,
 				Details:           "Detected usage of `npm`",
 				LOTPTool:          "npm",
+				LOTPTargets:       []string{"package.json"},
 				EventTriggers:     []string{"workflow_run"},
 				ReferencedSecrets: []string{},
 			},
@@ -460,60 +463,65 @@ func TestFindings(t *testing.T) {
 			RuleId: "untrusted_checkout_exec",
 			Purl:   purl,
 			Meta: results.FindingMeta{
-				Path:     "azure-pipelines-2.yml",
-				Line:     13,
-				Job:      "",
-				Step:     "1",
-				Details:  "Detected usage of `bash`",
-				LOTPTool: "bash",
+				Path:        "azure-pipelines-2.yml",
+				Line:        13,
+				Job:         "",
+				Step:        "1",
+				Details:     "Detected usage of `bash`",
+				LOTPTool:    "bash",
+				LOTPTargets: []string{"script.sh"},
 			},
 		},
 		{
 			RuleId: "untrusted_checkout_exec",
 			Purl:   purl,
 			Meta: results.FindingMeta{
-				Path:     "azure-pipelines-2.yml",
-				Line:     14,
-				Job:      "",
-				Step:     "2",
-				Details:  "Detected usage of `npm`",
-				LOTPTool: "npm",
+				Path:        "azure-pipelines-2.yml",
+				Line:        14,
+				Job:         "",
+				Step:        "2",
+				Details:     "Detected usage of `npm`",
+				LOTPTool:    "npm",
+				LOTPTargets: []string{"package.json"},
 			},
 		},
 		{
 			RuleId: "untrusted_checkout_exec",
 			Purl:   purl,
 			Meta: results.FindingMeta{
-				Path:     "azure-pipelines-4.yml",
-				Line:     10,
-				Job:      "",
-				Step:     "1",
-				Details:  "Detected usage of `bash`",
-				LOTPTool: "bash",
+				Path:        "azure-pipelines-4.yml",
+				Line:        10,
+				Job:         "",
+				Step:        "1",
+				Details:     "Detected usage of `bash`",
+				LOTPTool:    "bash",
+				LOTPTargets: []string{"script.sh"},
 			},
 		},
 		{
 			RuleId: "untrusted_checkout_exec",
 			Purl:   purl,
 			Meta: results.FindingMeta{
-				Path:     "azure-pipelines-4.yml",
-				Line:     11,
-				Job:      "",
-				Step:     "2",
-				Details:  "Detected usage of `npm`",
-				LOTPTool: "npm",
+				Path:        "azure-pipelines-4.yml",
+				Line:        11,
+				Job:         "",
+				Step:        "2",
+				Details:     "Detected usage of `npm`",
+				LOTPTool:    "npm",
+				LOTPTargets: []string{"package.json"},
 			},
 		},
 		{
 			RuleId: "untrusted_checkout_exec",
 			Purl:   purl,
 			Meta: results.FindingMeta{
-				Path:     ".tekton/pipeline-as-code-tekton.yml",
-				Line:     43,
-				Job:      "vale",
-				Step:     "0",
-				Details:  "Detected usage of `vale`",
-				LOTPTool: "vale",
+				Path:        ".tekton/pipeline-as-code-tekton.yml",
+				Line:        43,
+				Job:         "vale",
+				Step:        "0",
+				Details:     "Detected usage of `vale`",
+				LOTPTool:    "vale",
+				LOTPTargets: []string{".vale.ini"},
 			},
 		},
 		{
@@ -566,6 +574,34 @@ func TestFindings(t *testing.T) {
 		},
 		// test_new_fields.yml findings
 		{
+			RuleId: "untrusted_checkout_exec",
+			Purl:   purl,
+			Meta: results.FindingMeta{
+				Path:              ".github/workflows/test_new_fields.yml",
+				Line:              39,
+				Job:               "vulnerable_checkout",
+				Details:           "Detected usage of `bash`",
+				LOTPTool:          "bash",
+				LOTPTargets:       []string{"scripts/build.sh", "scripts/verify.sh"},
+				EventTriggers:     []string{"pull_request_target"},
+				ReferencedSecrets: []string{"API_KEY", "DATABASE_PASSWORD", "DEPLOY_TOKEN", "ENABLE_BUILD"},
+			},
+		},
+		{
+			RuleId: "untrusted_checkout_exec",
+			Purl:   purl,
+			Meta: results.FindingMeta{
+				Path:              ".github/workflows/test_new_fields.yml",
+				Line:              39,
+				Job:               "vulnerable_checkout",
+				Details:           "Detected usage of `chmod`",
+				LOTPTool:          "chmod",
+				LOTPTargets:       []string{"scripts/build.sh"},
+				EventTriggers:     []string{"pull_request_target"},
+				ReferencedSecrets: []string{"API_KEY", "DATABASE_PASSWORD", "DEPLOY_TOKEN", "ENABLE_BUILD"},
+			},
+		},
+		{
 			RuleId: "injection",
 			Purl:   purl,
 			Meta: results.FindingMeta{
@@ -595,6 +631,7 @@ func TestFindings(t *testing.T) {
 				Job:               "vulnerable_checkout",
 				Details:           "Detected usage of `npm`",
 				LOTPTool:          "npm",
+				LOTPTargets:       []string{"package.json"},
 				EventTriggers:     []string{"pull_request_target"},
 				ReferencedSecrets: []string{"API_KEY", "DATABASE_PASSWORD", "DEPLOY_TOKEN", "ENABLE_BUILD"},
 			},
@@ -744,7 +781,7 @@ func TestStructuredFindingFields(t *testing.T) {
 	// Test lotp_tool and referenced_secrets fields
 	var lotpFinding *results.Finding
 	for idx, f := range scannedPackage.FindingsResults.Findings {
-		if f.RuleId == "untrusted_checkout_exec" && f.Meta.Path == ".github/workflows/test_new_fields.yml" {
+		if f.RuleId == "untrusted_checkout_exec" && f.Meta.Path == ".github/workflows/test_new_fields.yml" && f.Meta.LOTPTool == "npm" {
 			lotpFinding = &scannedPackage.FindingsResults.Findings[idx]
 			break
 		}
@@ -752,10 +789,24 @@ func TestStructuredFindingFields(t *testing.T) {
 	assert.NotNil(t, lotpFinding, "Expected to find untrusted_checkout_exec finding for test_new_fields.yml")
 	if lotpFinding != nil {
 		assert.Equal(t, "npm", lotpFinding.Meta.LOTPTool, "LOTPTool should be 'npm'")
+		assert.Equal(t, []string{"package.json"}, lotpFinding.Meta.LOTPTargets, "LOTPTargets should resolve npm to package.json")
 		assert.Contains(t, lotpFinding.Meta.ReferencedSecrets, "API_KEY")
 		assert.Contains(t, lotpFinding.Meta.ReferencedSecrets, "DATABASE_PASSWORD")
 		assert.Contains(t, lotpFinding.Meta.ReferencedSecrets, "DEPLOY_TOKEN")
 		assert.Contains(t, lotpFinding.Meta.ReferencedSecrets, "ENABLE_BUILD")
 		assert.NotContains(t, lotpFinding.Meta.ReferencedSecrets, "GITHUB_TOKEN", "GITHUB_TOKEN should be excluded")
+	}
+
+	var bashMultiTargetFinding *results.Finding
+	for idx, f := range scannedPackage.FindingsResults.Findings {
+		if f.RuleId == "untrusted_checkout_exec" && f.Meta.Path == ".github/workflows/test_new_fields.yml" && f.Meta.LOTPTool == "bash" {
+			bashMultiTargetFinding = &scannedPackage.FindingsResults.Findings[idx]
+			break
+		}
+	}
+	assert.NotNil(t, bashMultiTargetFinding, "Expected to find bash finding with multiple targets")
+	if bashMultiTargetFinding != nil {
+		assert.Equal(t, []string{"scripts/build.sh", "scripts/verify.sh"}, bashMultiTargetFinding.Meta.LOTPTargets,
+			"LOTPTargets should contain all .sh files from the run block, deduplicated and sorted")
 	}
 }
