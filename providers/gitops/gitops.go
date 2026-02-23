@@ -262,7 +262,7 @@ func (g *GitClient) getBranchWorkflow(ctx context.Context, clonePath string, bra
 	lsOutput, err := g.Command.Run(ctx, "git", []string{"ls-tree", "-r", ref, "--full-tree", ".github/workflows"}, clonePath)
 	if err != nil {
 		// If the directory doesn’t exist, skip.
-		if strings.Contains(err.Error(), "Not a valid object name") ||
+		if strings.Contains(strings.ToLower(err.Error()), "not a valid object name") ||
 			strings.Contains(err.Error(), "did not match any file") {
 			return nil, nil
 		}
