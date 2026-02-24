@@ -6,7 +6,7 @@ require (
 	github.com/gofri/go-github-ratelimit v1.1.1
 	github.com/google/go-github/v59 v59.0.0
 	github.com/hashicorp/go-version v1.7.0
-	github.com/mark3labs/mcp-go v0.41.1
+	github.com/mark3labs/mcp-go v0.42.0
 	github.com/olekukonko/tablewriter v1.1.0
 	github.com/open-policy-agent/opa v1.9.0
 	github.com/owenrumney/go-sarif/v2 v2.3.3
