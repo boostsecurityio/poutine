@@ -37,9 +37,13 @@ Example: poutine analyze_local /path/to/repo`,
 
 		analyzer := analyze.NewAnalyzer(localScmClient, localGitClient, formatter, config, opaClient)
 
-		_, err = analyzer.AnalyzeLocalRepo(ctx, repoPath)
+		result, err := analyzer.AnalyzeLocalRepo(ctx, repoPath)
 		if err != nil {
 			return fmt.Errorf("failed to analyze repoPath %s: %w", repoPath, err)
+		}
+
+		if failOnViolation && result != nil && len(result.FindingsResults.Findings) > 0 {
+			return ErrViolationsFound
 		}
 
 		return nil

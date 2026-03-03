@@ -105,15 +105,16 @@ poutine analyze_org my-org/project --token "$GL_TOKEN" --scm gitlab --scm-base-u
 ### Configuration Options
 
 ```
---token          SCM access token (required for the commands analyze_repo, analyze_org) (env: GH_TOKEN)
---format         Output format (default: pretty, json, sarif)
---ignore-forks   Ignore forked repositories in the organization(analyze_org)
---scm            SCM platform (default: github, gitlab)
---scm-base-url   Base URI of the self-hosted SCM instance
---threads        Number of threads to use (default: 2)
---config         Path to the configuration file (default: .poutine.yml)
---skip           Add rules to the skip list for the current run (can be specified multiple times)
---verbose        Enable debug logging
+--token              SCM access token (required for the commands analyze_repo, analyze_org) (env: GH_TOKEN)
+--format             Output format (default: pretty, json, sarif)
+--ignore-forks       Ignore forked repositories in the organization(analyze_org)
+--scm                SCM platform (default: github, gitlab)
+--scm-base-url       Base URI of the self-hosted SCM instance
+--threads            Number of threads to use (default: 2)
+--config             Path to the configuration file (default: .poutine.yml)
+--skip               Add rules to the skip list for the current run (can be specified multiple times)
+--verbose            Enable debug logging
+--fail-on-violation  Exit with a non-zero code (10) when violations are found
 ```
 
 See [.poutine.sample.yml](.poutine.sample.yml) for an example configuration file.

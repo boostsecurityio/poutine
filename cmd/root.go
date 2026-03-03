@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"embed"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -42,18 +43,24 @@ var cfgFile string
 var config *models.Config = models.DefaultConfig()
 var skipRules []string
 var allowedRules []string
+var failOnViolation bool
+
+// ErrViolationsFound is returned when violations are detected and --fail-on-violation is set.
+var ErrViolationsFound = errors.New("poutine: violations found")
 
 var legacyFlags = []string{"-token", "-format", "-verbose", "-scm", "-scm-base-uri", "-threads"}
 
 const (
-	exitCodeErr       = 1
-	exitCodeInterrupt = 2
+	exitCodeErr        = 1
+	exitCodeInterrupt  = 2
+	exitCodeViolations = 10
 )
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:   "poutine",
-	Short: "A Supply Chain Vulnerability Scanner for Build Pipelines",
+	Use:           "poutine",
+	SilenceErrors: true,
+	Short:         "A Supply Chain Vulnerability Scanner for Build Pipelines",
 	Long: `A Supply Chain Vulnerability Scanner for Build Pipelines
 By BoostSecurity.io - https://github.com/boostsecurityio/poutine `,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
@@ -95,6 +102,10 @@ func Execute() {
 
 	err := RootCmd.ExecuteContext(ctx)
 	if err != nil {
+		if errors.Is(err, ErrViolationsFound) {
+			log.Info().Msg("violations found")
+			os.Exit(exitCodeViolations)
+		}
 		log.Error().Err(err).Msg("")
 		os.Exit(exitCodeErr)
 	}
@@ -120,6 +131,7 @@ func init() {
 	RootCmd.PersistentFlags().BoolVarP(&config.Quiet, "quiet", "q", false, "Disable progress output")
 	RootCmd.PersistentFlags().StringSliceVar(&skipRules, "skip", []string{}, "Adds rules to the configured skip list for the current run (optional)")
 	RootCmd.PersistentFlags().StringSliceVar(&allowedRules, "allowed-rules", []string{}, "Overwrite the configured allowedRules list for the current run (optional)")
+	RootCmd.PersistentFlags().BoolVar(&failOnViolation, "fail-on-violation", false, "Exit with a non-zero code (10) when violations are found")
 
 	_ = viper.BindPFlag("quiet", RootCmd.PersistentFlags().Lookup("quiet"))
 }
