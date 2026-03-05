@@ -99,10 +99,17 @@ func (f *Format) Format(ctx context.Context, packages []*models.PackageInsights)
 		}
 
 		pkgFindings := findingsByPurl[pkg.Purl]
-		for _, depPurl := range pkg.PackageDependencies {
-			normalizedDepPurl := normalizePurl(depPurl)
-			if depFindings, exists := findingsByPurl[normalizedDepPurl]; exists {
-				pkgFindings = append(pkgFindings, depFindings...)
+		seenPurls := map[string]bool{normalizePurl(pkg.Purl): true}
+		for _, depSlice := range [][]string{pkg.PackageDependencies, pkg.BuildDependencies} {
+			for _, depPurl := range depSlice {
+				normalizedDepPurl := normalizePurl(depPurl)
+				if seenPurls[normalizedDepPurl] {
+					continue
+				}
+				seenPurls[normalizedDepPurl] = true
+				if depFindings, exists := findingsByPurl[normalizedDepPurl]; exists {
+					pkgFindings = append(pkgFindings, depFindings...)
+				}
 			}
 		}
 
