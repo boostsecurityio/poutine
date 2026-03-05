@@ -335,9 +335,38 @@ func TestFindings(t *testing.T) {
 		},
 		{
 			RuleId: "github_action_from_unverified_creator_used",
-			Purl:   "pkg:githubactions/kartverket/github-workflows",
+			Purl:   purl,
 			Meta: results.FindingMeta{
-				Details: "Used in 1 repo(s)",
+				Path:          ".github/workflows/valid.yml",
+				Line:          35,
+				Job:           "build",
+				Step:          "4",
+				Details:       "kartverket/github-workflows/.github/workflows/run-terraform.yml@main",
+				EventTriggers: []string{"push", "pull_request_target"},
+			},
+		},
+		{
+			RuleId: "github_action_from_unverified_creator_used",
+			Purl:   purl,
+			Meta: results.FindingMeta{
+				Path:          ".github/workflows/valid.yml",
+				Line:          39,
+				Job:           "build",
+				Step:          "5",
+				Details:       "kartverket/github-workflows/.github/workflows/run-terraform.yml@v2.7.1",
+				EventTriggers: []string{"push", "pull_request_target"},
+			},
+		},
+		{
+			RuleId: "github_action_from_unverified_creator_used",
+			Purl:   purl,
+			Meta: results.FindingMeta{
+				Path:          ".github/workflows/valid.yml",
+				Line:          43,
+				Job:           "build",
+				Step:          "6",
+				Details:       "kartverket/github-workflows/.github/workflows/run-terraform.yml@v2.2",
+				EventTriggers: []string{"push", "pull_request_target"},
 			},
 		},
 		{
@@ -617,9 +646,14 @@ func TestFindings(t *testing.T) {
 		},
 		{
 			RuleId: "github_action_from_unverified_creator_used",
-			Purl:   "pkg:githubactions/some/action",
+			Purl:   purl,
 			Meta: results.FindingMeta{
-				Details: "Used in 1 repo(s)",
+				Path:          ".github/workflows/test_new_fields.yml",
+				Line:          44,
+				Job:           "vulnerable_checkout",
+				Step:          "3",
+				Details:       "some/action@v1",
+				EventTriggers: []string{"pull_request_target"},
 			},
 		},
 		{
@@ -745,6 +779,42 @@ func TestRulesConfig(t *testing.T) {
 		}
 	}
 	assert.Empty(t, labels)
+}
+
+// TestKnownVulnerabilityInBuildPlatformFinding validates that findings from the
+// known_vulnerability_in_build_platform rule use pkg.purl as the finding purl (not
+// input.provider), so they are not silently dropped from SARIF output.
+func TestKnownVulnerabilityInBuildPlatformFinding(t *testing.T) {
+	o, _ := opa.NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
+	// provider="gitlab", version="17.3.0" matches advisory PVE-2024-00001 (>=17.3, <17.3.3)
+	i := NewInventory(o, nil, "gitlab", "17.3.0")
+	purl := "pkg:github/org/owner"
+	pkg := &models.PackageInsights{
+		Purl:          purl,
+		SourceGitRepo: "org/owner",
+		SourceGitRef:  "main",
+	}
+	_ = pkg.NormalizePurl()
+
+	scannedPackage, err := i.ScanPackage(context.Background(), *pkg, "testdata")
+	require.NoError(t, err)
+
+	var platformFinding *results.Finding
+	for idx, f := range scannedPackage.FindingsResults.Findings {
+		if f.RuleId == "known_vulnerability_in_build_platform" {
+			platformFinding = &scannedPackage.FindingsResults.Findings[idx]
+			break
+		}
+	}
+
+	require.NotNil(t, platformFinding, "expected a known_vulnerability_in_build_platform finding")
+	// The finding purl must be pkg.purl (not input.provider like "gitlab"), so it
+	// is not dropped from SARIF output by the formatter's purl-based lookup.
+	assert.Equal(t, purl, platformFinding.Purl, "finding purl should be pkg.purl, not the provider string")
+	assert.NotEmpty(t, platformFinding.Meta.OsvId, "osv_id should be populated")
+	assert.NotEmpty(t, platformFinding.Meta.Details, "details should be populated")
 }
 
 func TestStructuredFindingFields(t *testing.T) {
