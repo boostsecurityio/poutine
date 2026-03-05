@@ -37,9 +37,13 @@ Example Scanning a remote Github Repository: poutine analyze_repo_stale_branches
 			return fmt.Errorf("error compiling regex: %w", err)
 		}
 
-		_, err = analyzer.AnalyzeStaleBranches(ctx, repo, &threads, &expand, reg)
+		result, err := analyzer.AnalyzeStaleBranches(ctx, repo, &threads, &expand, reg)
 		if err != nil {
 			return fmt.Errorf("failed to analyze repo %s: %w", repo, err)
+		}
+
+		if failOnViolation && result != nil && len(result.FindingsResults.Findings) > 0 {
+			return ErrViolationsFound
 		}
 
 		return nil
