@@ -11,7 +11,7 @@ import (
 
 func TestErrViolationsFound(t *testing.T) {
 	require.EqualError(t, ErrViolationsFound, "poutine: violations found")
-	assert.ErrorIs(t, ErrViolationsFound, ErrViolationsFound)
+	assert.Implements(t, (*error)(nil), ErrViolationsFound)
 }
 
 func TestExitCodeViolations(t *testing.T) {
@@ -24,7 +24,7 @@ func TestFailOnViolationFlag(t *testing.T) {
 	assert.Equal(t, "false", flag.DefValue, "--fail-on-violation should default to false")
 }
 
-func TestFailOnViolationLogic(t *testing.T) {
+func TestCheckViolations(t *testing.T) {
 	pkgWithFindings := &models.PackageInsights{
 		FindingsResults: results.FindingsResult{
 			Findings: []results.Finding{
@@ -38,49 +38,43 @@ func TestFailOnViolationLogic(t *testing.T) {
 		},
 	}
 
-	t.Run("failOnViolation=false with findings returns no error", func(t *testing.T) {
-		// Simulate the logic in command handlers
-		fov := false
-		pkg := pkgWithFindings
-		var err error
-		if fov && pkg != nil && len(pkg.FindingsResults.Findings) > 0 {
-			err = ErrViolationsFound
-		}
-		assert.NoError(t, err)
+	t.Run("returns nil when failOnViolation is false", func(t *testing.T) {
+		failOnViolation = false
+		defer func() { failOnViolation = false }()
+
+		assert.NoError(t, checkViolations(pkgWithFindings))
 	})
 
-	t.Run("failOnViolation=true with findings returns ErrViolationsFound", func(t *testing.T) {
-		fov := true
-		pkg := pkgWithFindings
-		var err error
-		if fov && pkg != nil && len(pkg.FindingsResults.Findings) > 0 {
-			err = ErrViolationsFound
-		}
-		assert.ErrorIs(t, err, ErrViolationsFound)
+	t.Run("returns ErrViolationsFound when findings exist", func(t *testing.T) {
+		failOnViolation = true
+		defer func() { failOnViolation = false }()
+
+		assert.ErrorIs(t, checkViolations(pkgWithFindings), ErrViolationsFound)
 	})
 
-	t.Run("failOnViolation=true with no findings returns no error", func(t *testing.T) {
-		fov := true
-		pkg := pkgNoFindings
-		var err error
-		if fov && pkg != nil && len(pkg.FindingsResults.Findings) > 0 {
-			err = ErrViolationsFound
-		}
-		assert.NoError(t, err)
+	t.Run("returns nil when no findings", func(t *testing.T) {
+		failOnViolation = true
+		defer func() { failOnViolation = false }()
+
+		assert.NoError(t, checkViolations(pkgNoFindings))
 	})
 
-	t.Run("failOnViolation=true with nil result returns no error", func(t *testing.T) {
-		fov := true
-		var pkg *models.PackageInsights
-		var err error
-		if fov && pkg != nil && len(pkg.FindingsResults.Findings) > 0 {
-			err = ErrViolationsFound
-		}
-		assert.NoError(t, err)
+	t.Run("returns nil for nil package", func(t *testing.T) {
+		failOnViolation = true
+		defer func() { failOnViolation = false }()
+
+		assert.NoError(t, checkViolations(nil))
+	})
+
+	t.Run("returns nil when called with no args", func(t *testing.T) {
+		failOnViolation = true
+		defer func() { failOnViolation = false }()
+
+		assert.NoError(t, checkViolations())
 	})
 }
 
-func TestFailOnViolationOrgLogic(t *testing.T) {
+func TestCheckViolationsOrg(t *testing.T) {
 	pkgWithFindings := &models.PackageInsights{
 		FindingsResults: results.FindingsResult{
 			Findings: []results.Finding{
@@ -90,33 +84,19 @@ func TestFailOnViolationOrgLogic(t *testing.T) {
 	}
 	pkgNoFindings := &models.PackageInsights{}
 
-	t.Run("failOnViolation=true with findings in org returns ErrViolationsFound", func(t *testing.T) {
-		fov := true
-		pkgs := []*models.PackageInsights{pkgNoFindings, pkgWithFindings}
-		var err error
-		if fov {
-			for _, pkg := range pkgs {
-				if pkg != nil && len(pkg.FindingsResults.Findings) > 0 {
-					err = ErrViolationsFound
-					break
-				}
-			}
-		}
+	t.Run("returns ErrViolationsFound when any package has findings", func(t *testing.T) {
+		failOnViolation = true
+		defer func() { failOnViolation = false }()
+
+		err := checkViolations(pkgNoFindings, pkgWithFindings)
 		assert.ErrorIs(t, err, ErrViolationsFound)
 	})
 
-	t.Run("failOnViolation=true with no findings in org returns no error", func(t *testing.T) {
-		fov := true
-		pkgs := []*models.PackageInsights{pkgNoFindings, pkgNoFindings}
-		var err error
-		if fov {
-			for _, pkg := range pkgs {
-				if pkg != nil && len(pkg.FindingsResults.Findings) > 0 {
-					err = ErrViolationsFound
-					break
-				}
-			}
-		}
+	t.Run("returns nil when no packages have findings", func(t *testing.T) {
+		failOnViolation = true
+		defer func() { failOnViolation = false }()
+
+		err := checkViolations(pkgNoFindings, pkgNoFindings)
 		assert.NoError(t, err)
 	})
 }

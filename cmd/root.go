@@ -48,6 +48,20 @@ var failOnViolation bool
 // ErrViolationsFound is returned when violations are detected and --fail-on-violation is set.
 var ErrViolationsFound = errors.New("poutine: violations found")
 
+// checkViolations returns ErrViolationsFound if --fail-on-violation is set
+// and any of the provided packages contain findings.
+func checkViolations(pkgs ...*models.PackageInsights) error {
+	if !failOnViolation {
+		return nil
+	}
+	for _, pkg := range pkgs {
+		if pkg != nil && len(pkg.FindingsResults.Findings) > 0 {
+			return ErrViolationsFound
+		}
+	}
+	return nil
+}
+
 var legacyFlags = []string{"-token", "-format", "-verbose", "-scm", "-scm-base-uri", "-threads"}
 
 const (
@@ -59,6 +73,7 @@ const (
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:           "poutine",
+	SilenceUsage:  true,
 	SilenceErrors: true,
 	Short:         "A Supply Chain Vulnerability Scanner for Build Pipelines",
 	Long: `A Supply Chain Vulnerability Scanner for Build Pipelines
@@ -106,7 +121,7 @@ func Execute() {
 			log.Info().Msg("violations found")
 			os.Exit(exitCodeViolations)
 		}
-		log.Error().Err(err).Msg("")
+		log.Error().Err(err).Msg("command failed")
 		os.Exit(exitCodeErr)
 	}
 }

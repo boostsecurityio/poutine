@@ -42,8 +42,8 @@ Example: poutine analyze_local /path/to/repo`,
 			return fmt.Errorf("failed to analyze repoPath %s: %w", repoPath, err)
 		}
 
-		if failOnViolation && result != nil && len(result.FindingsResults.Findings) > 0 {
-			return ErrViolationsFound
+		if err := checkViolations(result); err != nil {
+			return err
 		}
 
 		return nil

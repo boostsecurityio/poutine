@@ -37,12 +37,8 @@ Note: This command will scan all repositories in the organization except those t
 			return fmt.Errorf("failed to analyze org %s: %w", org, err)
 		}
 
-		if failOnViolation {
-			for _, pkg := range results {
-				if pkg != nil && len(pkg.FindingsResults.Findings) > 0 {
-					return ErrViolationsFound
-				}
-			}
+		if err := checkViolations(results...); err != nil {
+			return err
 		}
 
 		return nil
