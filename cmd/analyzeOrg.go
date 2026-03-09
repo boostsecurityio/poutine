@@ -32,9 +32,13 @@ Note: This command will scan all repositories in the organization except those t
 
 		org := args[0]
 
-		_, err = analyzer.AnalyzeOrg(ctx, org, &threads)
+		results, err := analyzer.AnalyzeOrg(ctx, org, &threads)
 		if err != nil {
 			return fmt.Errorf("failed to analyze org %s: %w", org, err)
+		}
+
+		if err := checkViolations(results...); err != nil {
+			return err
 		}
 
 		return nil
