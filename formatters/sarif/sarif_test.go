@@ -13,6 +13,92 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestSarifFormatBuildDependencyFindings validates that findings keyed by a
+// build dependency purl are included in the SARIF output. This exercises
+// the formatter's BuildDependencies lookup path.
+func TestSarifFormatBuildDependencyFindings(t *testing.T) {
+	actionPurl := "pkg:githubactions/unverified-owner/some-action"
+	pkgPurl := "pkg:github/test/repo@main"
+	pkg := &models.PackageInsights{
+		Purl:              pkgPurl,
+		SourceGitRepo:     "test/repo",
+		SourceGitRef:      "main",
+		SourceScmType:     "github",
+		BuildDependencies: []string{actionPurl + "@v1.0"},
+		FindingsResults: results.FindingsResult{
+			Findings: []results.Finding{
+				{
+					RuleId: "github_action_from_unverified_creator_used",
+					// Finding keyed by the build dependency purl (version stripped
+					// by the rego rule). This tests the BuildDependencies lookup.
+					Purl: actionPurl,
+					Meta: results.FindingMeta{
+						Path:    ".github/workflows/ci.yml",
+						Line:    5,
+						Job:     "build",
+						Step:    "2",
+						Details: "unverified-owner/some-action@v1.0",
+					},
+				},
+			},
+			Rules: map[string]results.Rule{
+				"github_action_from_unverified_creator_used": {
+					Id:          "github_action_from_unverified_creator_used",
+					Title:       "Github Action from Unverified Creator used",
+					Description: "Usage of GitHub Actions from unverified creators was detected.",
+					Level:       "note",
+				},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	formatter := NewFormat(&buf, "1.0.0")
+	err := formatter.Format(context.Background(), []*models.PackageInsights{pkg})
+	require.NoError(t, err)
+
+	var sarifOutput map[string]interface{}
+	err = json.Unmarshal(buf.Bytes(), &sarifOutput)
+	require.NoError(t, err)
+
+	runs, ok := sarifOutput["runs"].([]interface{})
+	require.True(t, ok)
+	require.Len(t, runs, 1)
+
+	run, ok := runs[0].(map[string]interface{})
+	require.True(t, ok)
+
+	sarifResults, ok := run["results"].([]interface{})
+	require.True(t, ok, "results should be present in the SARIF run")
+	require.Len(t, sarifResults, 1, "build dependency finding should appear in SARIF output")
+
+	result, ok := sarifResults[0].(map[string]interface{})
+	require.True(t, ok)
+	require.Equal(t, "github_action_from_unverified_creator_used", result["ruleId"])
+
+	locations, ok := result["locations"].([]interface{})
+	require.True(t, ok, "locations should be present")
+	require.Len(t, locations, 1)
+
+	location, ok := locations[0].(map[string]interface{})
+	require.True(t, ok)
+
+	physicalLocation, ok := location["physicalLocation"].(map[string]interface{})
+	require.True(t, ok)
+
+	artifactLocation, ok := physicalLocation["artifactLocation"].(map[string]interface{})
+	require.True(t, ok)
+	uri, ok := artifactLocation["uri"].(string)
+	require.True(t, ok, "uri should be a string")
+	require.Equal(t, ".github/workflows/ci.yml", uri, "uri should be the workflow file path")
+
+	region, ok := physicalLocation["region"].(map[string]interface{})
+	require.True(t, ok)
+	startLine, ok := region["startLine"].(float64)
+	require.True(t, ok, "startLine should be a number")
+	require.InDelta(t, float64(5), startLine, 0.0001, "startLine should match the finding line")
+}
+
 func TestSarifFormat(t *testing.T) {
 	// Create a test package with findings
 	pkg := &models.PackageInsights{

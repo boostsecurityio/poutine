@@ -17,17 +17,34 @@ github_verified_partners contains p if some p in ["1password", "42crunch", "acti
 # Consider input package namespaces as verified
 github_verified_partners contains input.packages[_].package_namespace
 
-results contains poutine.finding(
-	rule,
-	repo_purl,
-	{"details": sprintf("Used in %d repo(s)", [count(unverified_github_actions[repo_purl])])},
-)
-
-unverified_github_actions[action_repo] contains pkg.purl if {
+results contains poutine.finding(rule, pkg.purl, {
+	"path": workflow.path,
+	"line": step.lines.uses,
+	"job": job.id,
+	"step": i,
+	"details": step.uses,
+	"event_triggers": [event | event := workflow.events[j].name],
+}) if {
 	pkg := input.packages[_]
-	dep := array.concat(pkg.build_dependencies, pkg.package_dependencies)[_]
+	workflow := pkg.github_actions_workflows[_]
+	job := workflow.jobs[_]
+	step := job.steps[i]
+	dep := purl.parse_github_actions(step.uses, pkg.source_git_repo, pkg.source_git_ref)
 	startswith(dep, "pkg:githubactions/")
+	not regex.match(sprintf("pkg:githubactions/(%s)/", [concat("|", github_verified_partners)]), dep)
+}
 
-	action_repo := split(dep, "@")[0]
+results contains poutine.finding(rule, pkg.purl, {
+	"path": action.path,
+	"line": step.lines.uses,
+	"step": i,
+	"details": step.uses,
+}) if {
+	pkg := input.packages[_]
+	action := pkg.github_actions_metadata[_]
+	action.runs.using == "composite"
+	step := action.runs.steps[i]
+	dep := purl.parse_github_actions(step.uses, pkg.source_git_repo, pkg.source_git_ref)
+	startswith(dep, "pkg:githubactions/")
 	not regex.match(sprintf("pkg:githubactions/(%s)/", [concat("|", github_verified_partners)]), dep)
 }
