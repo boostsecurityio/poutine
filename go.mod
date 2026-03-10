@@ -1,6 +1,6 @@
 module github.com/boostsecurityio/poutine
 
-go 1.25
+go 1.25.0
 
 require (
 	github.com/gofri/go-github-ratelimit v1.1.1
@@ -18,7 +18,7 @@ require (
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
 	gitlab.com/gitlab-org/api/client-go v0.157.1
-	golang.org/x/oauth2 v0.31.0
+	golang.org/x/oauth2 v0.36.0
 	golang.org/x/sync v0.17.0
 	gopkg.in/yaml.v3 v3.0.1
 )
