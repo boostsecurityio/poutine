@@ -24,7 +24,7 @@ func TestPurls(t *testing.T) {
 	}
 	_ = pkg.NormalizePurl()
 	scannedPackage, err := i.ScanPackage(context.Background(), *pkg, "testdata")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	purls := []string{
 		"pkg:docker/node%3Alatest",
@@ -74,7 +74,7 @@ func TestFindings(t *testing.T) {
 	_ = pkg.NormalizePurl()
 
 	scannedPackage, err := i.ScanPackage(context.Background(), *pkg, "testdata")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	analysisResults := scannedPackage.FindingsResults
 
@@ -700,7 +700,7 @@ func TestSkipRule(t *testing.T) {
 	_ = pkg.NormalizePurl()
 
 	updatedPkg, err := i.ScanPackage(ctx, *pkg, "testdata")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	analysisResults := updatedPkg.FindingsResults
 
@@ -718,10 +718,10 @@ func TestSkipRule(t *testing.T) {
 			},
 		},
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	secondUpdatedPkg, err := i.ScanPackage(context.Background(), *pkg, "testdata")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	analysisResults = secondUpdatedPkg.FindingsResults
 
@@ -731,6 +731,86 @@ func TestSkipRule(t *testing.T) {
 	}
 
 	assert.NotContains(t, rule_ids, rule_id)
+}
+
+func TestSkipRuleByActionPurl(t *testing.T) {
+	o, _ := opa.NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
+	i := NewInventory(o, nil, "", "")
+	ctx := context.TODO()
+	purl := "pkg:github/org/owner"
+	rule_id := "github_action_from_unverified_creator_used"
+	pkg := &models.PackageInsights{
+		Purl:          purl,
+		SourceGitRepo: "org/owner",
+		SourceGitRef:  "main",
+	}
+	_ = pkg.NormalizePurl()
+
+	updatedPkg, err := i.ScanPackage(ctx, *pkg, "testdata")
+	require.NoError(t, err)
+
+	// Collect findings for the unverified creator rule
+	var unverifiedFindings []results.Finding
+	for _, f := range updatedPkg.FindingsResults.Findings {
+		if f.RuleId == rule_id {
+			unverifiedFindings = append(unverifiedFindings, f)
+		}
+	}
+	require.NotEmpty(t, unverifiedFindings, "expected unverified creator findings before skip")
+
+	// Test 1: Versionless skip should match ALL versions of kartverket/github-workflows
+	err = o.WithConfig(ctx, &models.Config{
+		Skip: []models.ConfigSkip{
+			{
+				Rule: []string{rule_id},
+				Purl: []string{"pkg:githubactions/kartverket/github-workflows"},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	secondUpdatedPkg, err := i.ScanPackage(context.Background(), *pkg, "testdata")
+	require.NoError(t, err)
+
+	for _, f := range secondUpdatedPkg.FindingsResults.Findings {
+		if f.RuleId == rule_id {
+			assert.NotContains(t, f.Meta.Details, "kartverket/github-workflows",
+				"versionless skip should remove all versions of kartverket/github-workflows")
+		}
+	}
+
+	// Test 2: Version-specific skip should only match that exact version
+	err = o.WithConfig(ctx, &models.Config{
+		Skip: []models.ConfigSkip{
+			{
+				Rule: []string{rule_id},
+				Purl: []string{"pkg:githubactions/kartverket/github-workflows@v2.7.1"},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	thirdUpdatedPkg, err := i.ScanPackage(context.Background(), *pkg, "testdata")
+	require.NoError(t, err)
+
+	var remainingDetails []string
+	for _, f := range thirdUpdatedPkg.FindingsResults.Findings {
+		if f.RuleId == rule_id {
+			remainingDetails = append(remainingDetails, f.Meta.Details)
+		}
+	}
+	// v2.7.1 should be skipped, but @main and @v2.2 should remain
+	for _, d := range remainingDetails {
+		assert.NotContains(t, d, "@v2.7.1",
+			"version-specific skip should remove only that version")
+	}
+	// Verify other versions are still present
+	assert.Contains(t, remainingDetails, "kartverket/github-workflows/.github/workflows/run-terraform.yml@main",
+		"@main should not be skipped by version-specific skip")
+	assert.Contains(t, remainingDetails, "kartverket/github-workflows/.github/workflows/run-terraform.yml@v2.2",
+		"@v2.2 should not be skipped by version-specific skip")
 }
 
 func TestRulesConfig(t *testing.T) {
@@ -750,7 +830,7 @@ func TestRulesConfig(t *testing.T) {
 	_ = pkg.NormalizePurl()
 
 	scannedPackage, err := i.ScanPackage(ctx, *pkg, "testdata")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	labels := []string{}
 	for _, f := range scannedPackage.FindingsResults.Findings {
@@ -767,10 +847,10 @@ func TestRulesConfig(t *testing.T) {
 			},
 		},
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	reScannedPackage, err := i.ScanPackage(ctx, *pkg, "testdata")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	labels = []string{}
 	for _, f := range reScannedPackage.FindingsResults.Findings {
