@@ -137,7 +137,8 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 
 	for repoBatch := range orgReposBatches {
 		if repoBatch.Err != nil {
-			return scannedPackages, fmt.Errorf("failed to get batch of repos: %w", repoBatch.Err)
+			log.Error().Err(repoBatch.Err).Msg("failed to fetch batch of repos, skipping batch")
+			continue
 		}
 		if repoBatch.TotalCount != 0 {
 			bar.ChangeMax(repoBatch.TotalCount)

@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/boostsecurityio/poutine/analyze"
 	"github.com/boostsecurityio/poutine/providers/scm/domain"
@@ -371,7 +372,23 @@ func (c *Client) GetOrgRepos(ctx context.Context, org string) <-chan analyze.Rep
 				} `graphql:"repositoryOwner(login: $org)"`
 			}
 
-			err := c.graphQLClient.Query(ctx, &query, variables)
+			var err error
+			for attempt := 0; attempt < 3; attempt++ {
+				err = c.graphQLClient.Query(ctx, &query, variables)
+				if err == nil {
+					break
+				}
+				if !isRetryableError(err) {
+					break
+				}
+				log.Warn().Err(err).Int("attempt", attempt+1).Msg("retrying GitHub GraphQL query after transient error")
+				select {
+				case <-ctx.Done():
+					batchChan <- analyze.RepoBatch{Err: ctx.Err()}
+					return
+				case <-time.After(time.Duration(1<<attempt) * time.Second):
+				}
+			}
 			if err != nil {
 				batchChan <- analyze.RepoBatch{Err: err}
 				return
@@ -414,4 +431,33 @@ func convertToRepositorySlice(githubRepos []GithubRepository) []analyze.Reposito
 		repos[i] = repo
 	}
 	return repos
+}
+
+// isRetryableError returns true for transient server errors (5xx, network issues)
+// that are worth retrying.
+func isRetryableError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := strings.ToLower(err.Error())
+	retryablePatterns := []string{
+		"500",
+		"502",
+		"503",
+		"504",
+		"bad gateway",
+		"service unavailable",
+		"gateway timeout",
+		"internal server error",
+		"connection reset",
+		"connection refused",
+		"broken pipe",
+		"unexpected eof",
+	}
+	for _, pattern := range retryablePatterns {
+		if strings.Contains(errStr, pattern) {
+			return true
+		}
+	}
+	return false
 }

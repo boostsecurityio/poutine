@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/boostsecurityio/poutine/analyze"
 	"github.com/boostsecurityio/poutine/providers/scm/domain"
+	"github.com/rs/zerolog/log"
 	"gitlab.com/gitlab-org/api/client-go"
 )
 
@@ -219,7 +221,25 @@ func (c *Client) ListGroupProjects(ctx context.Context, groupID string) <-chan a
 		}
 
 		for {
-			ps, resp, err := c.client.Groups.ListGroupProjects(groupID, opt)
+			var ps []*gitlab.Project
+			var resp *gitlab.Response
+			var err error
+			for attempt := 0; attempt < 3; attempt++ {
+				ps, resp, err = c.client.Groups.ListGroupProjects(groupID, opt)
+				if err == nil {
+					break
+				}
+				if !isRetryableGitLabError(err) {
+					break
+				}
+				log.Warn().Err(err).Int("attempt", attempt+1).Msg("retrying GitLab API call after transient error")
+				select {
+				case <-ctx.Done():
+					batchChan <- analyze.RepoBatch{Err: ctx.Err()}
+					return
+				case <-time.After(time.Duration(1<<attempt) * time.Second):
+				}
+			}
 			if err != nil {
 				batchChan <- analyze.RepoBatch{Err: err}
 				return
@@ -293,4 +313,22 @@ func projectsToRepos(projects []*gitlab.Project) []analyze.Repository {
 		}
 	}
 	return repos
+}
+
+func isRetryableGitLabError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := strings.ToLower(err.Error())
+	retryablePatterns := []string{
+		"500", "502", "503", "504",
+		"bad gateway", "service unavailable", "gateway timeout",
+		"internal server error", "connection reset", "unexpected eof",
+	}
+	for _, pattern := range retryablePatterns {
+		if strings.Contains(errStr, pattern) {
+			return true
+		}
+	}
+	return false
 }
