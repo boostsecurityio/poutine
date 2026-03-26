@@ -1,3 +1,9 @@
+---
+name: docs
+description: Update project documentation when features are added or changed. Use after modifying CLI commands, OPA rules, MCP tools, or the development workflow.
+paths: opa/rego/**, cmd/**, docs/**, README.md, MCP_INTEGRATION.md, CONTRIBUTING.md
+---
+
 Review recent code changes and update all relevant documentation:
 
 1. **Rule documentation** (`docs/content/en/rules/<rule_id>.md`):

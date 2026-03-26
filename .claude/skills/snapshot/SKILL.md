@@ -1,3 +1,10 @@
+---
+name: snapshot
+description: Run snapshot regression tests after changes to OPA rules, scanners, analyzers, or formatters to detect output regressions.
+allowed-tools: Bash(make snapshot:*), Bash(make update-snapshots:*)
+paths: opa/**, scanner/**, analyze/**, formatters/**
+---
+
 Run the snapshot regression tests to validate analysis output hasn't changed:
 
 1. Run snapshot tests: `make snapshot`
