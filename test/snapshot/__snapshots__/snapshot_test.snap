@@ -1,0 +1,1068 @@
+
+[TestSnapshotAnalyzeOrg - 1]
+{
+ "findings": [
+  {
+   "meta": {
+    "details": "ACTIONS_RUNNER_DEBUG",
+    "event_triggers": [
+     "issue_comment"
+    ],
+    "job": "pulled_pork",
+    "line": 13,
+    "path": ".github/workflows/level2.yml"
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "debug_enabled"
+  },
+  {
+   "meta": {
+    "details": "ACTIONS_STEP_DEBUG",
+    "event_triggers": [
+     "issue_comment"
+    ],
+    "job": "pulled_pork",
+    "line": 13,
+    "path": ".github/workflows/level2.yml"
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "debug_enabled"
+  },
+  {
+   "meta": {
+    "details": "ACTIONS_RUNNER_DEBUG",
+    "event_triggers": [
+     "pull_request_target"
+    ],
+    "job": "chicken-popcorn",
+    "line": 15,
+    "path": ".github/workflows/level3.yml"
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "debug_enabled"
+  },
+  {
+   "meta": {
+    "details": "ACTIONS_STEP_DEBUG",
+    "event_triggers": [
+     "pull_request_target"
+    ],
+    "job": "chicken-popcorn",
+    "line": 15,
+    "path": ".github/workflows/level3.yml"
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "debug_enabled"
+  },
+  {
+   "meta": {
+    "details": "ACTIONS_RUNNER_DEBUG",
+    "event_triggers": [
+     "pull_request_target"
+    ],
+    "job": "duck-blue-cheese",
+    "line": 43,
+    "path": ".github/workflows/level3.yml"
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "debug_enabled"
+  },
+  {
+   "meta": {
+    "details": "ACTIONS_STEP_DEBUG",
+    "event_triggers": [
+     "pull_request_target"
+    ],
+    "job": "duck-blue-cheese",
+    "line": 43,
+    "path": ".github/workflows/level3.yml"
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "debug_enabled"
+  },
+  {
+   "meta": {
+    "event_triggers": [
+     "pull_request_target"
+    ],
+    "path": ".github/workflows/pr.yml"
+   },
+   "purl": "pkg:github/messypoutine/terraform-google-some-vm",
+   "rule_id": "default_permissions_on_risky_events"
+  },
+  {
+   "meta": {
+    "details": "mxschmitt/action-tmate@v3",
+    "event_triggers": [
+     "push",
+     "pull_request",
+     "schedule"
+    ],
+    "job": "analyze",
+    "line": 93,
+    "path": ".github/workflows/codeql.yml",
+    "step": "4"
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "github_action_from_unverified_creator_used"
+  },
+  {
+   "meta": {
+    "details": "rlespinasse/github-slug-action@v4",
+    "event_triggers": [
+     "issues",
+     "issue_comment",
+     "pull_request_target",
+     "pull_request"
+    ],
+    "job": "fries",
+    "line": 36,
+    "path": ".github/workflows/level0.yml",
+    "step": "1"
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "github_action_from_unverified_creator_used"
+  },
+  {
+   "meta": {
+    "details": "rtCamp/action-slack-notify@4e5fb42d249be6a45a298f3c9543b111b02f7907",
+    "event_triggers": [
+     "pull_request_target"
+    ],
+    "job": "process-pr",
+    "line": 44,
+    "path": ".github/workflows/pr.yml",
+    "step": "0"
+   },
+   "purl": "pkg:github/messypoutine/terraform-google-some-vm",
+   "rule_id": "github_action_from_unverified_creator_used"
+  },
+  {
+   "meta": {
+    "event_triggers": [
+     "pull_request_target"
+    ],
+    "job": "process-pr",
+    "line": 50,
+    "path": ".github/workflows/pr.yml",
+    "step": "2"
+   },
+   "purl": "pkg:github/messypoutine/terraform-google-some-vm",
+   "rule_id": "if_always_true"
+  },
+  {
+   "meta": {
+    "details": "Sources: github.event.pull_request.head.ref github.head_ref",
+    "injection_sources": [
+     "github.event.pull_request.head.ref",
+     "github.head_ref"
+    ],
+    "line": 11,
+    "path": ".github/actions/auto-format/action.yml",
+    "step": "0"
+   },
+   "purl": "pkg:github/messypoutine/actionable",
+   "rule_id": "injection"
+  },
+  {
+   "meta": {
+    "details": "Sources: github.event.issue.body",
+    "event_triggers": [
+     "issues",
+     "issue_comment",
+     "pull_request_target",
+     "pull_request"
+    ],
+    "injection_sources": [
+     "github.event.issue.body"
+    ],
+    "job": "fries",
+    "line": 41,
+    "path": ".github/workflows/level0.yml",
+    "referenced_secrets": [
+     "FLAG_GRAVY_OVERFLOW_L0_FRIES"
+    ],
+    "step": "2"
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "injection"
+  },
+  {
+   "meta": {
+    "details": "Sources: github.event.comment.body",
+    "event_triggers": [
+     "issues",
+     "issue_comment",
+     "pull_request_target",
+     "pull_request"
+    ],
+    "injection_sources": [
+     "github.event.comment.body"
+    ],
+    "job": "cheddar",
+    "line": 69,
+    "path": ".github/workflows/level0.yml",
+    "referenced_secrets": [
+     "FLAG_GRAVY_OVERFLOW_L0_CHEDDAR"
+    ],
+    "step": "1"
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "injection"
+  },
+  {
+   "meta": {
+    "details": "Sources: github.event.workflow_run.head_branch",
+    "event_triggers": [
+     "workflow_run"
+    ],
+    "injection_sources": [
+     "github.event.workflow_run.head_branch"
+    ],
+    "job": "toppings-for-realz",
+    "line": 31,
+    "path": ".github/workflows/level1.yml",
+    "referenced_secrets": [
+     "FLAG_GRAVY_OVERFLOW_L1_TOPPINGS_FOR_REALZ"
+    ],
+    "step": "1"
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "injection"
+  },
+  {
+   "meta": {
+    "details": "Sources: github.event.pull_request.head.ref",
+    "event_triggers": [
+     "pull_request_target"
+    ],
+    "injection_sources": [
+     "github.event.pull_request.head.ref"
+    ],
+    "job": "duck-blue-cheese",
+    "line": 59,
+    "path": ".github/workflows/level3.yml",
+    "referenced_secrets": [
+     "FLAG_GRAVY_OVERFLOW_L3_REAL_FANCY"
+    ],
+    "step": "1"
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "injection"
+  },
+  {
+   "meta": {
+    "details": "Sources: Build.SourceBranch Build.SourceBranchName Build.SourceVersionMessage System.PullRequest.SourceBranch",
+    "injection_sources": [
+     "Build.SourceBranch",
+     "Build.SourceBranchName",
+     "Build.SourceVersionMessage",
+     "System.PullRequest.SourceBranch"
+    ],
+    "line": 17,
+    "path": "azure-pipelines.yml",
+    "step": "3"
+   },
+   "purl": "pkg:github/messypoutine/steamed-hotdog",
+   "rule_id": "injection"
+  },
+  {
+   "meta": {
+    "details": "Sources: body.pull_request.title",
+    "injection_sources": [
+     "body.pull_request.title"
+    ],
+    "job": "vale",
+    "line": 40,
+    "path": ".tekton/lint.yml",
+    "step": "0"
+   },
+   "purl": "pkg:github/messypoutine/tiktoken",
+   "rule_id": "injection"
+  },
+  {
+   "meta": {
+    "details": "Package: rlespinasse/github-slug-action",
+    "event_triggers": [
+     "issues",
+     "issue_comment",
+     "pull_request_target",
+     "pull_request"
+    ],
+    "job": "fries",
+    "line": 36,
+    "osv_id": "GHSA-6q4m-7476-932w",
+    "path": ".github/workflows/level0.yml",
+    "step": "1"
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "known_vulnerability_in_build_component"
+  },
+  {
+   "meta": {
+    "path": ".github/actions/auto-format/action.yml"
+   },
+   "purl": "pkg:github/messypoutine/actionable",
+   "rule_id": "unpinnable_action"
+  },
+  {
+   "meta": {
+    "path": ".github/actions/welcome-contribution/action.yml"
+   },
+   "purl": "pkg:github/messypoutine/actionable",
+   "rule_id": "unpinnable_action"
+  },
+  {
+   "meta": {
+    "details": "Detected usage the GitHub Action `actions/setup-node`",
+    "event_triggers": [
+     "issues",
+     "issue_comment",
+     "pull_request_target",
+     "pull_request"
+    ],
+    "job": "gravy",
+    "line": 105,
+    "lotp_action": "actions/setup-node",
+    "path": ".github/workflows/level0.yml",
+    "referenced_secrets": [
+     "FLAG_GRAVY_OVERFLOW_L0_GRAVY"
+    ]
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "untrusted_checkout_exec"
+  },
+  {
+   "meta": {
+    "details": "Detected usage of `npm`",
+    "event_triggers": [
+     "issues",
+     "issue_comment",
+     "pull_request_target",
+     "pull_request"
+    ],
+    "job": "gravy",
+    "line": 108,
+    "lotp_targets": [
+     "package.json"
+    ],
+    "lotp_tool": "npm",
+    "path": ".github/workflows/level0.yml",
+    "referenced_secrets": [
+     "FLAG_GRAVY_OVERFLOW_L0_GRAVY"
+    ]
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "untrusted_checkout_exec"
+  },
+  {
+   "meta": {
+    "details": "Detected usage the GitHub Action `actions/setup-node`",
+    "event_triggers": [
+     "issues",
+     "issue_comment",
+     "pull_request_target",
+     "pull_request"
+    ],
+    "job": "toppings",
+    "line": 131,
+    "lotp_action": "actions/setup-node",
+    "path": ".github/workflows/level0.yml",
+    "referenced_secrets": [
+     "FLAG_GRAVY_OVERFLOW_L0_TOPPINGS"
+    ]
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "untrusted_checkout_exec"
+  },
+  {
+   "meta": {
+    "details": "Detected usage of `npm`",
+    "event_triggers": [
+     "issues",
+     "issue_comment",
+     "pull_request_target",
+     "pull_request"
+    ],
+    "job": "toppings",
+    "line": 134,
+    "lotp_targets": [
+     "package.json"
+    ],
+    "lotp_tool": "npm",
+    "path": ".github/workflows/level0.yml",
+    "referenced_secrets": [
+     "FLAG_GRAVY_OVERFLOW_L0_TOPPINGS"
+    ]
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "untrusted_checkout_exec"
+  },
+  {
+   "meta": {
+    "details": "Detected usage the GitHub Action `actions/setup-node`",
+    "event_triggers": [
+     "pull_request_target"
+    ],
+    "job": "chicken-popcorn",
+    "line": 34,
+    "lotp_action": "actions/setup-node",
+    "path": ".github/workflows/level3.yml",
+    "referenced_secrets": [
+     "FLAG_GRAVY_OVERFLOW_L3_SOME_MEAT"
+    ]
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "untrusted_checkout_exec"
+  },
+  {
+   "meta": {
+    "details": "Detected usage of `npm`",
+    "event_triggers": [
+     "pull_request_target"
+    ],
+    "job": "chicken-popcorn",
+    "line": 38,
+    "lotp_targets": [
+     "package.json"
+    ],
+    "lotp_tool": "npm",
+    "path": ".github/workflows/level3.yml",
+    "referenced_secrets": [
+     "FLAG_GRAVY_OVERFLOW_L3_SOME_MEAT"
+    ]
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "untrusted_checkout_exec"
+  },
+  {
+   "meta": {
+    "details": "Detected usage of `bash`",
+    "line": 26,
+    "lotp_targets": [
+     "script.sh"
+    ],
+    "lotp_tool": "bash",
+    "path": "azure-pipelines.yml",
+    "step": "5"
+   },
+   "purl": "pkg:github/messypoutine/steamed-hotdog",
+   "rule_id": "untrusted_checkout_exec"
+  },
+  {
+   "meta": {
+    "details": "Detected usage of `npm`",
+    "line": 27,
+    "lotp_targets": [
+     "package.json"
+    ],
+    "lotp_tool": "npm",
+    "path": "azure-pipelines.yml",
+    "step": "6"
+   },
+   "purl": "pkg:github/messypoutine/steamed-hotdog",
+   "rule_id": "untrusted_checkout_exec"
+  },
+  {
+   "meta": {
+    "details": "Detected usage of `vale`",
+    "job": "vale",
+    "line": 48,
+    "lotp_targets": [
+     ".vale.ini"
+    ],
+    "lotp_tool": "vale",
+    "path": ".tekton/lint.yml",
+    "step": "1"
+   },
+   "purl": "pkg:github/messypoutine/tiktoken",
+   "rule_id": "untrusted_checkout_exec"
+  },
+  {
+   "meta": {
+    "details": "Command: curl $(trustedSourceUrl) | bash",
+    "line": 23,
+    "path": "azure-pipelines.yml",
+    "step": "4"
+   },
+   "purl": "pkg:github/messypoutine/steamed-hotdog",
+   "rule_id": "unverified_script_exec"
+  }
+ ],
+ "rules": {
+  "confused_deputy_auto_merge": {
+   "description": "Confused Deputy for GitHub Actions is a situation where a GitHub event attribute (ex. github.actor) is used to check the last interaction of a certain event. This allows an attacker abuse an event triggered by a Bot (ex. @dependabot recreate) and trigger as a side effect other privileged workflows, which may for instance automatically merge unapproved changes.",
+   "id": "confused_deputy_auto_merge",
+   "level": "error",
+   "title": "Confused Deputy Auto-Merge"
+  },
+  "debug_enabled": {
+   "description": "The workflow is configured to increase the verbosity of the runner.\nThis can potentially expose sensitive information.",
+   "id": "debug_enabled",
+   "level": "note",
+   "refs": [
+    {
+     "description": "",
+     "ref": "https://docs.gitlab.com/ee/ci/variables/index.html#enable-debug-logging"
+    },
+    {
+     "description": "",
+     "ref": "https://docs.gitlab.com/ee/ci/variables/index.html#mask-a-cicd-variable"
+    }
+   ],
+   "title": "CI Runner Debug Enabled"
+  },
+  "default_permissions_on_risky_events": {
+   "description": "The workflow and some of its jobs do not explicitely define permissions\nand the workflow triggers on events that are typically used to run builds from forks.\nBecause no permissions is set, the workflow inherits the default permissions\nconfigured on the repository or the organization.",
+   "id": "default_permissions_on_risky_events",
+   "level": "warning",
+   "title": "Default permissions used on risky events"
+  },
+  "github_action_from_unverified_creator_used": {
+   "description": "Usage of the following GitHub Actions repositories was detected in workflows\nor composite actions, but their owner is not a verified creator.",
+   "id": "github_action_from_unverified_creator_used",
+   "level": "note",
+   "title": "Github Action from Unverified Creator used"
+  },
+  "if_always_true": {
+   "description": "GitHub Actions expressions used in if condition of jobs or steps\nmust not contain extra characters or spaces.\nOtherwise, the condition is always true.",
+   "id": "if_always_true",
+   "level": "error",
+   "title": "If condition always evaluates to true"
+  },
+  "injection": {
+   "description": "The pipeline contains an injection into bash or JavaScript with an expression\nthat can contain user input. Prefer placing the expression in an environment variable\ninstead of interpolating it directly into a script.",
+   "id": "injection",
+   "level": "warning",
+   "refs": [
+    {
+     "description": "",
+     "ref": "https://securitylab.github.com/research/github-actions-preventing-pwn-requests/"
+    }
+   ],
+   "title": "Injection with Arbitrary External Contributor Input"
+  },
+  "job_all_secrets": {
+   "description": "The GitHub Actions Runner attempts to keep in memory only the secrets\nthat are necessary to execute a workflow job.\nIf a job converts the secrets object to JSON or accesses it using an expression,\nall secrets will be retained in memory for the duration of the job.",
+   "id": "job_all_secrets",
+   "level": "warning",
+   "title": "Workflow job exposes all secrets"
+  },
+  "known_vulnerability_in_build_component": {
+   "description": "The workflow or action depends on a GitHub Action with known vulnerabilities.",
+   "id": "known_vulnerability_in_build_component",
+   "level": "warning",
+   "refs": [
+    {
+     "description": "Source Advisory Database",
+     "ref": "https://osv.dev/"
+    }
+   ],
+   "title": "Build Component with a Known Vulnerability used"
+  },
+  "known_vulnerability_in_build_platform": {
+   "description": "The build or SCM provider used has a known vulnerability.",
+   "id": "known_vulnerability_in_build_platform",
+   "level": "warning",
+   "refs": [
+    {
+     "description": "Source Advisory Database",
+     "ref": "https://osv.dev/"
+    }
+   ],
+   "title": "Build Platform with a Known Vulnerability used"
+  },
+  "pr_runs_on_self_hosted": {
+   "config": {
+    "allowed_runners": {
+     "default": [],
+     "description": "List of runners name, label or group that are allowed to be used in PR workflows.",
+     "value": []
+    }
+   },
+   "description": "This job runs on a self-hosted GitHub Actions runner in a workflow\nthat is triggered by a pull request event.",
+   "id": "pr_runs_on_self_hosted",
+   "level": "warning",
+   "title": "Pull Request Runs on Self-Hosted GitHub Actions Runner"
+  },
+  "unpinnable_action": {
+   "description": "Pinning this GitHub Action is likely ineffective\nas it depends on other mutable supply chain components.",
+   "id": "unpinnable_action",
+   "level": "note",
+   "title": "Unpinnable CI component used"
+  },
+  "untrusted_checkout_exec": {
+   "description": "The workflow appears to checkout untrusted code from a fork\nand uses a command that is known to allow code execution.",
+   "id": "untrusted_checkout_exec",
+   "level": "error",
+   "title": "Arbitrary Code Execution from Untrusted Code Changes"
+  },
+  "unverified_script_exec": {
+   "description": "The pipeline executes a script or binary fetched from a remote\nserver without verifying its integrity.",
+   "id": "unverified_script_exec",
+   "level": "note",
+   "title": "Unverified Script Execution"
+  }
+ }
+}
+---
+
+[TestSnapshotAnalyzeRepo - 1]
+{
+ "findings": [
+  {
+   "meta": {
+    "details": "ACTIONS_RUNNER_DEBUG",
+    "event_triggers": [
+     "issue_comment"
+    ],
+    "job": "pulled_pork",
+    "line": 13,
+    "path": ".github/workflows/level2.yml"
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "debug_enabled"
+  },
+  {
+   "meta": {
+    "details": "ACTIONS_STEP_DEBUG",
+    "event_triggers": [
+     "issue_comment"
+    ],
+    "job": "pulled_pork",
+    "line": 13,
+    "path": ".github/workflows/level2.yml"
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "debug_enabled"
+  },
+  {
+   "meta": {
+    "details": "ACTIONS_RUNNER_DEBUG",
+    "event_triggers": [
+     "pull_request_target"
+    ],
+    "job": "chicken-popcorn",
+    "line": 15,
+    "path": ".github/workflows/level3.yml"
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "debug_enabled"
+  },
+  {
+   "meta": {
+    "details": "ACTIONS_STEP_DEBUG",
+    "event_triggers": [
+     "pull_request_target"
+    ],
+    "job": "chicken-popcorn",
+    "line": 15,
+    "path": ".github/workflows/level3.yml"
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "debug_enabled"
+  },
+  {
+   "meta": {
+    "details": "ACTIONS_RUNNER_DEBUG",
+    "event_triggers": [
+     "pull_request_target"
+    ],
+    "job": "duck-blue-cheese",
+    "line": 43,
+    "path": ".github/workflows/level3.yml"
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "debug_enabled"
+  },
+  {
+   "meta": {
+    "details": "ACTIONS_STEP_DEBUG",
+    "event_triggers": [
+     "pull_request_target"
+    ],
+    "job": "duck-blue-cheese",
+    "line": 43,
+    "path": ".github/workflows/level3.yml"
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "debug_enabled"
+  },
+  {
+   "meta": {
+    "details": "mxschmitt/action-tmate@v3",
+    "event_triggers": [
+     "push",
+     "pull_request",
+     "schedule"
+    ],
+    "job": "analyze",
+    "line": 93,
+    "path": ".github/workflows/codeql.yml",
+    "step": "4"
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "github_action_from_unverified_creator_used"
+  },
+  {
+   "meta": {
+    "details": "rlespinasse/github-slug-action@v4",
+    "event_triggers": [
+     "issues",
+     "issue_comment",
+     "pull_request_target",
+     "pull_request"
+    ],
+    "job": "fries",
+    "line": 36,
+    "path": ".github/workflows/level0.yml",
+    "step": "1"
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "github_action_from_unverified_creator_used"
+  },
+  {
+   "meta": {
+    "details": "Sources: github.event.issue.body",
+    "event_triggers": [
+     "issues",
+     "issue_comment",
+     "pull_request_target",
+     "pull_request"
+    ],
+    "injection_sources": [
+     "github.event.issue.body"
+    ],
+    "job": "fries",
+    "line": 41,
+    "path": ".github/workflows/level0.yml",
+    "referenced_secrets": [
+     "FLAG_GRAVY_OVERFLOW_L0_FRIES"
+    ],
+    "step": "2"
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "injection"
+  },
+  {
+   "meta": {
+    "details": "Sources: github.event.comment.body",
+    "event_triggers": [
+     "issues",
+     "issue_comment",
+     "pull_request_target",
+     "pull_request"
+    ],
+    "injection_sources": [
+     "github.event.comment.body"
+    ],
+    "job": "cheddar",
+    "line": 69,
+    "path": ".github/workflows/level0.yml",
+    "referenced_secrets": [
+     "FLAG_GRAVY_OVERFLOW_L0_CHEDDAR"
+    ],
+    "step": "1"
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "injection"
+  },
+  {
+   "meta": {
+    "details": "Sources: github.event.workflow_run.head_branch",
+    "event_triggers": [
+     "workflow_run"
+    ],
+    "injection_sources": [
+     "github.event.workflow_run.head_branch"
+    ],
+    "job": "toppings-for-realz",
+    "line": 31,
+    "path": ".github/workflows/level1.yml",
+    "referenced_secrets": [
+     "FLAG_GRAVY_OVERFLOW_L1_TOPPINGS_FOR_REALZ"
+    ],
+    "step": "1"
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "injection"
+  },
+  {
+   "meta": {
+    "details": "Sources: github.event.pull_request.head.ref",
+    "event_triggers": [
+     "pull_request_target"
+    ],
+    "injection_sources": [
+     "github.event.pull_request.head.ref"
+    ],
+    "job": "duck-blue-cheese",
+    "line": 59,
+    "path": ".github/workflows/level3.yml",
+    "referenced_secrets": [
+     "FLAG_GRAVY_OVERFLOW_L3_REAL_FANCY"
+    ],
+    "step": "1"
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "injection"
+  },
+  {
+   "meta": {
+    "details": "Package: rlespinasse/github-slug-action",
+    "event_triggers": [
+     "issues",
+     "issue_comment",
+     "pull_request_target",
+     "pull_request"
+    ],
+    "job": "fries",
+    "line": 36,
+    "osv_id": "GHSA-6q4m-7476-932w",
+    "path": ".github/workflows/level0.yml",
+    "step": "1"
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "known_vulnerability_in_build_component"
+  },
+  {
+   "meta": {
+    "details": "Detected usage the GitHub Action `actions/setup-node`",
+    "event_triggers": [
+     "issues",
+     "issue_comment",
+     "pull_request_target",
+     "pull_request"
+    ],
+    "job": "gravy",
+    "line": 105,
+    "lotp_action": "actions/setup-node",
+    "path": ".github/workflows/level0.yml",
+    "referenced_secrets": [
+     "FLAG_GRAVY_OVERFLOW_L0_GRAVY"
+    ]
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "untrusted_checkout_exec"
+  },
+  {
+   "meta": {
+    "details": "Detected usage of `npm`",
+    "event_triggers": [
+     "issues",
+     "issue_comment",
+     "pull_request_target",
+     "pull_request"
+    ],
+    "job": "gravy",
+    "line": 108,
+    "lotp_targets": [
+     "package.json"
+    ],
+    "lotp_tool": "npm",
+    "path": ".github/workflows/level0.yml",
+    "referenced_secrets": [
+     "FLAG_GRAVY_OVERFLOW_L0_GRAVY"
+    ]
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "untrusted_checkout_exec"
+  },
+  {
+   "meta": {
+    "details": "Detected usage the GitHub Action `actions/setup-node`",
+    "event_triggers": [
+     "issues",
+     "issue_comment",
+     "pull_request_target",
+     "pull_request"
+    ],
+    "job": "toppings",
+    "line": 131,
+    "lotp_action": "actions/setup-node",
+    "path": ".github/workflows/level0.yml",
+    "referenced_secrets": [
+     "FLAG_GRAVY_OVERFLOW_L0_TOPPINGS"
+    ]
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "untrusted_checkout_exec"
+  },
+  {
+   "meta": {
+    "details": "Detected usage of `npm`",
+    "event_triggers": [
+     "issues",
+     "issue_comment",
+     "pull_request_target",
+     "pull_request"
+    ],
+    "job": "toppings",
+    "line": 134,
+    "lotp_targets": [
+     "package.json"
+    ],
+    "lotp_tool": "npm",
+    "path": ".github/workflows/level0.yml",
+    "referenced_secrets": [
+     "FLAG_GRAVY_OVERFLOW_L0_TOPPINGS"
+    ]
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "untrusted_checkout_exec"
+  },
+  {
+   "meta": {
+    "details": "Detected usage the GitHub Action `actions/setup-node`",
+    "event_triggers": [
+     "pull_request_target"
+    ],
+    "job": "chicken-popcorn",
+    "line": 34,
+    "lotp_action": "actions/setup-node",
+    "path": ".github/workflows/level3.yml",
+    "referenced_secrets": [
+     "FLAG_GRAVY_OVERFLOW_L3_SOME_MEAT"
+    ]
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "untrusted_checkout_exec"
+  },
+  {
+   "meta": {
+    "details": "Detected usage of `npm`",
+    "event_triggers": [
+     "pull_request_target"
+    ],
+    "job": "chicken-popcorn",
+    "line": 38,
+    "lotp_targets": [
+     "package.json"
+    ],
+    "lotp_tool": "npm",
+    "path": ".github/workflows/level3.yml",
+    "referenced_secrets": [
+     "FLAG_GRAVY_OVERFLOW_L3_SOME_MEAT"
+    ]
+   },
+   "purl": "pkg:github/messypoutine/gravy-overflow",
+   "rule_id": "untrusted_checkout_exec"
+  }
+ ],
+ "rules": {
+  "confused_deputy_auto_merge": {
+   "description": "Confused Deputy for GitHub Actions is a situation where a GitHub event attribute (ex. github.actor) is used to check the last interaction of a certain event. This allows an attacker abuse an event triggered by a Bot (ex. @dependabot recreate) and trigger as a side effect other privileged workflows, which may for instance automatically merge unapproved changes.",
+   "id": "confused_deputy_auto_merge",
+   "level": "error",
+   "title": "Confused Deputy Auto-Merge"
+  },
+  "debug_enabled": {
+   "description": "The workflow is configured to increase the verbosity of the runner.\nThis can potentially expose sensitive information.",
+   "id": "debug_enabled",
+   "level": "note",
+   "refs": [
+    {
+     "description": "",
+     "ref": "https://docs.gitlab.com/ee/ci/variables/index.html#enable-debug-logging"
+    },
+    {
+     "description": "",
+     "ref": "https://docs.gitlab.com/ee/ci/variables/index.html#mask-a-cicd-variable"
+    }
+   ],
+   "title": "CI Runner Debug Enabled"
+  },
+  "default_permissions_on_risky_events": {
+   "description": "The workflow and some of its jobs do not explicitely define permissions\nand the workflow triggers on events that are typically used to run builds from forks.\nBecause no permissions is set, the workflow inherits the default permissions\nconfigured on the repository or the organization.",
+   "id": "default_permissions_on_risky_events",
+   "level": "warning",
+   "title": "Default permissions used on risky events"
+  },
+  "github_action_from_unverified_creator_used": {
+   "description": "Usage of the following GitHub Actions repositories was detected in workflows\nor composite actions, but their owner is not a verified creator.",
+   "id": "github_action_from_unverified_creator_used",
+   "level": "note",
+   "title": "Github Action from Unverified Creator used"
+  },
+  "if_always_true": {
+   "description": "GitHub Actions expressions used in if condition of jobs or steps\nmust not contain extra characters or spaces.\nOtherwise, the condition is always true.",
+   "id": "if_always_true",
+   "level": "error",
+   "title": "If condition always evaluates to true"
+  },
+  "injection": {
+   "description": "The pipeline contains an injection into bash or JavaScript with an expression\nthat can contain user input. Prefer placing the expression in an environment variable\ninstead of interpolating it directly into a script.",
+   "id": "injection",
+   "level": "warning",
+   "refs": [
+    {
+     "description": "",
+     "ref": "https://securitylab.github.com/research/github-actions-preventing-pwn-requests/"
+    }
+   ],
+   "title": "Injection with Arbitrary External Contributor Input"
+  },
+  "job_all_secrets": {
+   "description": "The GitHub Actions Runner attempts to keep in memory only the secrets\nthat are necessary to execute a workflow job.\nIf a job converts the secrets object to JSON or accesses it using an expression,\nall secrets will be retained in memory for the duration of the job.",
+   "id": "job_all_secrets",
+   "level": "warning",
+   "title": "Workflow job exposes all secrets"
+  },
+  "known_vulnerability_in_build_component": {
+   "description": "The workflow or action depends on a GitHub Action with known vulnerabilities.",
+   "id": "known_vulnerability_in_build_component",
+   "level": "warning",
+   "refs": [
+    {
+     "description": "Source Advisory Database",
+     "ref": "https://osv.dev/"
+    }
+   ],
+   "title": "Build Component with a Known Vulnerability used"
+  },
+  "known_vulnerability_in_build_platform": {
+   "description": "The build or SCM provider used has a known vulnerability.",
+   "id": "known_vulnerability_in_build_platform",
+   "level": "warning",
+   "refs": [
+    {
+     "description": "Source Advisory Database",
+     "ref": "https://osv.dev/"
+    }
+   ],
+   "title": "Build Platform with a Known Vulnerability used"
+  },
+  "pr_runs_on_self_hosted": {
+   "config": {
+    "allowed_runners": {
+     "default": [],
+     "description": "List of runners name, label or group that are allowed to be used in PR workflows.",
+     "value": []
+    }
+   },
+   "description": "This job runs on a self-hosted GitHub Actions runner in a workflow\nthat is triggered by a pull request event.",
+   "id": "pr_runs_on_self_hosted",
+   "level": "warning",
+   "title": "Pull Request Runs on Self-Hosted GitHub Actions Runner"
+  },
+  "unpinnable_action": {
+   "description": "Pinning this GitHub Action is likely ineffective\nas it depends on other mutable supply chain components.",
+   "id": "unpinnable_action",
+   "level": "note",
+   "title": "Unpinnable CI component used"
+  },
+  "untrusted_checkout_exec": {
+   "description": "The workflow appears to checkout untrusted code from a fork\nand uses a command that is known to allow code execution.",
+   "id": "untrusted_checkout_exec",
+   "level": "error",
+   "title": "Arbitrary Code Execution from Untrusted Code Changes"
+  },
+  "unverified_script_exec": {
+   "description": "The pipeline executes a script or binary fetched from a remote\nserver without verifying its integrity.",
+   "id": "unverified_script_exec",
+   "level": "note",
+   "title": "Unverified Script Execution"
+  }
+ }
+}
+---
