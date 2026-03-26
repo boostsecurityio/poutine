@@ -8,7 +8,8 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
+
+	"github.com/cenkalti/backoff/v4"
 
 	"github.com/boostsecurityio/poutine/analyze"
 	"github.com/boostsecurityio/poutine/providers/scm/domain"
@@ -372,23 +373,17 @@ func (c *Client) GetOrgRepos(ctx context.Context, org string) <-chan analyze.Rep
 				} `graphql:"repositoryOwner(login: $org)"`
 			}
 
-			var err error
-			for attempt := 0; attempt < 3; attempt++ {
-				err = c.graphQLClient.Query(ctx, &query, variables)
-				if err == nil {
-					break
+			err := backoff.Retry(func() error {
+				queryErr := c.graphQLClient.Query(ctx, &query, variables)
+				if queryErr == nil {
+					return nil
 				}
-				if !isRetryableError(err) {
-					break
+				if !isRetryableError(queryErr) {
+					return backoff.Permanent(queryErr)
 				}
-				log.Warn().Err(err).Int("attempt", attempt+1).Msg("retrying GitHub GraphQL query after transient error")
-				select {
-				case <-ctx.Done():
-					batchChan <- analyze.RepoBatch{Err: ctx.Err()}
-					return
-				case <-time.After(time.Duration(1<<attempt) * time.Second):
-				}
-			}
+				log.Warn().Err(queryErr).Msg("retrying GitHub GraphQL query after transient error")
+				return queryErr
+			}, backoff.WithContext(backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3), ctx))
 			if err != nil {
 				batchChan <- analyze.RepoBatch{Err: err}
 				return

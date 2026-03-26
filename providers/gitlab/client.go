@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/boostsecurityio/poutine/analyze"
 	"github.com/boostsecurityio/poutine/providers/scm/domain"
+	"github.com/cenkalti/backoff/v4"
 	"github.com/rs/zerolog/log"
 	"gitlab.com/gitlab-org/api/client-go"
 )
@@ -223,23 +223,18 @@ func (c *Client) ListGroupProjects(ctx context.Context, groupID string) <-chan a
 		for {
 			var ps []*gitlab.Project
 			var resp *gitlab.Response
-			var err error
-			for attempt := 0; attempt < 3; attempt++ {
-				ps, resp, err = c.client.Groups.ListGroupProjects(groupID, opt)
-				if err == nil {
-					break
+			err := backoff.Retry(func() error {
+				var apiErr error
+				ps, resp, apiErr = c.client.Groups.ListGroupProjects(groupID, opt)
+				if apiErr == nil {
+					return nil
 				}
-				if !isRetryableGitLabError(err) {
-					break
+				if !isRetryableGitLabError(apiErr) {
+					return backoff.Permanent(apiErr)
 				}
-				log.Warn().Err(err).Int("attempt", attempt+1).Msg("retrying GitLab API call after transient error")
-				select {
-				case <-ctx.Done():
-					batchChan <- analyze.RepoBatch{Err: ctx.Err()}
-					return
-				case <-time.After(time.Duration(1<<attempt) * time.Second):
-				}
-			}
+				log.Warn().Err(apiErr).Msg("retrying GitLab API call after transient error")
+				return apiErr
+			}, backoff.WithContext(backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3), ctx))
 			if err != nil {
 				batchChan <- analyze.RepoBatch{Err: err}
 				return
