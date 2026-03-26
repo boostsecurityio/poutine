@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
+	"strings"
+
 	"github.com/boostsecurityio/poutine/analyze"
 	"github.com/boostsecurityio/poutine/providers/gitops"
 	"github.com/rs/zerolog/log"
-	"net/url"
-	"strings"
 )
 
 func NewGitSCMClient(ctx context.Context, repoPath string, gitCommand *gitops.GitCommand) (*ScmClient, error) {
@@ -36,10 +37,7 @@ func (s *ScmClient) GetRepo(ctx context.Context, org string, name string) (analy
 	}
 	baseUrl, err := s.GetBaseURL()
 	if err != nil {
-		var gitErr gitops.GitError
-		if errors.As(err, &gitErr) {
-			baseUrl = "localrepo"
-		}
+		baseUrl = "localrepo"
 	}
 	return Repo{
 		BaseUrl: baseUrl,
@@ -53,11 +51,7 @@ func (s *ScmClient) GetToken() string {
 func (s *ScmClient) GetProviderName() string {
 	providerBaseURL, err := s.GetBaseURL()
 	if err != nil {
-		var gitErr gitops.GitError
-		if errors.As(err, &gitErr) {
-			return "provider"
-		}
-		return ""
+		return "provider"
 	}
 
 	return providerBaseURL
@@ -68,11 +62,7 @@ func (s *ScmClient) GetProviderVersion(ctx context.Context) (string, error) {
 func (s *ScmClient) GetProviderBaseURL() string {
 	baseURL, err := s.GetBaseURL()
 	if err != nil {
-		var gitErr gitops.GitError
-		if errors.As(err, &gitErr) {
-			return s.repoPath
-		}
-		return ""
+		return s.repoPath
 	}
 	return baseURL
 }
@@ -105,11 +95,7 @@ func (s *ScmClient) GetBaseURL() (string, error) {
 func (s *ScmClient) ParseRepoAndOrg(repoString string) (string, string, error) {
 	remoteURL, err := s.gitClient.GetRemoteOriginURL(context.Background(), s.repoPath)
 	if err != nil {
-		var gitErr gitops.GitError
-		if errors.As(err, &gitErr) {
-			return "", "local", nil
-		}
-		return "", "", err
+		return "", "local", nil
 	}
 	if strings.Contains(remoteURL, "git@") {
 		remoteURL = strings.Replace(remoteURL, ":", "/", 1)
