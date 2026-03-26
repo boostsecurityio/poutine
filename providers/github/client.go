@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 
@@ -434,6 +435,17 @@ func isRetryableError(err error) bool {
 	if err == nil {
 		return false
 	}
+
+	// Type-based checks for network errors
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		return true
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+
+	// String-based checks for HTTP status codes from GraphQL client
 	errStr := strings.ToLower(err.Error())
 	retryablePatterns := []string{
 		"500",
@@ -444,10 +456,6 @@ func isRetryableError(err error) bool {
 		"service unavailable",
 		"gateway timeout",
 		"internal server error",
-		"connection reset",
-		"connection refused",
-		"broken pipe",
-		"unexpected eof",
 	}
 	for _, pattern := range retryablePatterns {
 		if strings.Contains(errStr, pattern) {

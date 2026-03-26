@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 
@@ -314,11 +315,20 @@ func isRetryableGitLabError(err error) bool {
 	if err == nil {
 		return false
 	}
+
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		return true
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+
 	errStr := strings.ToLower(err.Error())
 	retryablePatterns := []string{
 		"500", "502", "503", "504",
 		"bad gateway", "service unavailable", "gateway timeout",
-		"internal server error", "connection reset", "unexpected eof",
+		"internal server error",
 	}
 	for _, pattern := range retryablePatterns {
 		if strings.Contains(errStr, pattern) {
