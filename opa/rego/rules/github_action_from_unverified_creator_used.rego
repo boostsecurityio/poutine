@@ -23,6 +23,7 @@ results contains poutine.finding(rule, pkg.purl, {
 	"job": job.id,
 	"step": i,
 	"details": step.uses,
+	"purl": dep,
 	"event_triggers": [event | event := workflow.events[j].name],
 }) if {
 	pkg := input.packages[_]
@@ -39,6 +40,7 @@ results contains poutine.finding(rule, pkg.purl, {
 	"line": step.lines.uses,
 	"step": i,
 	"details": step.uses,
+	"purl": dep,
 }) if {
 	pkg := input.packages[_]
 	action := pkg.github_actions_metadata[_]
