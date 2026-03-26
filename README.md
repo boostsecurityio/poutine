@@ -266,7 +266,7 @@ For detailed setup instructions for your specific AI coding tool, see the [MCP I
 
 ## Building from source
 
-Building `poutine` requires Go 1.25+.
+Building `poutine` requires Go 1.26+.
 
 ```bash
 git clone https://github.com/boostsecurityio/poutine.git

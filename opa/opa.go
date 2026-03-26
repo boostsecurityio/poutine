@@ -18,6 +18,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/open-policy-agent/opa/v1/storage/inmem"
 	"github.com/open-policy-agent/opa/v1/topdown/print"
+	"github.com/open-policy-agent/opa/v1/types"
 	"github.com/rs/zerolog/log"
 )
 
@@ -271,6 +272,24 @@ func Capabilities() (*ast.Capabilities, error) {
 	if len(capabilites.AllowNet) != 0 {
 		return nil, fmt.Errorf("capabilities allow_net not empty")
 	}
+
+	// Register custom builtins so the compiler recognizes them during validation.
+	// These match the functions registered at runtime via rego.RegisterBuiltinX() in builtins.go.
+	capabilites.Builtins = append(capabilites.Builtins,
+		&ast.Builtin{
+			Name: "purl.parse_docker_image",
+			Decl: types.NewFunction(types.Args(types.S), types.S),
+		},
+		&ast.Builtin{
+			Name: "purl.parse_github_actions",
+			Decl: types.NewFunction(types.Args(types.S, types.S, types.S), types.S),
+		},
+		&ast.Builtin{
+			Name: "semver.constraint_check",
+			Decl: types.NewFunction(types.Args(types.S, types.S), types.S),
+		},
+	)
+
 	return capabilites, nil
 }
 
