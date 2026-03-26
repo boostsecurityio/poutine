@@ -233,7 +233,7 @@ func (c *Client) ListGroupProjects(ctx context.Context, groupID string) <-chan a
 					return backoff.Permanent(apiErr)
 				}
 				log.Warn().Err(apiErr).Msg("retrying GitLab API call after transient error")
-				return apiErr
+				return fmt.Errorf("gitlab repo batch call failed: %w", apiErr)
 			}, backoff.WithContext(backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3), ctx))
 			if err != nil {
 				batchChan <- analyze.RepoBatch{Err: err}

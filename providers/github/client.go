@@ -382,7 +382,7 @@ func (c *Client) GetOrgRepos(ctx context.Context, org string) <-chan analyze.Rep
 					return backoff.Permanent(queryErr)
 				}
 				log.Warn().Err(queryErr).Msg("retrying GitHub GraphQL query after transient error")
-				return queryErr
+				return fmt.Errorf("repo batch gql query failed: %w", queryErr)
 			}, backoff.WithContext(backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3), ctx))
 			if err != nil {
 				batchChan <- analyze.RepoBatch{Err: err}
