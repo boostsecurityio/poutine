@@ -4,11 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 
 	"github.com/boostsecurityio/poutine/analyze"
 	"github.com/boostsecurityio/poutine/providers/scm/domain"
+	"github.com/cenkalti/backoff/v4"
+	"github.com/rs/zerolog/log"
 	"gitlab.com/gitlab-org/api/client-go"
 )
 
@@ -219,7 +222,20 @@ func (c *Client) ListGroupProjects(ctx context.Context, groupID string) <-chan a
 		}
 
 		for {
-			ps, resp, err := c.client.Groups.ListGroupProjects(groupID, opt)
+			var ps []*gitlab.Project
+			var resp *gitlab.Response
+			err := backoff.Retry(func() error {
+				var apiErr error
+				ps, resp, apiErr = c.client.Groups.ListGroupProjects(groupID, opt)
+				if apiErr == nil {
+					return nil
+				}
+				if !isRetryableGitLabError(apiErr) {
+					return backoff.Permanent(apiErr)
+				}
+				log.Warn().Err(apiErr).Msg("retrying GitLab API call after transient error")
+				return fmt.Errorf("gitlab repo batch call failed: %w", apiErr)
+			}, backoff.WithContext(backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3), ctx))
 			if err != nil {
 				batchChan <- analyze.RepoBatch{Err: err}
 				return
@@ -293,4 +309,31 @@ func projectsToRepos(projects []*gitlab.Project) []analyze.Repository {
 		}
 	}
 	return repos
+}
+
+func isRetryableGitLabError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		return true
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+
+	errStr := strings.ToLower(err.Error())
+	retryablePatterns := []string{
+		"500", "502", "503", "504",
+		"bad gateway", "service unavailable", "gateway timeout",
+		"internal server error",
+	}
+	for _, pattern := range retryablePatterns {
+		if strings.Contains(errStr, pattern) {
+			return true
+		}
+	}
+	return false
 }

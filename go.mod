@@ -3,6 +3,7 @@ module github.com/boostsecurityio/poutine
 go 1.25.0
 
 require (
+	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/gofri/go-github-ratelimit v1.1.1
 	github.com/google/go-github/v59 v59.0.0
 	github.com/hashicorp/go-version v1.7.0
