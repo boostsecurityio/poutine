@@ -10,7 +10,6 @@ unpinned_github_action(purl) if {
 
 unpinned_docker(purl) if {
 	startswith(purl, "pkg:docker/")
-	not contains(purl, "@")
 	not regex.match("@sha256:[a-f0-9]{64}", purl)
 }
 

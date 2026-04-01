@@ -68,9 +68,56 @@ func (p *Purl) Link() string {
 	return ""
 }
 
+// PurlFromDockerImage parses a Docker image reference and returns a valid
+// Docker PURL per https://github.com/package-url/purl-spec/blob/main/types/docker-definition.json
+//
+// Examples:
+//
+//	alpine:latest           -> pkg:docker/alpine@latest
+//	ghcr.io/org/image:tag   -> pkg:docker/org/image@tag?repository_url=ghcr.io
+//	myimage@sha256:abcdef   -> pkg:docker/myimage@sha256%3Aabcdef
 func PurlFromDockerImage(image string) (Purl, error) {
-	purl, err := packageurl.FromString("pkg:docker/" + image)
-	return Purl{PackageURL: purl}, err
+	if image == "" {
+		return Purl{}, fmt.Errorf("empty docker image reference")
+	}
+
+	var name, version string
+	var qualifiers packageurl.Qualifiers
+
+	// Split off version: either @digest or :tag
+	if idx := strings.Index(image, "@"); idx != -1 {
+		version = image[idx+1:]
+		image = image[:idx]
+	} else if idx := strings.LastIndex(image, ":"); idx != -1 {
+		// Ensure the colon is after the last slash (i.e. it's a tag, not a port/registry part)
+		if slashIdx := strings.LastIndex(image, "/"); idx > slashIdx {
+			version = image[idx+1:]
+			image = image[:idx]
+		}
+	}
+
+	// Split registry from the path.
+	// A registry is present if the first path component contains a dot or colon,
+	// or is "localhost" (standard Docker reference parsing heuristic).
+	parts := strings.SplitN(image, "/", 2)
+	if len(parts) == 2 && (strings.ContainsAny(parts[0], ".:") || parts[0] == "localhost") {
+		registry := parts[0]
+		qualifiers = packageurl.QualifiersFromMap(map[string]string{
+			"repository_url": registry,
+		})
+		image = parts[1]
+	}
+
+	// Split remaining path into namespace and name
+	if idx := strings.LastIndex(image, "/"); idx != -1 {
+		namespace := image[:idx]
+		name = image[idx+1:]
+		p := packageurl.NewPackageURL("docker", namespace, name, version, qualifiers, "")
+		return Purl{PackageURL: *p}, nil
+	}
+
+	p := packageurl.NewPackageURL("docker", "", image, version, qualifiers, "")
+	return Purl{PackageURL: *p}, nil
 }
 
 func PurlFromGithubActions(uses string, sourceGitRepo string, sourceGitRef string) (Purl, error) {

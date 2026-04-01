@@ -53,15 +53,15 @@ func TestPurlFromGithubActions(t *testing.T) {
 		},
 		{
 			uses:     "docker://alpine:latest",
-			expected: "pkg:docker/alpine:latest",
+			expected: "pkg:docker/alpine@latest",
 		},
 		{
 			uses:     "docker://ghcr.io/org/owner/image:tag",
-			expected: "pkg:docker/ghcr.io/org/owner/image:tag",
+			expected: "pkg:docker/org/owner/image@tag?repository_url=ghcr.io",
 		},
 		{
 			uses:     "docker://ghcr.io/org/owner/image@sha256:digest",
-			expected: "pkg:docker/ghcr.io/org/owner/image@sha256:digest",
+			expected: "pkg:docker/org/owner/image@sha256:digest?repository_url=ghcr.io",
 		},
 		{
 			uses:  "",
