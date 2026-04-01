@@ -2,7 +2,6 @@ package models
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"gopkg.in/yaml.v3"
 	"strings"
@@ -553,10 +552,13 @@ type GithubActionsStrategy struct {
 	Matrix map[string]StringList `json:"matrix,omitempty" yaml:"matrix"`
 }
 
-// UnmarshalYAML parses the `strategy` block and extracts `matrix`
+// UnmarshalYAML parses the `strategy` block and extracts `matrix` dimensions.
+// It is intentionally lenient: unsupported constructs (expressions, include/exclude,
+// scalar dimensions, nested sequences) are silently skipped so that the rest of
+// the workflow still parses successfully.
 func (o *GithubActionsStrategy) UnmarshalYAML(node *yaml.Node) error {
 	if node.Kind != yaml.MappingNode {
-		return errors.New("invalid yaml node type for strategy")
+		return nil
 	}
 	for i := 0; i < len(node.Content); i += 2 {
 		key := node.Content[i].Value
@@ -564,16 +566,20 @@ func (o *GithubActionsStrategy) UnmarshalYAML(node *yaml.Node) error {
 		if key != "matrix" {
 			continue
 		}
+		// matrix may be an expression like ${{ fromJSON(...) }}
 		if value.Kind != yaml.MappingNode {
-			return errors.New("matrix must be a mapping")
+			continue
 		}
 		m := make(map[string]StringList, len(value.Content)/2)
-		// walk each matrix dimension
 		for j := 0; j < len(value.Content); j += 2 {
 			dim := value.Content[j].Value
 			listNode := value.Content[j+1]
+			// skip include/exclude (special GHA keys) and non-sequence dimensions
+			if dim == "include" || dim == "exclude" {
+				continue
+			}
 			if listNode.Kind != yaml.SequenceNode {
-				return fmt.Errorf("matrix.%s must be a sequence", dim)
+				continue
 			}
 			var items StringList
 			for _, item := range listNode.Content {
@@ -583,15 +589,15 @@ func (o *GithubActionsStrategy) UnmarshalYAML(node *yaml.Node) error {
 				case yaml.MappingNode:
 					var obj map[string]interface{}
 					if err := item.Decode(&obj); err != nil {
-						return fmt.Errorf("failed to decode matrix item: %w", err)
+						continue
 					}
 					b, err := json.Marshal(obj)
 					if err != nil {
-						return fmt.Errorf("failed to marshal matrix item: %w", err)
+						continue
 					}
 					items = append(items, string(b))
 				default:
-					return fmt.Errorf("unsupported node kind %v in matrix.%s", item.Kind, dim)
+					continue
 				}
 			}
 			m[dim] = items

@@ -234,6 +234,50 @@ func TestGithubActionsWorkflowJobs(t *testing.T) {
 				},
 			},
 		},
+		{
+			Name:  "matrix with expression value",
+			Input: `example_matrix: { strategy: { matrix: "${{ fromJSON(needs.config.outputs.matrix) }}" } }`,
+			Expected: GithubActionsJob{
+				ID: "example_matrix",
+			},
+		},
+		{
+			Name:  "matrix with scalar dimension skipped",
+			Input: `example_matrix: { strategy: { matrix: { rust: stable, os: [ubuntu-latest, macos-latest] } } }`,
+			Expected: GithubActionsJob{
+				ID: "example_matrix",
+				Strategy: GithubActionsStrategy{
+					Matrix: map[string]StringList{
+						"os": {"ubuntu-latest", "macos-latest"},
+					},
+				},
+			},
+		},
+		{
+			Name:  "matrix with include and exclude skipped",
+			Input: `example_matrix: { strategy: { matrix: { os: [ubuntu-latest], include: [{ os: windows-latest, experimental: true }], exclude: [{ os: macos-latest }] } } }`,
+			Expected: GithubActionsJob{
+				ID: "example_matrix",
+				Strategy: GithubActionsStrategy{
+					Matrix: map[string]StringList{
+						"os": {"ubuntu-latest"},
+					},
+				},
+			},
+		},
+		{
+			Name:  "matrix with nested sequences skipped",
+			Input: "example_matrix:\n  strategy:\n    matrix:\n      target:\n        - [a, b]\n        - [c, d]\n      os: [ubuntu-latest]",
+			Expected: GithubActionsJob{
+				ID: "example_matrix",
+				Strategy: GithubActionsStrategy{
+					Matrix: map[string]StringList{
+						"target": nil,
+						"os":     {"ubuntu-latest"},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
