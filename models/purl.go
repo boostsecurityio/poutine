@@ -1,6 +1,7 @@
 package models
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -78,7 +79,7 @@ func (p *Purl) Link() string {
 //	myimage@sha256:abcdef   -> pkg:docker/myimage@sha256%3Aabcdef
 func PurlFromDockerImage(image string) (Purl, error) {
 	if image == "" {
-		return Purl{}, fmt.Errorf("empty docker image reference")
+		return Purl{}, errors.New("empty docker image reference")
 	}
 
 	var name, version string
