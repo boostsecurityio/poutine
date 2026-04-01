@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/cenkalti/backoff/v4"
 
@@ -353,12 +354,14 @@ func (c *Client) GetOrgRepos(ctx context.Context, org string) <-chan analyze.Rep
 		defer close(batchChan)
 
 		var totalCountSent bool
+		const maxConsecutiveFailures = 3
 
 		variables := map[string]interface{}{
 			"org":   githubv4.String(org),
 			"after": (*githubv4.String)(nil),
 		}
 
+		consecutiveFailures := 0
 		for {
 			var query struct {
 				RepositoryOwner struct {
@@ -374,6 +377,9 @@ func (c *Client) GetOrgRepos(ctx context.Context, org string) <-chan analyze.Rep
 				} `graphql:"repositoryOwner(login: $org)"`
 			}
 
+			bo := backoff.NewExponentialBackOff()
+			bo.InitialInterval = 500 * time.Millisecond
+			bo.MaxInterval = 5 * time.Second
 			err := backoff.Retry(func() error {
 				queryErr := c.graphQLClient.Query(ctx, &query, variables)
 				if queryErr == nil {
@@ -384,11 +390,23 @@ func (c *Client) GetOrgRepos(ctx context.Context, org string) <-chan analyze.Rep
 				}
 				log.Warn().Err(queryErr).Msg("retrying GitHub GraphQL query after transient error")
 				return fmt.Errorf("repo batch gql query failed: %w", queryErr)
-			}, backoff.WithContext(backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3), ctx))
+			}, backoff.WithContext(backoff.WithMaxRetries(bo, 5), ctx))
 			if err != nil {
 				batchChan <- analyze.RepoBatch{Err: err}
-				return
+				consecutiveFailures++
+				if consecutiveFailures >= maxConsecutiveFailures {
+					log.Error().Int("failures", consecutiveFailures).Msg("too many consecutive batch failures, stopping pagination")
+					break
+				}
+				// Wait before retrying the same page
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(time.Duration(consecutiveFailures*2) * time.Second):
+				}
+				continue
 			}
+			consecutiveFailures = 0
 
 			if query.RepositoryOwner.Login == "" {
 				batchChan <- analyze.RepoBatch{Err: errors.New("org does not exist")}
@@ -456,6 +474,7 @@ func isRetryableError(err error) bool {
 		"service unavailable",
 		"gateway timeout",
 		"internal server error",
+		"stream error",
 	}
 	for _, pattern := range retryablePatterns {
 		if strings.Contains(errStr, pattern) {

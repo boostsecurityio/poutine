@@ -73,6 +73,8 @@ type GitClient interface {
 	GetRepoHeadBranchName(ctx context.Context, repoPath string) (string, error)
 	GetUniqWorkflowsBranches(ctx context.Context, clonePath string) (map[string][]models.BranchInfo, error)
 	BlobMatches(ctx context.Context, clonePath string, blobsha string, regex *regexp.Regexp) (bool, []byte, error)
+	ListFiles(clonePath string, extensions []string) (map[string][]byte, error)
+	Cleanup(clonePath string)
 }
 
 func NewAnalyzer(scmClient ScmClient, gitClient GitClient, formatter Formatter, config *models.Config, opaClient *opa.Opa) *Analyzer {
@@ -164,20 +166,37 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 				defer goRoutineLimitSem.Release(1)
 				defer reposWg.Done()
 				repoNameWithOwner := repo.GetRepoIdentifier()
-				tempDir, err := a.cloneRepoToTemp(ctx, repo.BuildGitURL(a.ScmClient.GetProviderBaseURL()), a.ScmClient.GetToken(), "HEAD")
+				repoKey, err := a.cloneRepo(ctx, repo.BuildGitURL(a.ScmClient.GetProviderBaseURL()), a.ScmClient.GetToken(), "HEAD")
 				if err != nil {
 					log.Error().Err(err).Str("repo", repoNameWithOwner).Msg("failed to clone repo")
 					return
 				}
-				defer os.RemoveAll(tempDir)
+				defer a.GitClient.Cleanup(repoKey)
 
-				pkg, err := a.GeneratePackageInsights(ctx, tempDir, repo, "HEAD")
+				pkg, err := a.GeneratePackageInsights(ctx, repoKey, repo, "HEAD")
 				if err != nil {
 					log.Error().Err(err).Str("repo", repoNameWithOwner).Msg("failed to generate package insights")
 					return
 				}
 
-				scannedPkg, err := inventory.ScanPackage(ctx, *pkg, tempDir)
+				files, err := a.GitClient.ListFiles(repoKey, []string{".yml", ".yaml"})
+				if err != nil {
+					log.Error().Err(err).Str("repo", repoNameWithOwner).Msg("failed to list files")
+					return
+				}
+
+				memScanner := &scanner.InventoryScannerMem{
+					Files: files,
+					Parsers: []scanner.MemParser{
+						scanner.NewGithubActionsMetadataParser(),
+						scanner.NewGithubActionWorkflowParser(),
+						scanner.NewAzurePipelinesParser(),
+						scanner.NewGitlabCiParser(),
+						scanner.NewPipelineAsCodeTektonParser(),
+					},
+				}
+
+				scannedPkg, err := inventory.ScanPackageScanner(ctx, *pkg, memScanner)
 				if err != nil {
 					log.Error().Err(err).Str("repo", repoNameWithOwner).Msg("failed to scan package")
 					return
@@ -245,16 +264,16 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 	_ = bar.RenderBlank()
 
 	repoUrl := repo.BuildGitURL(a.ScmClient.GetProviderBaseURL())
-	tempDir, err := a.FetchConeToTemp(ctx, repoUrl, a.ScmClient.GetToken(), "refs/heads/*:refs/remotes/origin/*", ".github/workflows")
+	repoKey, err := a.fetchCone(ctx, repoUrl, a.ScmClient.GetToken(), "refs/heads/*:refs/remotes/origin/*", ".github/workflows")
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch cone: %w", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer a.GitClient.Cleanup(repoKey)
 
 	bar.Describe("Listing unique workflows")
 	_ = bar.Add(1)
 
-	workflows, err := a.GitClient.GetUniqWorkflowsBranches(ctx, tempDir)
+	workflows, err := a.GitClient.GetUniqWorkflowsBranches(ctx, repoKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get unique workflow: %w", err)
 	}
@@ -267,7 +286,7 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 	if numberOfGoroutines != nil {
 		maxGoroutines = *numberOfGoroutines
 	}
-	semaphore := semaphore.NewWeighted(int64(maxGoroutines))
+	sem := semaphore.NewWeighted(int64(maxGoroutines))
 	m := sync.Mutex{}
 	type file struct {
 		path string
@@ -291,15 +310,15 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 		blobShas = append(blobShas, sha)
 	}
 	for _, blobSha := range blobShas {
-		if err := semaphore.Acquire(ctx, 1); err != nil {
+		if err := sem.Acquire(ctx, 1); err != nil {
 			errChan <- fmt.Errorf("failed to acquire semaphore: %w", err)
 			break
 		}
 		wgProducer.Add(1)
 		go func(blobSha string) {
 			defer wgProducer.Done()
-			defer semaphore.Release(1)
-			match, content, err := a.GitClient.BlobMatches(ctx, tempDir, blobSha, regex)
+			defer sem.Release(1)
+			match, content, err := a.GitClient.BlobMatches(ctx, repoKey, blobSha, regex)
 			if err != nil {
 				errChan <- fmt.Errorf("failed to blob match %s: %w", blobSha, err)
 				return
@@ -326,7 +345,7 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 
 	bar.Describe("Scanning package")
 	_ = bar.Add(1)
-	pkg, err := a.GeneratePackageInsights(ctx, tempDir, repo, "HEAD")
+	pkg, err := a.GeneratePackageInsights(ctx, repoKey, repo, "HEAD")
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate package insight: %w", err)
 	}
@@ -412,21 +431,37 @@ func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref strin
 	bar := a.ProgressBar(2, "Cloning repository")
 	_ = bar.RenderBlank()
 
-	tempDir, err := a.cloneRepoToTemp(ctx, repo.BuildGitURL(a.ScmClient.GetProviderBaseURL()), a.ScmClient.GetToken(), ref)
+	repoKey, err := a.cloneRepo(ctx, repo.BuildGitURL(a.ScmClient.GetProviderBaseURL()), a.ScmClient.GetToken(), ref)
 	if err != nil {
 		return nil, err
 	}
-	defer os.RemoveAll(tempDir)
+	defer a.GitClient.Cleanup(repoKey)
 
 	bar.Describe("Analyzing repository")
 	_ = bar.Add(1)
 
-	pkg, err := a.GeneratePackageInsights(ctx, tempDir, repo, ref)
+	pkg, err := a.GeneratePackageInsights(ctx, repoKey, repo, ref)
 	if err != nil {
 		return nil, err
 	}
 
-	scannedPackage, err := inventory.ScanPackage(ctx, *pkg, tempDir)
+	files, err := a.GitClient.ListFiles(repoKey, []string{".yml", ".yaml"})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list files: %w", err)
+	}
+
+	memScanner := &scanner.InventoryScannerMem{
+		Files: files,
+		Parsers: []scanner.MemParser{
+			scanner.NewGithubActionsMetadataParser(),
+			scanner.NewGithubActionWorkflowParser(),
+			scanner.NewAzurePipelinesParser(),
+			scanner.NewGitlabCiParser(),
+			scanner.NewPipelineAsCodeTektonParser(),
+		},
+	}
+
+	scannedPackage, err := inventory.ScanPackageScanner(ctx, *pkg, memScanner)
 	if err != nil {
 		return nil, err
 	}
@@ -669,32 +704,22 @@ func (a *Analyzer) GeneratePackageInsights(ctx context.Context, tempDir string, 
 	return pkg, nil
 }
 
-func (a *Analyzer) FetchConeToTemp(ctx context.Context, gitURL, token, ref string, cone string) (string, error) {
-	tempDir, err := os.MkdirTemp("", TEMP_DIR_PREFIX)
+func (a *Analyzer) fetchCone(ctx context.Context, gitURL, token, ref string, cone string) (string, error) {
+	key := fmt.Sprintf("repo:%s:cone:%d", gitURL, time.Now().UnixNano())
+	err := a.GitClient.FetchCone(ctx, key, gitURL, token, ref, cone)
 	if err != nil {
-		return "", fmt.Errorf("failed to create temp directory: %w", err)
+		return "", fmt.Errorf("failed to fetch cone: %w", err)
 	}
-
-	err = a.GitClient.FetchCone(ctx, tempDir, gitURL, token, ref, cone)
-	if err != nil {
-		os.RemoveAll(tempDir) // Clean up if cloning fails
-		return "", fmt.Errorf("failed to clone repo: %w", err)
-	}
-	return tempDir, nil
+	return key, nil
 }
 
-func (a *Analyzer) cloneRepoToTemp(ctx context.Context, gitURL string, token string, ref string) (string, error) {
-	tempDir, err := os.MkdirTemp("", TEMP_DIR_PREFIX)
+func (a *Analyzer) cloneRepo(ctx context.Context, gitURL string, token string, ref string) (string, error) {
+	key := fmt.Sprintf("repo:%s:%d", gitURL, time.Now().UnixNano())
+	err := a.GitClient.Clone(ctx, key, gitURL, token, ref)
 	if err != nil {
-		return "", fmt.Errorf("failed to create temp directory: %w", err)
-	}
-
-	err = a.GitClient.Clone(ctx, tempDir, gitURL, token, ref)
-	if err != nil {
-		os.RemoveAll(tempDir) // Clean up if cloning fails
 		return "", fmt.Errorf("failed to clone repo: %w", err)
 	}
-	return tempDir, nil
+	return key, nil
 }
 
 func (a *Analyzer) ProgressBar(maxValue int64, description string) *progressbar.ProgressBar {

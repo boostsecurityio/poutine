@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/boostsecurityio/poutine/analyze"
 	"github.com/boostsecurityio/poutine/providers/scm/domain"
@@ -221,9 +222,14 @@ func (c *Client) ListGroupProjects(ctx context.Context, groupID string) <-chan a
 			Archived:         gitlab.Ptr(false),
 		}
 
+		const maxConsecutiveFailures = 3
+		consecutiveFailures := 0
 		for {
 			var ps []*gitlab.Project
 			var resp *gitlab.Response
+			bo := backoff.NewExponentialBackOff()
+			bo.InitialInterval = 500 * time.Millisecond
+			bo.MaxInterval = 5 * time.Second
 			err := backoff.Retry(func() error {
 				var apiErr error
 				ps, resp, apiErr = c.client.Groups.ListGroupProjects(groupID, opt)
@@ -235,11 +241,22 @@ func (c *Client) ListGroupProjects(ctx context.Context, groupID string) <-chan a
 				}
 				log.Warn().Err(apiErr).Msg("retrying GitLab API call after transient error")
 				return fmt.Errorf("gitlab repo batch call failed: %w", apiErr)
-			}, backoff.WithContext(backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3), ctx))
+			}, backoff.WithContext(backoff.WithMaxRetries(bo, 5), ctx))
 			if err != nil {
 				batchChan <- analyze.RepoBatch{Err: err}
-				return
+				consecutiveFailures++
+				if consecutiveFailures >= maxConsecutiveFailures {
+					log.Error().Int("failures", consecutiveFailures).Msg("too many consecutive batch failures, stopping pagination")
+					break
+				}
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(time.Duration(consecutiveFailures*2) * time.Second):
+				}
+				continue
 			}
+			consecutiveFailures = 0
 
 			batchChan <- analyze.RepoBatch{
 				TotalCount:   resp.TotalItems,
