@@ -63,11 +63,28 @@ type GithubActionsWith = GithubActionsEnvs
 type GithubActionsJobRunsOn StringList
 type StringList []string
 
+// StringBool accepts both YAML booleans and quoted strings like "false".
+type StringBool bool
+
+func (b *StringBool) UnmarshalYAML(node *yaml.Node) error {
+	var boolVal bool
+	if err := node.Decode(&boolVal); err == nil {
+		*b = StringBool(boolVal)
+		return nil
+	}
+	var strVal string
+	if err := node.Decode(&strVal); err != nil {
+		return err
+	}
+	*b = StringBool(strVal == "true")
+	return nil
+}
+
 type GithubActionsInput struct {
-	Name        string `json:"name"`
-	Description string `json:"description,omitempty"`
-	Required    bool   `json:"required"`
-	Type        string `json:"type"`
+	Name        string     `json:"name"`
+	Description string     `json:"description,omitempty"`
+	Required    StringBool `json:"required"`
+	Type        string     `json:"type"`
 }
 
 type GithubActionsOutput struct {

@@ -533,12 +533,12 @@ jobs:
 
 	assert.Equal(t, "workflow_call", workflow.Events[1].Name)
 	assert.Equal(t, "string", workflow.Events[1].Inputs[0].Type)
-	assert.Equal(t, true, workflow.Events[1].Inputs[0].Required)
+	assert.Equal(t, StringBool(true), workflow.Events[1].Inputs[0].Required)
 	assert.Equal(t, "build", workflow.Events[1].Outputs[0].Name)
 	assert.Equal(t, "build_id", workflow.Events[1].Outputs[0].Description)
 	assert.Equal(t, "${{ jobs.build.outputs.build }}", workflow.Events[1].Outputs[0].Value)
 	assert.Equal(t, "BOARD_TOKEN", workflow.Events[1].Secrets[0].Name)
-	assert.Equal(t, true, workflow.Events[1].Secrets[0].Required)
+	assert.Equal(t, StringBool(true), workflow.Events[1].Secrets[0].Required)
 
 	assert.Equal(t, "schedule", workflow.Events[2].Name)
 	assert.Equal(t, "0 0 * * 0", workflow.Events[2].Cron[0])
@@ -627,7 +627,7 @@ runs:
 	assert.Equal(t, "John Doe", actionMetadata.Author)
 	assert.Equal(t, "Analyze git sha", actionMetadata.Description)
 	assert.Equal(t, "git_sha", actionMetadata.Inputs[0].Name)
-	assert.Equal(t, true, actionMetadata.Inputs[0].Required)
+	assert.Equal(t, StringBool(true), actionMetadata.Inputs[0].Required)
 	assert.Equal(t, "string", actionMetadata.Inputs[0].Type)
 	assert.Equal(t, "response", actionMetadata.Outputs[0].Name)
 	assert.Equal(t, "Response from the command executed", actionMetadata.Outputs[0].Description)

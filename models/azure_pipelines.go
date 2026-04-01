@@ -147,13 +147,18 @@ func (v *AzurePipelineVariables) UnmarshalYAML(value *yaml.Node) error {
 		return nil
 	}
 
-	var listFormat []AzurePipelineVariable
-	if err := value.Decode(&listFormat); err == nil {
-		for _, variable := range listFormat {
-			v.Map[variable.Name] = variable.Value
+	// Variables lists can contain name/value pairs, group references,
+	// and template references. Decode each item individually and
+	// skip non-variable entries (group, template).
+	if value.Kind == yaml.SequenceNode {
+		for _, item := range value.Content {
+			var variable AzurePipelineVariable
+			if err := item.Decode(&variable); err == nil && variable.Name != "" {
+				v.Map[variable.Name] = variable.Value
+			}
 		}
 		return nil
 	}
 
-	return fmt.Errorf("variables must be either a map or a list of objects")
+	return nil
 }

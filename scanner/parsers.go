@@ -1,7 +1,6 @@
 package scanner
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -18,7 +17,7 @@ type GithubActionsMetadataParser struct {
 
 func NewGithubActionsMetadataParser() *GithubActionsMetadataParser {
 	return &GithubActionsMetadataParser{
-		pattern: regexp.MustCompile(`(\b|/)action\.ya?ml$`),
+		pattern: regexp.MustCompile(`(^|/)action\.ya?ml$`),
 	}
 }
 
@@ -214,7 +213,8 @@ func (p *GitlabCiParser) Parse(filePath string, scanningPath string, pkgInsights
 func (p *GitlabCiParser) ParseFromMemory(data []byte, filePath string, pkgInsights *models.PackageInsights) error {
 	config, err := models.ParseGitlabciConfig(data)
 	if err != nil {
-		return fmt.Errorf("failed to parse gitlabci config: %w", err)
+		log.Debug().Err(err).Str("file", filePath).Msg("failed to parse gitlabci config")
+		return nil
 	}
 	config.Path = filePath
 
