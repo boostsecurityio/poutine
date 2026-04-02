@@ -43,7 +43,7 @@ func TestOpaBuiltins(t *testing.T) {
 		{
 			builtin:  "purl.parse_docker_image",
 			input:    `"alpine:latest"`,
-			expected: "pkg:docker/alpine%3Alatest",
+			expected: "pkg:docker/alpine:latest",
 		},
 	}
 

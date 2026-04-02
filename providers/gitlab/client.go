@@ -259,7 +259,7 @@ func (c *Client) ListGroupProjects(ctx context.Context, groupID string) <-chan a
 			consecutiveFailures = 0
 
 			batchChan <- analyze.RepoBatch{
-				TotalCount:   resp.TotalItems,
+				TotalCount:   int(resp.TotalItems),
 				Repositories: projectsToRepos(ps),
 			}
 
@@ -304,13 +304,13 @@ func projectToRepo(project *gitlab.Project) *GitLabRepo {
 		IsPrivate:         !(project.Visibility == gitlab.PublicVisibility),
 		IsMirror:          project.Mirror,
 		IsArchived:        project.Archived,
-		StarCount:         project.StarCount,
-		ForksCount:        project.ForksCount,
+		StarCount:         int(project.StarCount),
+		ForksCount:        int(project.ForksCount),
 		IsFork:            isFork,
 		IsEmpty:           project.EmptyRepo,
 		HasIssues:         project.IssuesEnabled,
-		ID:                project.ID,
-		IssuesCount:       project.OpenIssuesCount,
+		ID:                int(project.ID),
+		IssuesCount:       int(project.OpenIssuesCount),
 		HasWiki:           project.WikiEnabled,
 		License:           license,
 		DefaultBranch:     project.DefaultBranch,
