@@ -3,8 +3,9 @@ package models
 import (
 	"encoding/json"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -74,7 +75,7 @@ func (b *StringBool) UnmarshalYAML(node *yaml.Node) error {
 	}
 	var strVal string
 	if err := node.Decode(&strVal); err != nil {
-		return err
+		return fmt.Errorf("error parsing string value for string bool: %s", node.Value)
 	}
 	*b = StringBool(strVal == "true")
 	return nil
