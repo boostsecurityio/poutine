@@ -395,9 +395,8 @@ func (o *GitlabciStringRef) UnmarshalYAML(node *yaml.Node) error {
 		if node.Tag == "!reference" {
 			val, _ := yaml.Marshal(node)
 			*o = GitlabciStringRef(val)
-		} else {
-			return fmt.Errorf("unexpected string or reference")
 		}
+		// skip non-reference sequences
 	case yaml.ScalarNode:
 		var s string
 		if err := node.Decode(&s); err != nil {

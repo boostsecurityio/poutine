@@ -51,6 +51,21 @@ func TestAzurePipeline(t *testing.T) {
 			},
 		},
 		{
+			input: "variables:\n  - group: my-variable-group\n  - name: foo\n    value: bar\n  - template: vars.yml",
+			expected: AzurePipeline{
+				Stages: []AzureStage{
+					{
+						Jobs: []AzureJob{
+							{},
+						},
+					},
+				},
+				Variables: AzurePipelineVariables{map[string]string{
+					"foo": "bar",
+				}},
+			},
+		},
+		{
 			input: `stages: [{stage: build, jobs: [{job: test, steps: [bash: asdf]}]}]`,
 			expected: AzurePipeline{
 				Stages: []AzureStage{

@@ -234,6 +234,50 @@ func TestGithubActionsWorkflowJobs(t *testing.T) {
 				},
 			},
 		},
+		{
+			Name:  "matrix with expression value",
+			Input: `example_matrix: { strategy: { matrix: "${{ fromJSON(needs.config.outputs.matrix) }}" } }`,
+			Expected: GithubActionsJob{
+				ID: "example_matrix",
+			},
+		},
+		{
+			Name:  "matrix with scalar dimension skipped",
+			Input: `example_matrix: { strategy: { matrix: { rust: stable, os: [ubuntu-latest, macos-latest] } } }`,
+			Expected: GithubActionsJob{
+				ID: "example_matrix",
+				Strategy: GithubActionsStrategy{
+					Matrix: map[string]StringList{
+						"os": {"ubuntu-latest", "macos-latest"},
+					},
+				},
+			},
+		},
+		{
+			Name:  "matrix with include and exclude skipped",
+			Input: `example_matrix: { strategy: { matrix: { os: [ubuntu-latest], include: [{ os: windows-latest, experimental: true }], exclude: [{ os: macos-latest }] } } }`,
+			Expected: GithubActionsJob{
+				ID: "example_matrix",
+				Strategy: GithubActionsStrategy{
+					Matrix: map[string]StringList{
+						"os": {"ubuntu-latest"},
+					},
+				},
+			},
+		},
+		{
+			Name:  "matrix with nested sequences skipped",
+			Input: "example_matrix:\n  strategy:\n    matrix:\n      target:\n        - [a, b]\n        - [c, d]\n      os: [ubuntu-latest]",
+			Expected: GithubActionsJob{
+				ID: "example_matrix",
+				Strategy: GithubActionsStrategy{
+					Matrix: map[string]StringList{
+						"target": nil,
+						"os":     {"ubuntu-latest"},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -489,12 +533,12 @@ jobs:
 
 	assert.Equal(t, "workflow_call", workflow.Events[1].Name)
 	assert.Equal(t, "string", workflow.Events[1].Inputs[0].Type)
-	assert.Equal(t, true, workflow.Events[1].Inputs[0].Required)
+	assert.Equal(t, StringBool(true), workflow.Events[1].Inputs[0].Required)
 	assert.Equal(t, "build", workflow.Events[1].Outputs[0].Name)
 	assert.Equal(t, "build_id", workflow.Events[1].Outputs[0].Description)
 	assert.Equal(t, "${{ jobs.build.outputs.build }}", workflow.Events[1].Outputs[0].Value)
 	assert.Equal(t, "BOARD_TOKEN", workflow.Events[1].Secrets[0].Name)
-	assert.Equal(t, true, workflow.Events[1].Secrets[0].Required)
+	assert.Equal(t, StringBool(true), workflow.Events[1].Secrets[0].Required)
 
 	assert.Equal(t, "schedule", workflow.Events[2].Name)
 	assert.Equal(t, "0 0 * * 0", workflow.Events[2].Cron[0])
@@ -583,7 +627,7 @@ runs:
 	assert.Equal(t, "John Doe", actionMetadata.Author)
 	assert.Equal(t, "Analyze git sha", actionMetadata.Description)
 	assert.Equal(t, "git_sha", actionMetadata.Inputs[0].Name)
-	assert.Equal(t, true, actionMetadata.Inputs[0].Required)
+	assert.Equal(t, StringBool(true), actionMetadata.Inputs[0].Required)
 	assert.Equal(t, "string", actionMetadata.Inputs[0].Type)
 	assert.Equal(t, "response", actionMetadata.Outputs[0].Name)
 	assert.Equal(t, "Response from the command executed", actionMetadata.Outputs[0].Description)

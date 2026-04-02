@@ -2,10 +2,10 @@ package models
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -64,11 +64,28 @@ type GithubActionsWith = GithubActionsEnvs
 type GithubActionsJobRunsOn StringList
 type StringList []string
 
+// StringBool accepts both YAML booleans and quoted strings like "false".
+type StringBool bool
+
+func (b *StringBool) UnmarshalYAML(node *yaml.Node) error {
+	var boolVal bool
+	if err := node.Decode(&boolVal); err == nil {
+		*b = StringBool(boolVal)
+		return nil
+	}
+	var strVal string
+	if err := node.Decode(&strVal); err != nil {
+		return fmt.Errorf("error parsing string value for string bool: %s", node.Value)
+	}
+	*b = StringBool(strVal == "true")
+	return nil
+}
+
 type GithubActionsInput struct {
-	Name        string `json:"name"`
-	Description string `json:"description,omitempty"`
-	Required    bool   `json:"required"`
-	Type        string `json:"type"`
+	Name        string     `json:"name"`
+	Description string     `json:"description,omitempty"`
+	Required    StringBool `json:"required"`
+	Type        string     `json:"type"`
 }
 
 type GithubActionsOutput struct {
@@ -553,10 +570,13 @@ type GithubActionsStrategy struct {
 	Matrix map[string]StringList `json:"matrix,omitempty" yaml:"matrix"`
 }
 
-// UnmarshalYAML parses the `strategy` block and extracts `matrix`
+// UnmarshalYAML parses the `strategy` block and extracts `matrix` dimensions.
+// It is intentionally lenient: unsupported constructs (expressions, include/exclude,
+// scalar dimensions, nested sequences) are silently skipped so that the rest of
+// the workflow still parses successfully.
 func (o *GithubActionsStrategy) UnmarshalYAML(node *yaml.Node) error {
 	if node.Kind != yaml.MappingNode {
-		return errors.New("invalid yaml node type for strategy")
+		return nil
 	}
 	for i := 0; i < len(node.Content); i += 2 {
 		key := node.Content[i].Value
@@ -564,16 +584,20 @@ func (o *GithubActionsStrategy) UnmarshalYAML(node *yaml.Node) error {
 		if key != "matrix" {
 			continue
 		}
+		// matrix may be an expression like ${{ fromJSON(...) }}
 		if value.Kind != yaml.MappingNode {
-			return errors.New("matrix must be a mapping")
+			continue
 		}
 		m := make(map[string]StringList, len(value.Content)/2)
-		// walk each matrix dimension
 		for j := 0; j < len(value.Content); j += 2 {
 			dim := value.Content[j].Value
 			listNode := value.Content[j+1]
+			// skip include/exclude (special GHA keys) and non-sequence dimensions
+			if dim == "include" || dim == "exclude" {
+				continue
+			}
 			if listNode.Kind != yaml.SequenceNode {
-				return fmt.Errorf("matrix.%s must be a sequence", dim)
+				continue
 			}
 			var items StringList
 			for _, item := range listNode.Content {
@@ -583,15 +607,15 @@ func (o *GithubActionsStrategy) UnmarshalYAML(node *yaml.Node) error {
 				case yaml.MappingNode:
 					var obj map[string]interface{}
 					if err := item.Decode(&obj); err != nil {
-						return fmt.Errorf("failed to decode matrix item: %w", err)
+						continue
 					}
 					b, err := json.Marshal(obj)
 					if err != nil {
-						return fmt.Errorf("failed to marshal matrix item: %w", err)
+						continue
 					}
 					items = append(items, string(b))
 				default:
-					return fmt.Errorf("unsupported node kind %v in matrix.%s", item.Kind, dim)
+					continue
 				}
 			}
 			m[dim] = items
