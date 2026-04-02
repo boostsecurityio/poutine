@@ -81,7 +81,7 @@ func TestRun(t *testing.T) {
 
 	assert.Contains(t, scannedPackage.BuildDependencies, "pkg:githubactions/actions/checkout@v4")
 	assert.Contains(t, scannedPackage.PackageDependencies, "pkg:githubactions/actions/github-script@main")
-	assert.Contains(t, scannedPackage.PackageDependencies, "pkg:docker/alpine:latest")
+	assert.Contains(t, scannedPackage.PackageDependencies, "pkg:docker/alpine@latest")
 	assert.Equal(t, 3, len(scannedPackage.GitlabciConfigs))
 }
 
