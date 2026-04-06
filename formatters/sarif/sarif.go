@@ -76,7 +76,7 @@ func (f *Format) Format(ctx context.Context, packages []*models.PackageInsights)
 		taxonomyRef := sarif.NewToolComponentReference().
 			WithName("boost/sast").
 			WithIndex(0).
-			WithGuid("00000000-0000-0000-0000-000000000000")
+			WithGuid("0c8bf036-487d-590a-8c22-c41f287b1560")
 		run.Tool.Driver.WithSupportedTaxonomies([]*sarif.ToolComponentReference{taxonomyRef})
 
 		run.WithTaxonomies([]*sarif.ToolComponent{taxonomy})
