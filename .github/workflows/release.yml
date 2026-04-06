@@ -9,7 +9,7 @@ on:
 
 env:
   GO_VERSION: 1.26
-  GO_RELEASER_VERSION: v2.4.7
+  GO_RELEASER_VERSION: v2.15.2
   
 permissions: {}
 
