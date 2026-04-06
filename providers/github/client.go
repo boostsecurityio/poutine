@@ -107,9 +107,6 @@ type GithubRepository struct {
 	License struct {
 		Name string `graphql:"name"`
 	} `graphql:"licenseInfo"`
-	Issues struct {
-		TotalCount int `graphql:"totalCount"`
-	} `graphql:"issues"`
 }
 
 func (gh GithubRepository) GetProviderName() string {
@@ -206,7 +203,10 @@ func (gh GithubRepository) GetStarsCount() int {
 }
 
 func (gh GithubRepository) GetOpenIssuesCount() int {
-	return gh.Issues.TotalCount
+	// Issue counts are fetched via the issueNodes alias in GetOrgRepos and
+	// carried by repoWithIssueCount, which overrides this method. This
+	// implementation exists only to satisfy the analyze.Repository interface.
+	return 0
 }
 
 func (gh GithubRepository) GetIsEmpty() bool {
@@ -374,6 +374,17 @@ func (c *Client) GetOrgRepos(ctx context.Context, org string) <-chan analyze.Rep
 							HasNextPage bool
 						}
 					} `graphql:"repositories(first: 100, after: $after, isArchived: false, isLocked: false, orderBy: {field: UPDATED_AT, direction: DESC})"`
+					// issueNodes is a separate alias for the same query to fetch issue counts.
+					// It may return FORBIDDEN errors for repos where Issues:Read is not granted;
+					// those repos will have a zero issue count rather than failing the whole batch.
+					IssueNodes struct {
+						Nodes []struct {
+							DatabaseId int `graphql:"databaseId"`
+							Issues     struct {
+								TotalCount int `graphql:"totalCount"`
+							} `graphql:"issues"`
+						}
+					} `graphql:"issueNodes: repositories(first: 100, after: $after, isArchived: false, isLocked: false, orderBy: {field: UPDATED_AT, direction: DESC})"`
 				} `graphql:"repositoryOwner(login: $org)"`
 			}
 
@@ -383,6 +394,12 @@ func (c *Client) GetOrgRepos(ctx context.Context, org string) <-chan analyze.Rep
 			err := backoff.Retry(func() error {
 				queryErr := c.graphQLClient.Query(ctx, &query, variables)
 				if queryErr == nil {
+					return nil
+				}
+				// Partial success: issues FORBIDDEN on some repos but main repo data is intact.
+				// The library unmarshals data before returning errors, so Repositories.Nodes
+				// is already populated. Accept the partial result.
+				if isIssuesPermissionError(queryErr) && query.RepositoryOwner.Login != "" {
 					return nil
 				}
 				if !isRetryableError(queryErr) {
@@ -417,6 +434,13 @@ func (c *Client) GetOrgRepos(ctx context.Context, org string) <-chan analyze.Rep
 				return
 			}
 
+			issueCounts := make(map[int]int, len(query.RepositoryOwner.IssueNodes.Nodes))
+			for _, node := range query.RepositoryOwner.IssueNodes.Nodes {
+				if node.DatabaseId != 0 {
+					issueCounts[node.DatabaseId] = node.Issues.TotalCount
+				}
+			}
+
 			totalCount := 0
 			if !totalCountSent {
 				totalCount = query.RepositoryOwner.Repositories.TotalCount
@@ -425,7 +449,7 @@ func (c *Client) GetOrgRepos(ctx context.Context, org string) <-chan analyze.Rep
 
 			batchChan <- analyze.RepoBatch{
 				TotalCount:   totalCount,
-				Repositories: convertToRepositorySlice(query.RepositoryOwner.Repositories.Nodes),
+				Repositories: convertToRepositorySlice(query.RepositoryOwner.Repositories.Nodes, issueCounts),
 			}
 
 			if !query.RepositoryOwner.Repositories.PageInfo.HasNextPage {
@@ -439,18 +463,65 @@ func (c *Client) GetOrgRepos(ctx context.Context, org string) <-chan analyze.Rep
 	return batchChan
 }
 
-func convertToRepositorySlice(githubRepos []GithubRepository) []analyze.Repository {
+// repoWithIssueCount wraps GithubRepository to carry an issue count that is
+// fetched via a separate aliased query rather than from GithubRepository itself.
+type repoWithIssueCount struct {
+	GithubRepository
+	issueCount int
+}
+
+func (r repoWithIssueCount) GetOpenIssuesCount() int {
+	return r.issueCount
+}
+
+func convertToRepositorySlice(githubRepos []GithubRepository, issueCounts map[int]int) []analyze.Repository {
 	repos := make([]analyze.Repository, len(githubRepos))
 	for i, repo := range githubRepos {
-		repos[i] = repo
+		repos[i] = repoWithIssueCount{
+			GithubRepository: repo,
+			issueCount:       issueCounts[repo.DatabaseId],
+		}
 	}
 	return repos
+}
+
+// isIssuesPermissionError returns true when the only GraphQL error is a
+// "Resource not accessible by personal access token" on the issueNodes alias —
+// meaning the FGPAT lacks Issues:Read, but the main repo list is intact.
+func isIssuesPermissionError(err error) bool {
+	return err != nil && strings.EqualFold(err.Error(), "resource not accessible by personal access token")
+}
+
+// isFatalError returns true for errors that should stop pagination immediately
+// (auth failures, permission errors) rather than being retried.
+func isFatalError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := strings.ToLower(err.Error())
+	fatalPatterns := []string{
+		"401",
+		"403",
+		"bad credentials",
+		"requires authentication",
+		"must have push access",
+	}
+	for _, pattern := range fatalPatterns {
+		if strings.Contains(errStr, pattern) {
+			return true
+		}
+	}
+	return false
 }
 
 // isRetryableError returns true for transient server errors (5xx, network issues)
 // that are worth retrying.
 func isRetryableError(err error) bool {
 	if err == nil {
+		return false
+	}
+
+	if isFatalError(err) {
 		return false
 	}
 
