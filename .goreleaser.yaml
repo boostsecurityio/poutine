@@ -23,7 +23,8 @@ builds:
       - '7'
 
 kos:
-  - repository: ghcr.io/boostsecurityio/poutine
+  - repositories:
+      - ghcr.io/boostsecurityio/poutine
     base_image: 'cgr.dev/chainguard/git:latest@sha256:06119871a608d163eac2daddd0745582e457a29ee8402bd351c13f294ede30e1'
     tags:
       - '{{.Version}}'
@@ -43,18 +44,17 @@ docker_signs:
 
 signs:
   - cmd: cosign
-    certificate: '${artifact}.pem'
+    signature: "${artifact}.sigstore.json"
     args:
       - "sign-blob"
-      - "--output-certificate=${certificate}"
-      - "--output-signature=${signature}"
+      - "--bundle=${signature}"
       - "${artifact}"
       - "--yes" # skip user interaction
-    artifacts: all
+    artifacts: checksum
     output: true
 
 archives:
-  - format: tar.gz
+  - formats: [ 'tar.gz' ]
     # this name template makes the OS and Arch compatible with the results of `uname`.
     name_template: >-
       {{ .ProjectName }}_
@@ -66,7 +66,7 @@ archives:
     # use zip for windows archives
     format_overrides:
       - goos: windows
-        format: zip
+        formats: ['zip']
 
 changelog:
   use: github-native
