@@ -96,6 +96,14 @@ type Analyzer struct {
 	Formatter Formatter
 	Config    *models.Config
 	Opa       *opa.Opa
+	Observer  ProgressObserver
+}
+
+func (a *Analyzer) observer() ProgressObserver {
+	if a.Observer != nil {
+		return a.Observer
+	}
+	return noopObserver{}
 }
 
 func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutines *int) ([]*models.PackageInsights, error) {
@@ -115,7 +123,7 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 	inventory := scanner.NewInventory(a.Opa, pkgsupplyClient, provider, providerVersion)
 
 	log.Debug().Msgf("Starting repository analysis for organization: %s on %s", org, provider)
-	bar := a.ProgressBar(0, "Analyzing repositories")
+	obs := a.observer()
 
 	var reposWg sync.WaitGroup
 	errChan := make(chan error, 1)
@@ -143,17 +151,16 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 			continue
 		}
 		if repoBatch.TotalCount != 0 {
-			bar.ChangeMax(repoBatch.TotalCount)
+			obs.OnDiscoveryCompleted(org, repoBatch.TotalCount)
 		}
 
 		for _, repo := range repoBatch.Repositories {
 			if a.Config.IgnoreForks && repo.GetIsFork() {
-				bar.ChangeMax(repoBatch.TotalCount - 1)
+				obs.OnRepoSkipped(repo.GetRepoIdentifier(), "fork")
 				continue
 			}
 			if repo.GetSize() == 0 {
-				bar.ChangeMax(repoBatch.TotalCount - 1)
-				log.Info().Str("repo", repo.GetRepoIdentifier()).Msg("Skipping empty repository")
+				obs.OnRepoSkipped(repo.GetRepoIdentifier(), "empty")
 				continue
 			}
 			if err := goRoutineLimitSem.Acquire(ctx, 1); err != nil {
@@ -166,9 +173,11 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 				defer goRoutineLimitSem.Release(1)
 				defer reposWg.Done()
 				repoNameWithOwner := repo.GetRepoIdentifier()
+				obs.OnRepoStarted(repoNameWithOwner)
 				repoKey, err := a.cloneRepo(ctx, repo.BuildGitURL(a.ScmClient.GetProviderBaseURL()), a.ScmClient.GetToken(), "HEAD")
 				if err != nil {
 					log.Error().Err(err).Str("repo", repoNameWithOwner).Msg("failed to clone repo")
+					obs.OnRepoError(repoNameWithOwner, err)
 					return
 				}
 				defer a.GitClient.Cleanup(repoKey)
@@ -176,12 +185,14 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 				pkg, err := a.GeneratePackageInsights(ctx, repoKey, repo, "HEAD")
 				if err != nil {
 					log.Error().Err(err).Str("repo", repoNameWithOwner).Msg("failed to generate package insights")
+					obs.OnRepoError(repoNameWithOwner, err)
 					return
 				}
 
 				files, err := a.GitClient.ListFiles(repoKey, []string{".yml", ".yaml"})
 				if err != nil {
 					log.Error().Err(err).Str("repo", repoNameWithOwner).Msg("failed to list files")
+					obs.OnRepoError(repoNameWithOwner, err)
 					return
 				}
 
@@ -199,6 +210,7 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 				scannedPkg, err := inventory.ScanPackageScanner(ctx, *pkg, memScanner)
 				if err != nil {
 					log.Error().Err(err).Str("repo", repoNameWithOwner).Msg("failed to scan package")
+					obs.OnRepoError(repoNameWithOwner, err)
 					return
 				}
 
@@ -208,7 +220,7 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 					log.Error().Msg("Context canceled while sending package to channel")
 					return
 				}
-				_ = bar.Add(1)
+				obs.OnRepoCompleted(repoNameWithOwner, scannedPkg)
 			}(repo)
 		}
 	}
@@ -227,12 +239,13 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 		}
 	}
 
-	_ = bar.Finish()
-
+	obs.OnFinalizeStarted(len(scannedPackages))
 	err = a.finalizeAnalysis(ctx, scannedPackages)
 	if err != nil {
+		obs.OnFinalizeCompleted()
 		return scannedPackages, err
 	}
+	obs.OnFinalizeCompleted()
 
 	return scannedPackages, nil
 }
@@ -259,10 +272,12 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 
 	inventory := scanner.NewInventory(a.Opa, pkgsupplyClient, provider, providerVersion)
 
+	obs := a.observer()
 	log.Debug().Msgf("Starting repository analysis for: %s/%s on %s", org, repoName, provider)
 	bar := a.ProgressBar(3, "Cloning repository")
 	_ = bar.RenderBlank()
 
+	obs.OnRepoStarted(repoString)
 	repoUrl := repo.BuildGitURL(a.ScmClient.GetProviderBaseURL())
 	repoKey, err := a.fetchCone(ctx, repoUrl, a.ScmClient.GetToken(), "refs/heads/*:refs/remotes/origin/*", ".github/workflows")
 	if err != nil {
@@ -363,6 +378,9 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 	}
 
 	_ = bar.Finish()
+	obs.OnRepoCompleted(repoString, scannedPackage)
+
+	obs.OnFinalizeStarted(1)
 	if *expand {
 		expanded := []results.Finding{}
 		for _, finding := range scannedPackage.FindingsResults.Findings {
@@ -385,6 +403,7 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 		scannedPackage.FindingsResults.Findings = expanded
 
 		if err := a.Formatter.Format(ctx, []*models.PackageInsights{scannedPackage}); err != nil {
+			obs.OnFinalizeCompleted()
 			return nil, fmt.Errorf("failed to finalize analysis of package: %w", err)
 		}
 	} else {
@@ -398,10 +417,11 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 		}
 
 		if err := a.Formatter.FormatWithPath(ctx, []*models.PackageInsights{scannedPackage}, results); err != nil {
+			obs.OnFinalizeCompleted()
 			return nil, fmt.Errorf("failed to finalize analysis of package: %w", err)
 		}
-
 	}
+	obs.OnFinalizeCompleted()
 
 	return scannedPackage, nil
 }
@@ -427,10 +447,12 @@ func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref strin
 	pkgsupplyClient := pkgsupply.NewStaticClient()
 	inventory := scanner.NewInventory(a.Opa, pkgsupplyClient, provider, providerVersion)
 
+	obs := a.observer()
 	log.Debug().Msgf("Starting repository analysis for: %s/%s on %s", org, repoName, provider)
 	bar := a.ProgressBar(2, "Cloning repository")
 	_ = bar.RenderBlank()
 
+	obs.OnRepoStarted(repoString)
 	repoKey, err := a.cloneRepo(ctx, repo.BuildGitURL(a.ScmClient.GetProviderBaseURL()), a.ScmClient.GetToken(), ref)
 	if err != nil {
 		return nil, err
@@ -466,11 +488,15 @@ func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref strin
 		return nil, err
 	}
 	_ = bar.Finish()
+	obs.OnRepoCompleted(repoString, scannedPackage)
 
+	obs.OnFinalizeStarted(1)
 	err = a.finalizeAnalysis(ctx, []*models.PackageInsights{scannedPackage})
 	if err != nil {
+		obs.OnFinalizeCompleted()
 		return nil, err
 	}
+	obs.OnFinalizeCompleted()
 
 	return scannedPackage, nil
 }

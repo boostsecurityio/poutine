@@ -219,6 +219,7 @@ func GetAnalyzer(ctx context.Context, command string) (*analyze.Analyzer, error)
 	gitClient := gitops.NewGitClient(nil)
 
 	analyzer := analyze.NewAnalyzer(scmClient, gitClient, formatter, config, opaClient)
+	analyzer.Observer = analyze.NewProgressBarObserver(config.Quiet)
 	return analyzer, nil
 }
 
@@ -239,6 +240,7 @@ func GetAnalyzerWithConfig(ctx context.Context, command, scmProvider, scmBaseURL
 	gitClient := gitops.NewGitClient(nil)
 
 	analyzer := analyze.NewAnalyzer(scmClient, gitClient, formatter, cfg, opaClient)
+	analyzer.Observer = analyze.NewProgressBarObserver(cfg.Quiet)
 	return analyzer, nil
 }
 
