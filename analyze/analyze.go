@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -22,7 +21,6 @@ import (
 	scm_domain "github.com/boostsecurityio/poutine/providers/scm/domain"
 	"github.com/boostsecurityio/poutine/scanner"
 	"github.com/rs/zerolog/log"
-	"github.com/schollz/progressbar/v3"
 )
 
 const TEMP_DIR_PREFIX = "poutine-*"
@@ -96,6 +94,14 @@ type Analyzer struct {
 	Formatter Formatter
 	Config    *models.Config
 	Opa       *opa.Opa
+	Observer  ProgressObserver
+}
+
+func (a *Analyzer) observer() ProgressObserver {
+	if a.Observer != nil {
+		return a.Observer
+	}
+	return noopObserver{}
 }
 
 func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutines *int) ([]*models.PackageInsights, error) {
@@ -114,8 +120,9 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 	pkgsupplyClient := pkgsupply.NewStaticClient()
 	inventory := scanner.NewInventory(a.Opa, pkgsupplyClient, provider, providerVersion)
 
+	obs := a.observer()
+	obs.OnAnalysisStarted("Discovering repositories")
 	log.Debug().Msgf("Starting repository analysis for organization: %s on %s", org, provider)
-	bar := a.ProgressBar(0, "Analyzing repositories")
 
 	var reposWg sync.WaitGroup
 	errChan := make(chan error, 1)
@@ -137,23 +144,24 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 		}
 	}()
 
+	discoveryCompleted := false
 	for repoBatch := range orgReposBatches {
 		if repoBatch.Err != nil {
 			log.Error().Err(repoBatch.Err).Msg("failed to fetch batch of repos, skipping batch")
 			continue
 		}
-		if repoBatch.TotalCount != 0 {
-			bar.ChangeMax(repoBatch.TotalCount)
+		if !discoveryCompleted && repoBatch.TotalCount != 0 {
+			discoveryCompleted = true
+			obs.OnDiscoveryCompleted(org, repoBatch.TotalCount)
 		}
 
 		for _, repo := range repoBatch.Repositories {
 			if a.Config.IgnoreForks && repo.GetIsFork() {
-				bar.ChangeMax(repoBatch.TotalCount - 1)
+				obs.OnRepoSkipped(repo.GetRepoIdentifier(), "fork")
 				continue
 			}
 			if repo.GetSize() == 0 {
-				bar.ChangeMax(repoBatch.TotalCount - 1)
-				log.Info().Str("repo", repo.GetRepoIdentifier()).Msg("Skipping empty repository")
+				obs.OnRepoSkipped(repo.GetRepoIdentifier(), "empty")
 				continue
 			}
 			if err := goRoutineLimitSem.Acquire(ctx, 1); err != nil {
@@ -166,9 +174,11 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 				defer goRoutineLimitSem.Release(1)
 				defer reposWg.Done()
 				repoNameWithOwner := repo.GetRepoIdentifier()
+				obs.OnRepoStarted(repoNameWithOwner)
 				repoKey, err := a.cloneRepo(ctx, repo.BuildGitURL(a.ScmClient.GetProviderBaseURL()), a.ScmClient.GetToken(), "HEAD")
 				if err != nil {
 					log.Error().Err(err).Str("repo", repoNameWithOwner).Msg("failed to clone repo")
+					obs.OnRepoError(repoNameWithOwner, err)
 					return
 				}
 				defer a.GitClient.Cleanup(repoKey)
@@ -176,12 +186,14 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 				pkg, err := a.GeneratePackageInsights(ctx, repoKey, repo, "HEAD")
 				if err != nil {
 					log.Error().Err(err).Str("repo", repoNameWithOwner).Msg("failed to generate package insights")
+					obs.OnRepoError(repoNameWithOwner, err)
 					return
 				}
 
 				files, err := a.GitClient.ListFiles(repoKey, []string{".yml", ".yaml"})
 				if err != nil {
 					log.Error().Err(err).Str("repo", repoNameWithOwner).Msg("failed to list files")
+					obs.OnRepoError(repoNameWithOwner, err)
 					return
 				}
 
@@ -199,6 +211,7 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 				scannedPkg, err := inventory.ScanPackageScanner(ctx, *pkg, memScanner)
 				if err != nil {
 					log.Error().Err(err).Str("repo", repoNameWithOwner).Msg("failed to scan package")
+					obs.OnRepoError(repoNameWithOwner, err)
 					return
 				}
 
@@ -208,7 +221,7 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 					log.Error().Msg("Context canceled while sending package to channel")
 					return
 				}
-				_ = bar.Add(1)
+				obs.OnRepoCompleted(repoNameWithOwner, scannedPkg)
 			}(repo)
 		}
 	}
@@ -227,12 +240,12 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 		}
 	}
 
-	_ = bar.Finish()
-
+	obs.OnFinalizeStarted(len(scannedPackages))
 	err = a.finalizeAnalysis(ctx, scannedPackages)
 	if err != nil {
 		return scannedPackages, err
 	}
+	obs.OnFinalizeCompleted()
 
 	return scannedPackages, nil
 }
@@ -259,27 +272,28 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 
 	inventory := scanner.NewInventory(a.Opa, pkgsupplyClient, provider, providerVersion)
 
+	obs := a.observer()
+	obs.OnAnalysisStarted("Cloning repository")
 	log.Debug().Msgf("Starting repository analysis for: %s/%s on %s", org, repoName, provider)
-	bar := a.ProgressBar(3, "Cloning repository")
-	_ = bar.RenderBlank()
 
+	obs.OnRepoStarted(repoString)
 	repoUrl := repo.BuildGitURL(a.ScmClient.GetProviderBaseURL())
 	repoKey, err := a.fetchCone(ctx, repoUrl, a.ScmClient.GetToken(), "refs/heads/*:refs/remotes/origin/*", ".github/workflows")
 	if err != nil {
+		obs.OnRepoError(repoString, err)
 		return nil, fmt.Errorf("failed to fetch cone: %w", err)
 	}
 	defer a.GitClient.Cleanup(repoKey)
 
-	bar.Describe("Listing unique workflows")
-	_ = bar.Add(1)
+	obs.OnStepCompleted("Listing unique workflows")
 
 	workflows, err := a.GitClient.GetUniqWorkflowsBranches(ctx, repoKey)
 	if err != nil {
+		obs.OnRepoError(repoString, err)
 		return nil, fmt.Errorf("failed to get unique workflow: %w", err)
 	}
 
-	bar.Describe("Check which workflows match regex: " + regex.String())
-	_ = bar.Add(1)
+	obs.OnStepCompleted("Checking workflows match regex: " + regex.String())
 
 	errChan := make(chan error, 1)
 	maxGoroutines := 5
@@ -340,13 +354,14 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 	close(filesChan)
 	wgConsumer.Wait()
 	for err := range errChan {
+		obs.OnRepoError(repoString, err)
 		return nil, err
 	}
 
-	bar.Describe("Scanning package")
-	_ = bar.Add(1)
+	obs.OnStepCompleted("Scanning package")
 	pkg, err := a.GeneratePackageInsights(ctx, repoKey, repo, "HEAD")
 	if err != nil {
+		obs.OnRepoError(repoString, err)
 		return nil, fmt.Errorf("failed to generate package insight: %w", err)
 	}
 
@@ -359,10 +374,13 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 
 	scannedPackage, err := inventory.ScanPackageScanner(ctx, *pkg, &inventoryScanner)
 	if err != nil {
+		obs.OnRepoError(repoString, err)
 		return nil, fmt.Errorf("failed to scan package: %w", err)
 	}
 
-	_ = bar.Finish()
+	obs.OnRepoCompleted(repoString, scannedPackage)
+
+	obs.OnFinalizeStarted(1)
 	if *expand {
 		expanded := []results.Finding{}
 		for _, finding := range scannedPackage.FindingsResults.Findings {
@@ -400,8 +418,8 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 		if err := a.Formatter.FormatWithPath(ctx, []*models.PackageInsights{scannedPackage}, results); err != nil {
 			return nil, fmt.Errorf("failed to finalize analysis of package: %w", err)
 		}
-
 	}
+	obs.OnFinalizeCompleted()
 
 	return scannedPackage, nil
 }
@@ -427,26 +445,31 @@ func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref strin
 	pkgsupplyClient := pkgsupply.NewStaticClient()
 	inventory := scanner.NewInventory(a.Opa, pkgsupplyClient, provider, providerVersion)
 
+	obs := a.observer()
+	obs.OnAnalysisStarted("Cloning repository")
 	log.Debug().Msgf("Starting repository analysis for: %s/%s on %s", org, repoName, provider)
-	bar := a.ProgressBar(2, "Cloning repository")
-	_ = bar.RenderBlank()
 
+	obs.OnRepoStarted(repoString)
 	repoKey, err := a.cloneRepo(ctx, repo.BuildGitURL(a.ScmClient.GetProviderBaseURL()), a.ScmClient.GetToken(), ref)
 	if err != nil {
+		obs.OnRepoError(repoString, err)
 		return nil, err
 	}
 	defer a.GitClient.Cleanup(repoKey)
 
-	bar.Describe("Analyzing repository")
-	_ = bar.Add(1)
+	obs.OnStepCompleted("Cloned repository")
 
 	pkg, err := a.GeneratePackageInsights(ctx, repoKey, repo, ref)
 	if err != nil {
+		obs.OnRepoError(repoString, err)
 		return nil, err
 	}
 
+	obs.OnStepCompleted("Generated package insights")
+
 	files, err := a.GitClient.ListFiles(repoKey, []string{".yml", ".yaml"})
 	if err != nil {
+		obs.OnRepoError(repoString, err)
 		return nil, fmt.Errorf("failed to list files: %w", err)
 	}
 
@@ -463,14 +486,19 @@ func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref strin
 
 	scannedPackage, err := inventory.ScanPackageScanner(ctx, *pkg, memScanner)
 	if err != nil {
+		obs.OnRepoError(repoString, err)
 		return nil, err
 	}
-	_ = bar.Finish()
 
+	obs.OnStepCompleted("Scanned repository")
+	obs.OnRepoCompleted(repoString, scannedPackage)
+
+	obs.OnFinalizeStarted(1)
 	err = a.finalizeAnalysis(ctx, []*models.PackageInsights{scannedPackage})
 	if err != nil {
 		return nil, err
 	}
+	obs.OnFinalizeCompleted()
 
 	return scannedPackage, nil
 }
@@ -720,19 +748,4 @@ func (a *Analyzer) cloneRepo(ctx context.Context, gitURL string, token string, r
 		return "", fmt.Errorf("failed to clone repo: %w", err)
 	}
 	return key, nil
-}
-
-func (a *Analyzer) ProgressBar(maxValue int64, description string) *progressbar.ProgressBar {
-	if a.Config.Quiet {
-		return progressbar.DefaultSilent(maxValue, description)
-	} else {
-		return progressbar.NewOptions64(
-			maxValue,
-			progressbar.OptionSetDescription(description),
-			progressbar.OptionShowCount(),
-			progressbar.OptionSetWriter(os.Stderr),
-			progressbar.OptionClearOnFinish(),
-		)
-
-	}
 }

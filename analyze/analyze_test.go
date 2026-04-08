@@ -2,8 +2,10 @@ package analyze
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/boostsecurityio/poutine/formatters/noop"
@@ -187,4 +189,132 @@ jobs:
 		require.NoError(t, err)
 		require.NotNil(t, result)
 	})
+}
+
+// mockObserver records observer events for testing.
+type mockObserver struct {
+	mu     sync.Mutex
+	events []string
+}
+
+func (m *mockObserver) OnAnalysisStarted(description string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.events = append(m.events, "analysis_started:"+description)
+}
+func (m *mockObserver) OnDiscoveryCompleted(org string, totalCount int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.events = append(m.events, fmt.Sprintf("discovery_completed:%s:%d", org, totalCount))
+}
+func (m *mockObserver) OnRepoStarted(repo string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.events = append(m.events, "repo_started:"+repo)
+}
+func (m *mockObserver) OnRepoCompleted(repo string, _ *models.PackageInsights) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.events = append(m.events, "repo_completed:"+repo)
+}
+func (m *mockObserver) OnRepoError(repo string, _ error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.events = append(m.events, "repo_error:"+repo)
+}
+func (m *mockObserver) OnRepoSkipped(repo string, reason string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.events = append(m.events, fmt.Sprintf("repo_skipped:%s:%s", repo, reason))
+}
+func (m *mockObserver) OnStepCompleted(description string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.events = append(m.events, "step_completed:"+description)
+}
+func (m *mockObserver) OnFinalizeStarted(total int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.events = append(m.events, fmt.Sprintf("finalize_started:%d", total))
+}
+func (m *mockObserver) OnFinalizeCompleted() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.events = append(m.events, "finalize_completed")
+}
+
+func TestProgressObserverNilSafe(t *testing.T) {
+	ctx := context.Background()
+	opaClient, err := newTestOpa(ctx)
+	require.NoError(t, err)
+
+	// Observer is nil — should not panic
+	analyzer := NewAnalyzer(nil, nil, &noop.Format{}, models.DefaultConfig(), opaClient)
+	assert.Nil(t, analyzer.Observer)
+
+	// AnalyzeManifest doesn't use observer, but this ensures nil Observer doesn't crash
+	_, err = analyzer.AnalyzeManifest(ctx, strings.NewReader("on: push\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4"), "github-actions")
+	require.NoError(t, err)
+}
+
+func TestProgressObserverInterface(t *testing.T) {
+	obs := &mockObserver{}
+
+	// Verify the interface is implemented
+	var _ ProgressObserver = obs
+	var _ ProgressObserver = &noopObserver{}
+	var _ ProgressObserver = &ProgressBarObserver{}
+
+	// Test mock records events
+	obs.OnDiscoveryCompleted("test-org", 10)
+	obs.OnRepoStarted("test-org/repo1")
+	obs.OnRepoCompleted("test-org/repo1", nil)
+	obs.OnRepoSkipped("test-org/repo2", "fork")
+	obs.OnRepoError("test-org/repo3", errors.New("clone failed"))
+	obs.OnStepCompleted("Analyzing repository")
+	obs.OnFinalizeStarted(1)
+	obs.OnFinalizeCompleted()
+
+	assert.Equal(t, []string{
+		"discovery_completed:test-org:10",
+		"repo_started:test-org/repo1",
+		"repo_completed:test-org/repo1",
+		"repo_skipped:test-org/repo2:fork",
+		"repo_error:test-org/repo3",
+		"step_completed:Analyzing repository",
+		"finalize_started:1",
+		"finalize_completed",
+	}, obs.events)
+}
+
+func TestProgressObserverConcurrency(t *testing.T) {
+	// Exercise the concurrent methods on both observer implementations
+	// to verify no data races. Run with: go test -race
+	observers := []ProgressObserver{
+		&mockObserver{},
+		NewProgressBarObserver(true),
+	}
+
+	for _, obs := range observers {
+		obs.OnDiscoveryCompleted("org", 100)
+
+		var wg sync.WaitGroup
+		for i := 0; i < 50; i++ {
+			wg.Add(1)
+			go func(n int) {
+				defer wg.Done()
+				repo := fmt.Sprintf("org/repo-%d", n)
+				obs.OnRepoStarted(repo)
+				if n%5 == 0 {
+					obs.OnRepoError(repo, errors.New("error"))
+				} else {
+					obs.OnRepoCompleted(repo, nil)
+				}
+			}(i)
+		}
+		wg.Wait()
+
+		obs.OnFinalizeStarted(40)
+		obs.OnFinalizeCompleted()
+	}
 }
