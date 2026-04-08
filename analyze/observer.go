@@ -11,6 +11,7 @@ import "github.com/boostsecurityio/poutine/models"
 // During AnalyzeOrg, methods are called from two contexts:
 //
 // Main goroutine (sequential, never concurrent with each other):
+//   - OnAnalysisStarted
 //   - OnDiscoveryCompleted
 //   - OnRepoSkipped
 //   - OnFinalizeStarted
@@ -28,6 +29,11 @@ import "github.com/boostsecurityio/poutine/models"
 // During AnalyzeRepo and AnalyzeStaleBranches all methods are called
 // from a single goroutine.
 type ProgressObserver interface {
+	// OnAnalysisStarted is called from the main goroutine at the very
+	// beginning of any analysis, before any work begins. Useful for
+	// rendering an initial status indicator while discovery or cloning runs.
+	OnAnalysisStarted(description string)
+
 	// OnDiscoveryCompleted is called from the main goroutine when the
 	// total repo count is known (first batch with TotalCount > 0).
 	OnDiscoveryCompleted(org string, totalCount int)
@@ -48,6 +54,12 @@ type ProgressObserver interface {
 	// skipped (fork, empty, etc.).
 	OnRepoSkipped(repo string, reason string)
 
+	// OnStepCompleted is called when a sub-step within a single-repo
+	// analysis completes (e.g. "Cloning repository", "Analyzing repository").
+	// Used by AnalyzeRepo and AnalyzeStaleBranches for step-level progress.
+	// Called from the main goroutine.
+	OnStepCompleted(description string)
+
 	// OnFinalizeStarted is called from the main goroutine when the
 	// formatting/output phase begins, after all repos are processed.
 	OnFinalizeStarted(totalPackages int)
@@ -59,10 +71,12 @@ type ProgressObserver interface {
 
 type noopObserver struct{}
 
+func (noopObserver) OnAnalysisStarted(string)                        {}
 func (noopObserver) OnDiscoveryCompleted(string, int)                {}
 func (noopObserver) OnRepoStarted(string)                            {}
 func (noopObserver) OnRepoCompleted(string, *models.PackageInsights) {}
 func (noopObserver) OnRepoError(string, error)                       {}
 func (noopObserver) OnRepoSkipped(string, string)                    {}
+func (noopObserver) OnStepCompleted(string)                          {}
 func (noopObserver) OnFinalizeStarted(int)                           {}
 func (noopObserver) OnFinalizeCompleted()                            {}

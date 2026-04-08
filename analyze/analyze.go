@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -22,7 +21,6 @@ import (
 	scm_domain "github.com/boostsecurityio/poutine/providers/scm/domain"
 	"github.com/boostsecurityio/poutine/scanner"
 	"github.com/rs/zerolog/log"
-	"github.com/schollz/progressbar/v3"
 )
 
 const TEMP_DIR_PREFIX = "poutine-*"
@@ -122,8 +120,9 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 	pkgsupplyClient := pkgsupply.NewStaticClient()
 	inventory := scanner.NewInventory(a.Opa, pkgsupplyClient, provider, providerVersion)
 
-	log.Debug().Msgf("Starting repository analysis for organization: %s on %s", org, provider)
 	obs := a.observer()
+	obs.OnAnalysisStarted("Discovering repositories")
+	log.Debug().Msgf("Starting repository analysis for organization: %s on %s", org, provider)
 
 	var reposWg sync.WaitGroup
 	errChan := make(chan error, 1)
@@ -274,9 +273,8 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 	inventory := scanner.NewInventory(a.Opa, pkgsupplyClient, provider, providerVersion)
 
 	obs := a.observer()
+	obs.OnAnalysisStarted("Cloning repository")
 	log.Debug().Msgf("Starting repository analysis for: %s/%s on %s", org, repoName, provider)
-	bar := a.ProgressBar(3, "Cloning repository")
-	_ = bar.RenderBlank()
 
 	obs.OnRepoStarted(repoString)
 	repoUrl := repo.BuildGitURL(a.ScmClient.GetProviderBaseURL())
@@ -287,8 +285,7 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 	}
 	defer a.GitClient.Cleanup(repoKey)
 
-	bar.Describe("Listing unique workflows")
-	_ = bar.Add(1)
+	obs.OnStepCompleted("Listing unique workflows")
 
 	workflows, err := a.GitClient.GetUniqWorkflowsBranches(ctx, repoKey)
 	if err != nil {
@@ -296,8 +293,7 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 		return nil, fmt.Errorf("failed to get unique workflow: %w", err)
 	}
 
-	bar.Describe("Check which workflows match regex: " + regex.String())
-	_ = bar.Add(1)
+	obs.OnStepCompleted("Checking workflows match regex: " + regex.String())
 
 	errChan := make(chan error, 1)
 	maxGoroutines := 5
@@ -362,8 +358,7 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 		return nil, err
 	}
 
-	bar.Describe("Scanning package")
-	_ = bar.Add(1)
+	obs.OnStepCompleted("Scanning package")
 	pkg, err := a.GeneratePackageInsights(ctx, repoKey, repo, "HEAD")
 	if err != nil {
 		obs.OnRepoError(repoString, err)
@@ -383,7 +378,6 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 		return nil, fmt.Errorf("failed to scan package: %w", err)
 	}
 
-	_ = bar.Finish()
 	obs.OnRepoCompleted(repoString, scannedPackage)
 
 	obs.OnFinalizeStarted(1)
@@ -452,9 +446,8 @@ func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref strin
 	inventory := scanner.NewInventory(a.Opa, pkgsupplyClient, provider, providerVersion)
 
 	obs := a.observer()
+	obs.OnAnalysisStarted("Cloning repository")
 	log.Debug().Msgf("Starting repository analysis for: %s/%s on %s", org, repoName, provider)
-	bar := a.ProgressBar(2, "Cloning repository")
-	_ = bar.RenderBlank()
 
 	obs.OnRepoStarted(repoString)
 	repoKey, err := a.cloneRepo(ctx, repo.BuildGitURL(a.ScmClient.GetProviderBaseURL()), a.ScmClient.GetToken(), ref)
@@ -464,8 +457,7 @@ func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref strin
 	}
 	defer a.GitClient.Cleanup(repoKey)
 
-	bar.Describe("Analyzing repository")
-	_ = bar.Add(1)
+	obs.OnStepCompleted("Cloned repository")
 
 	pkg, err := a.GeneratePackageInsights(ctx, repoKey, repo, ref)
 	if err != nil {
@@ -495,7 +487,6 @@ func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref strin
 		obs.OnRepoError(repoString, err)
 		return nil, err
 	}
-	_ = bar.Finish()
 	obs.OnRepoCompleted(repoString, scannedPackage)
 
 	obs.OnFinalizeStarted(1)
@@ -753,19 +744,4 @@ func (a *Analyzer) cloneRepo(ctx context.Context, gitURL string, token string, r
 		return "", fmt.Errorf("failed to clone repo: %w", err)
 	}
 	return key, nil
-}
-
-func (a *Analyzer) ProgressBar(maxValue int64, description string) *progressbar.ProgressBar {
-	if a.Config.Quiet {
-		return progressbar.DefaultSilent(maxValue, description)
-	} else {
-		return progressbar.NewOptions64(
-			maxValue,
-			progressbar.OptionSetDescription(description),
-			progressbar.OptionShowCount(),
-			progressbar.OptionSetWriter(os.Stderr),
-			progressbar.OptionClearOnFinish(),
-		)
-
-	}
 }

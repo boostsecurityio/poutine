@@ -197,6 +197,11 @@ type mockObserver struct {
 	events []string
 }
 
+func (m *mockObserver) OnAnalysisStarted(description string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.events = append(m.events, "analysis_started:"+description)
+}
 func (m *mockObserver) OnDiscoveryCompleted(org string, totalCount int) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -221,6 +226,11 @@ func (m *mockObserver) OnRepoSkipped(repo string, reason string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.events = append(m.events, fmt.Sprintf("repo_skipped:%s:%s", repo, reason))
+}
+func (m *mockObserver) OnStepCompleted(description string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.events = append(m.events, "step_completed:"+description)
 }
 func (m *mockObserver) OnFinalizeStarted(total int) {
 	m.mu.Lock()
@@ -261,6 +271,7 @@ func TestProgressObserverInterface(t *testing.T) {
 	obs.OnRepoCompleted("test-org/repo1", nil)
 	obs.OnRepoSkipped("test-org/repo2", "fork")
 	obs.OnRepoError("test-org/repo3", errors.New("clone failed"))
+	obs.OnStepCompleted("Analyzing repository")
 	obs.OnFinalizeStarted(1)
 	obs.OnFinalizeCompleted()
 
@@ -270,6 +281,7 @@ func TestProgressObserverInterface(t *testing.T) {
 		"repo_completed:test-org/repo1",
 		"repo_skipped:test-org/repo2:fork",
 		"repo_error:test-org/repo3",
+		"step_completed:Analyzing repository",
 		"finalize_started:1",
 		"finalize_completed",
 	}, obs.events)
