@@ -19,11 +19,11 @@ func NewProgressBarObserver(quiet bool) *ProgressBarObserver {
 	return &ProgressBarObserver{quiet: quiet}
 }
 
-func (o *ProgressBarObserver) newBar(max int64, description string) *progressbar.ProgressBar {
+func (o *ProgressBarObserver) newBar(barMax int64, description string) *progressbar.ProgressBar {
 	if o.quiet {
-		return progressbar.DefaultSilent(max, description)
+		return progressbar.DefaultSilent(barMax, description)
 	}
-	return progressbar.NewOptions64(max,
+	return progressbar.NewOptions64(barMax,
 		progressbar.OptionSetDescription(description),
 		progressbar.OptionShowCount(),
 		progressbar.OptionSetWriter(os.Stderr),
