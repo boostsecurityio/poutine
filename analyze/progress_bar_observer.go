@@ -11,8 +11,9 @@ import (
 // For org analysis it shows a repo-count bar (created on OnDiscoveryCompleted).
 // For single-repo analysis it shows a step-level bar (created on first OnStepCompleted).
 type ProgressBarObserver struct {
-	bar   *progressbar.ProgressBar
-	quiet bool
+	bar      *progressbar.ProgressBar
+	quiet    bool
+	stepMode bool // true when bar is step-driven (single-repo analysis)
 }
 
 func NewProgressBarObserver(quiet bool) *ProgressBarObserver {
@@ -49,13 +50,13 @@ func (o *ProgressBarObserver) OnDiscoveryCompleted(_ string, totalCount int) {
 func (o *ProgressBarObserver) OnRepoStarted(_ string) {}
 
 func (o *ProgressBarObserver) OnRepoCompleted(_ string, _ *models.PackageInsights) {
-	if o.bar != nil {
+	if o.bar != nil && !o.stepMode {
 		_ = o.bar.Add(1)
 	}
 }
 
 func (o *ProgressBarObserver) OnRepoError(_ string, _ error) {
-	if o.bar != nil {
+	if o.bar != nil && !o.stepMode {
 		_ = o.bar.Add(1)
 	}
 }
@@ -69,6 +70,7 @@ func (o *ProgressBarObserver) OnRepoSkipped(_ string, _ string) {
 }
 
 func (o *ProgressBarObserver) OnStepCompleted(description string) {
+	o.stepMode = true
 	if o.bar != nil && o.bar.GetMax64() == -1 {
 		// Finish the spinner, then create a step bar.
 		_ = o.bar.Finish()

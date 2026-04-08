@@ -465,6 +465,8 @@ func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref strin
 		return nil, err
 	}
 
+	obs.OnStepCompleted("Generated package insights")
+
 	files, err := a.GitClient.ListFiles(repoKey, []string{".yml", ".yaml"})
 	if err != nil {
 		obs.OnRepoError(repoString, err)
@@ -487,6 +489,8 @@ func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref strin
 		obs.OnRepoError(repoString, err)
 		return nil, err
 	}
+
+	obs.OnStepCompleted("Scanned repository")
 	obs.OnRepoCompleted(repoString, scannedPackage)
 
 	obs.OnFinalizeStarted(1)
