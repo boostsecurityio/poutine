@@ -145,7 +145,7 @@ func (f *Format) Format(ctx context.Context, packages []*models.PackageInsights)
 				WithLevel(rule.Level).
 				WithMessage(sarif.NewTextMessage(ruleDescription)).
 				WithPartialFingerPrints(map[string]interface{}{
-					"primaryLocationLineHash": fingerprint,
+					"poutineFingerprint": fingerprint,
 				})
 
 			result.AddLocation(

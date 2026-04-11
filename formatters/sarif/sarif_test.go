@@ -74,6 +74,12 @@ func TestSarifFormatBuildDependencyFindings(t *testing.T) {
 
 	result, ok := sarifResults[0].(map[string]interface{})
 	require.True(t, ok)
+
+	// Verify fingerprint exists
+	partialFingerprints, ok := result["partialFingerprints"].(map[string]interface{})
+	require.True(t, ok, "partialFingerprints should be present")
+	_, exists := partialFingerprints["poutineFingerprint"]
+	require.True(t, exists, "poutineFingerprint should be present")
 	require.Equal(t, "github_action_from_unverified_creator_used", result["ruleId"])
 
 	locations, ok := result["locations"].([]interface{})
