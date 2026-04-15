@@ -19,6 +19,7 @@ import (
 	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/go-git/go-git/v6/plumbing/object"
 	"github.com/go-git/go-git/v6/plumbing/protocol/packp"
+	"github.com/go-git/go-git/v6/plumbing/storer"
 	"github.com/go-git/go-git/v6/plumbing/transport"
 	gogithttp "github.com/go-git/go-git/v6/plumbing/transport/http"
 	"github.com/go-git/go-git/v6/storage/memory"
@@ -43,6 +44,24 @@ func init() {
 }
 
 var ErrRepoNotReachable = errors.New("repo or ref not reachable")
+var ErrRemoteRefNotFound = errors.New("remote ref not found")
+
+type resolvedRefKind int
+
+const (
+	resolvedRefHead resolvedRefKind = iota
+	resolvedRefBranch
+	resolvedRefTag
+	resolvedRefCommit
+)
+
+type resolvedRef struct {
+	kind       resolvedRefKind
+	input      string
+	fullRef    string
+	localRef   plumbing.ReferenceName
+	commitHash plumbing.Hash
+}
 
 // inMemRepo holds an in-memory git repository.
 type inMemRepo struct {
@@ -105,6 +124,10 @@ func (g *GitClient) Clone(ctx context.Context, clonePath string, url string, tok
 	// Build refspec and fetch. For HEAD, try common defaults first to avoid
 	// an extra ls-remote round-trip.
 	var defaultBranch string
+	resolved := &resolvedRef{
+		kind:  resolvedRefHead,
+		input: ref,
+	}
 	fetchOpts := &gogit.FetchOptions{
 		RemoteName: "origin",
 		Depth:      1,
@@ -123,6 +146,7 @@ func (g *GitClient) Clone(ctx context.Context, clonePath string, url string, tok
 			err = repo.FetchContext(ctx, fetchOpts)
 			if err == nil {
 				defaultBranch = branch
+				resolved.localRef = plumbing.ReferenceName("refs/remotes/origin/" + branch)
 				break
 			}
 			if classifyFetchError(err) != nil && !strings.Contains(err.Error(), "couldn't find remote ref") {
@@ -136,6 +160,7 @@ func (g *GitClient) Clone(ctx context.Context, clonePath string, url string, tok
 				fetchOpts.RefSpecs = []config.RefSpec{
 					config.RefSpec(fmt.Sprintf("+refs/heads/%s:refs/remotes/origin/%s", discovered, discovered)),
 				}
+				resolved.localRef = plumbing.ReferenceName("refs/remotes/origin/" + discovered)
 			} else {
 				fetchOpts.RefSpecs = []config.RefSpec{config.RefSpec("+refs/heads/*:refs/remotes/origin/*")}
 			}
@@ -145,31 +170,20 @@ func (g *GitClient) Clone(ctx context.Context, clonePath string, url string, tok
 			}
 			defaultBranch = discovered
 		}
-	case looksLikeSHA(ref):
-		fetchOpts.RefSpecs = []config.RefSpec{
-			config.RefSpec(fmt.Sprintf("+%s:refs/remotes/origin/target", ref)),
-		}
-		err = repo.FetchContext(ctx, fetchOpts)
-		if err := classifyFetchError(err); err != nil {
+	default:
+		resolved, err = resolveRemoteRef(repo, url, token, ref)
+		if err != nil {
 			return err
 		}
-	default:
-		fullRef := ref
-		if !strings.HasPrefix(ref, "refs/") {
-			fullRef = "refs/heads/" + ref
+		if resolved.kind == resolvedRefBranch {
+			defaultBranch = strings.TrimPrefix(resolved.fullRef, "refs/heads/")
 		}
-		defaultBranch = strings.TrimPrefix(fullRef, "refs/heads/")
-		localRef := "refs/remotes/origin/" + defaultBranch
-		fetchOpts.RefSpecs = []config.RefSpec{
-			config.RefSpec(fmt.Sprintf("+%s:%s", fullRef, localRef)),
-		}
-		err = repo.FetchContext(ctx, fetchOpts)
-		if err := classifyFetchError(err); err != nil {
+		if err := fetchResolvedRef(ctx, repo, fetchOpts, resolved); err != nil {
 			return err
 		}
 	}
 
-	headHash, err := resolveHead(repo, ref, token)
+	headHash, err := resolveFetchedTargetToCommit(store, repo, resolved, token)
 	if err != nil {
 		return fmt.Errorf("failed to resolve head after clone: %w", err)
 	}
@@ -204,6 +218,27 @@ func (g *GitClient) Clone(ctx context.Context, clonePath string, url string, tok
 	}
 	g.mu.Unlock()
 
+	return nil
+}
+
+func fetchResolvedRef(ctx context.Context, repo *gogit.Repository, fetchOpts *gogit.FetchOptions, resolved *resolvedRef) error {
+	switch resolved.kind {
+	case resolvedRefBranch, resolvedRefTag:
+		fetchOpts.RefSpecs = []config.RefSpec{
+			config.RefSpec(fmt.Sprintf("+%s:%s", resolved.fullRef, resolved.localRef)),
+		}
+	case resolvedRefCommit:
+		fetchOpts.RefSpecs = []config.RefSpec{
+			config.RefSpec(fmt.Sprintf("+%s:%s", resolved.commitHash.String(), resolved.localRef)),
+		}
+	default:
+		return fmt.Errorf("unsupported resolved ref kind for fetch: %q", resolved.input)
+	}
+
+	err := repo.FetchContext(ctx, fetchOpts)
+	if err := classifyFetchError(err); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -582,20 +617,82 @@ func (g *GitClient) Cleanup(clonePath string) {
 	g.mu.Unlock()
 }
 
-// resolveHead finds the commit hash for the fetched ref.
-// It resolves entirely from local refs (no network calls) for performance.
-func resolveHead(repo *gogit.Repository, ref string, token string) (plumbing.Hash, error) {
-	// If a specific branch or SHA was requested, look it up directly
-	if ref != "HEAD" && ref != "" {
-		if looksLikeSHA(ref) {
-			return plumbing.NewHash(ref), nil
+func resolveRemoteRef(repo *gogit.Repository, url string, token string, ref string) (*resolvedRef, error) {
+	switch {
+	case ref == "" || ref == "HEAD":
+		return &resolvedRef{kind: resolvedRefHead, input: ref}, nil
+	case looksLikeSHA(ref):
+		return &resolvedRef{
+			kind:       resolvedRefCommit,
+			input:      ref,
+			localRef:   plumbing.ReferenceName("refs/poutine/target"),
+			commitHash: plumbing.NewHash(ref),
+		}, nil
+	case strings.HasPrefix(ref, "refs/heads/"):
+		return &resolvedRef{
+			kind:     resolvedRefBranch,
+			input:    ref,
+			fullRef:  ref,
+			localRef: plumbing.ReferenceName("refs/remotes/origin/" + strings.TrimPrefix(ref, "refs/heads/")),
+		}, nil
+	case strings.HasPrefix(ref, "refs/tags/"):
+		return &resolvedRef{
+			kind:     resolvedRefTag,
+			input:    ref,
+			fullRef:  ref,
+			localRef: plumbing.ReferenceName("refs/poutine/target"),
+		}, nil
+	}
+
+	remote, err := repo.Remote("origin")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get origin remote for ref resolution: %w", err)
+	}
+
+	remoteRefs, err := remote.List(&gogit.ListOptions{
+		Auth: authForToken(token),
+	})
+	if err != nil {
+		if err := classifyFetchError(err); err != nil {
+			return nil, err
 		}
-		branch := strings.TrimPrefix(ref, "refs/heads/")
-		refName := plumbing.ReferenceName("refs/remotes/origin/" + branch)
-		r, err := repo.Reference(refName, true)
-		if err == nil {
-			return r.Hash(), nil
+		return nil, fmt.Errorf("failed to list remote refs for %s: %w", url, err)
+	}
+
+	tagRef := plumbing.ReferenceName("refs/tags/" + ref)
+	for _, remoteRef := range remoteRefs {
+		if remoteRef.Name() == tagRef {
+			return &resolvedRef{
+				kind:     resolvedRefTag,
+				input:    ref,
+				fullRef:  tagRef.String(),
+				localRef: plumbing.ReferenceName("refs/poutine/target"),
+			}, nil
 		}
+	}
+
+	branchRef := plumbing.ReferenceName("refs/heads/" + ref)
+	for _, remoteRef := range remoteRefs {
+		if remoteRef.Name() == branchRef {
+			return &resolvedRef{
+				kind:     resolvedRefBranch,
+				input:    ref,
+				fullRef:  branchRef.String(),
+				localRef: plumbing.ReferenceName("refs/remotes/origin/" + ref),
+			}, nil
+		}
+	}
+
+	return nil, fmt.Errorf("%w: %s", ErrRemoteRefNotFound, ref)
+}
+
+func resolveFetchedTargetToCommit(store storer.EncodedObjectStorer, repo *gogit.Repository, resolved *resolvedRef, token string) (plumbing.Hash, error) {
+	if resolved != nil && resolved.kind != resolvedRefHead {
+		return resolveFetchedRefToCommit(store, repo, resolved.localRef)
+	}
+
+	if resolved != nil && resolved.localRef != "" {
+		return resolveFetchedRefToCommit(store, repo, resolved.localRef)
 	}
 
 	// For HEAD: try common default branch names from local refs (no network call)
@@ -618,7 +715,7 @@ func resolveHead(repo *gogit.Repository, ref string, token string) (plumbing.Has
 		name := string(r.Name())
 		if strings.HasPrefix(name, "refs/remotes/origin/") && !strings.HasSuffix(name, "/HEAD") {
 			headHash = r.Hash()
-			return errors.New("found") // break
+			return errors.New("found")
 		}
 		return nil
 	})
@@ -637,16 +734,42 @@ func resolveHead(repo *gogit.Repository, ref string, token string) (plumbing.Has
 				if r.Name() == plumbing.HEAD && r.Type() == plumbing.SymbolicReference {
 					defaultBranch := strings.TrimPrefix(string(r.Target()), "refs/heads/")
 					localRef := plumbing.ReferenceName("refs/remotes/origin/" + defaultBranch)
-					r, err := repo.Reference(localRef, true)
-					if err == nil {
-						return r.Hash(), nil
-					}
+					return resolveFetchedRefToCommit(store, repo, localRef)
 				}
 			}
 		}
 	}
 
-	return plumbing.ZeroHash, fmt.Errorf("could not resolve head for ref %s", ref)
+	return plumbing.ZeroHash, fmt.Errorf("could not resolve head for ref %s", resolved.input)
+}
+
+func resolveFetchedRefToCommit(store storer.EncodedObjectStorer, repo *gogit.Repository, refName plumbing.ReferenceName) (plumbing.Hash, error) {
+	r, err := repo.Reference(refName, true)
+	if err != nil {
+		return plumbing.ZeroHash, fmt.Errorf("failed to resolve fetched ref %s: %w", refName, err)
+	}
+
+	return peelToCommit(store, r.Hash())
+}
+
+func peelToCommit(store storer.EncodedObjectStorer, hash plumbing.Hash) (plumbing.Hash, error) {
+	obj, err := store.EncodedObject(plumbing.AnyObject, hash)
+	if err != nil {
+		return plumbing.ZeroHash, fmt.Errorf("failed to load object %s: %w", hash, err)
+	}
+
+	switch obj.Type() {
+	case plumbing.CommitObject:
+		return hash, nil
+	case plumbing.TagObject:
+		tag, err := object.GetTag(store, hash)
+		if err != nil {
+			return plumbing.ZeroHash, fmt.Errorf("failed to load tag %s: %w", hash, err)
+		}
+		return peelToCommit(store, tag.Target)
+	default:
+		return plumbing.ZeroHash, fmt.Errorf("object %s is %s, expected commit or tag", hash, obj.Type())
+	}
 }
 
 // looksLikeSHA returns true if s looks like a full-length git commit SHA.

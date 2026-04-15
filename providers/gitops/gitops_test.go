@@ -2,10 +2,14 @@ package gitops
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"regexp"
 	"testing"
 	"time"
 
+	gogit "github.com/go-git/go-git/v6"
+	"github.com/go-git/go-git/v6/config"
 	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/go-git/go-git/v6/plumbing/object"
 	"github.com/go-git/go-git/v6/storage/memory"
@@ -151,6 +155,140 @@ func TestClassifyFetchError(t *testing.T) {
 
 	err := classifyFetchError(ErrRepoNotReachable)
 	assert.Error(t, err)
+}
+
+func TestResolveRemoteRefBareTagPrefersTag(t *testing.T) {
+	remotePath, _ := createTestRemoteRepo(t)
+	repo := createTestClientRepo(t, remotePath)
+
+	resolved, err := resolveRemoteRef(repo, remotePath, "", "v2")
+	require.NoError(t, err)
+	assert.Equal(t, resolvedRefTag, resolved.kind)
+	assert.Equal(t, "refs/tags/v2", resolved.fullRef)
+	assert.Equal(t, plumbing.ReferenceName("refs/poutine/target"), resolved.localRef)
+}
+
+func TestResolveRemoteRefExplicitBranch(t *testing.T) {
+	remotePath, _ := createTestRemoteRepo(t)
+	repo := createTestClientRepo(t, remotePath)
+
+	resolved, err := resolveRemoteRef(repo, remotePath, "", "refs/heads/release")
+	require.NoError(t, err)
+	assert.Equal(t, resolvedRefBranch, resolved.kind)
+	assert.Equal(t, "refs/heads/release", resolved.fullRef)
+	assert.Equal(t, plumbing.ReferenceName("refs/remotes/origin/release"), resolved.localRef)
+}
+
+func TestResolveFetchedRefToCommitPeelsAnnotatedTag(t *testing.T) {
+	remotePath, refs := createTestRemoteRepo(t)
+	repo, err := gogit.PlainOpen(remotePath)
+	require.NoError(t, err)
+
+	hash, err := resolveFetchedRefToCommit(repo.Storer, repo, plumbing.ReferenceName("refs/tags/v2"))
+	require.NoError(t, err)
+	assert.Equal(t, refs.annotatedTagCommit, hash)
+}
+
+func TestFetchResolvedRefResolvesBareAndExplicitTags(t *testing.T) {
+	remotePath, refs := createTestRemoteRepo(t)
+	ctx := context.Background()
+
+	repo := createTestClientRepo(t, remotePath)
+	resolved, err := resolveRemoteRef(repo, remotePath, "", "v2")
+	require.NoError(t, err)
+	err = fetchResolvedRef(ctx, repo, &gogit.FetchOptions{
+		RemoteName: "origin",
+		Depth:      1,
+		Tags:       gogit.NoTags,
+	}, resolved)
+	require.NoError(t, err)
+	sha, err := resolveFetchedRefToCommit(repo.Storer, repo, resolved.localRef)
+	require.NoError(t, err)
+	assert.Equal(t, refs.annotatedTagCommit, sha)
+
+	repo = createTestClientRepo(t, remotePath)
+	resolved, err = resolveRemoteRef(repo, remotePath, "", "refs/tags/v2")
+	require.NoError(t, err)
+	err = fetchResolvedRef(ctx, repo, &gogit.FetchOptions{
+		RemoteName: "origin",
+		Depth:      1,
+		Tags:       gogit.NoTags,
+	}, resolved)
+	require.NoError(t, err)
+	sha, err = resolveFetchedRefToCommit(repo.Storer, repo, resolved.localRef)
+	require.NoError(t, err)
+	assert.Equal(t, refs.annotatedTagCommit, sha)
+}
+
+type testRemoteRefs struct {
+	annotatedTagCommit plumbing.Hash
+	releaseCommit      plumbing.Hash
+}
+
+func createTestRemoteRepo(t *testing.T) (string, testRemoteRefs) {
+	t.Helper()
+
+	dir := t.TempDir()
+	repo, err := gogit.PlainInit(dir, false)
+	require.NoError(t, err)
+
+	writeRepoFile(t, dir, "action.yml", "name: first\n")
+	firstCommit := commitAll(t, repo, "first commit")
+
+	writeRepoFile(t, dir, "action.yml", "name: release\n")
+	releaseCommit := commitAll(t, repo, "release commit")
+
+	err = repo.Storer.SetReference(plumbing.NewHashReference(plumbing.ReferenceName("refs/heads/release"), releaseCommit))
+	require.NoError(t, err)
+
+	_, err = repo.CreateTag("v2", firstCommit, &gogit.CreateTagOptions{
+		Tagger:  &object.Signature{Name: "test", Email: "test@example.com", When: fixedTime()},
+		Message: "annotated v2",
+	})
+	require.NoError(t, err)
+
+	err = repo.Storer.SetReference(plumbing.NewHashReference(plumbing.ReferenceName("refs/heads/v2"), releaseCommit))
+	require.NoError(t, err)
+
+	return dir, testRemoteRefs{
+		annotatedTagCommit: firstCommit,
+		releaseCommit:      releaseCommit,
+	}
+}
+
+func createTestClientRepo(t *testing.T, remotePath string) *gogit.Repository {
+	t.Helper()
+
+	store := memory.NewStorage()
+	repo, err := gogit.Init(store, nil)
+	require.NoError(t, err)
+	_, err = repo.CreateRemote(&config.RemoteConfig{
+		Name: "origin",
+		URLs: []string{remotePath},
+	})
+	require.NoError(t, err)
+	return repo
+}
+
+func writeRepoFile(t *testing.T, repoDir, name, content string) {
+	t.Helper()
+	err := os.WriteFile(filepath.Join(repoDir, name), []byte(content), 0o644)
+	require.NoError(t, err)
+}
+
+func commitAll(t *testing.T, repo *gogit.Repository, message string) plumbing.Hash {
+	t.Helper()
+
+	wt, err := repo.Worktree()
+	require.NoError(t, err)
+	_, err = wt.Add(".")
+	require.NoError(t, err)
+
+	hash, err := wt.Commit(message, &gogit.CommitOptions{
+		Author: &object.Signature{Name: "test", Email: "test@example.com", When: fixedTime()},
+	})
+	require.NoError(t, err)
+	return hash
 }
 
 func fixedTime() time.Time {
