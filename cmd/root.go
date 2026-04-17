@@ -138,7 +138,7 @@ func init() {
 		}
 	}
 
-	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .poutine.yml in the current directory)")
+	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default searches .poutine.yml in the current directory, then .github/poutine.yml)")
 	RootCmd.PersistentFlags().StringVarP(&Format, "format", "f", "pretty", "Output format (pretty, json, sarif)")
 	RootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "Enable verbose logging")
 	RootCmd.PersistentFlags().StringVarP(&ScmProvider, "scm", "s", "github", "SCM platform (github, gitlab)")
@@ -155,6 +155,8 @@ func initConfig() {
 	viper.AutomaticEnv()
 	if cfgFile != "" {
 		viper.SetConfigFile(cfgFile)
+	} else if path := discoverConfigFile(); path != "" {
+		viper.SetConfigFile(path)
 	} else {
 		viper.AddConfigPath(".")
 		viper.SetConfigName(".poutine")
@@ -173,6 +175,26 @@ func initConfig() {
 		log.Error().Err(err).Msg("Unable to unmarshal config")
 		os.Exit(1)
 	}
+}
+
+// discoverConfigFile returns the first existing poutine config file in the
+// documented precedence order: .poutine.{ext} in the current directory, then
+// .github/poutine.{ext}. It returns an empty string when no file is found, in
+// which case viper's own search is used so the resulting ConfigFileNotFoundError
+// can still be handled uniformly.
+func discoverConfigFile() string {
+	// Supported extensions are the common subset viper parses natively.
+	extensions := []string{"yml", "yaml", "json", "toml"}
+	candidates := []string{".poutine", filepath.Join(".github", "poutine")}
+	for _, base := range candidates {
+		for _, ext := range extensions {
+			p := base + "." + ext
+			if fi, err := os.Stat(p); err == nil && !fi.IsDir() {
+				return p
+			}
+		}
+	}
+	return ""
 }
 
 func cleanup() {
