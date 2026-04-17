@@ -177,7 +177,7 @@ func initConfig() {
 
 // findDefaultConfigFile returns the path of the first default config file
 // found under baseDir, in order of precedence:
-//  1. <baseDir>/.poutine.<ext>        (repo root)
+//  1. <baseDir>/.poutine.<ext>        (working directory)
 //  2. <baseDir>/.github/poutine.<ext> (GitHub convention — no leading dot)
 //
 // Extensions are those supported by viper (yml, yaml, json, toml, ...).
