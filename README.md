@@ -111,7 +111,7 @@ poutine analyze_org my-org/project --token "$GL_TOKEN" --scm gitlab --scm-base-u
 --scm                SCM platform (default: github, gitlab)
 --scm-base-url       Base URI of the self-hosted SCM instance
 --threads            Number of threads to use (default: 2)
---config             Path to the configuration file (default: .poutine.yml)
+--config             Path to the configuration file (default: .poutine.yml in the working directory, or .github/poutine.yml)
 --skip               Add rules to the skip list for the current run (can be specified multiple times)
 --verbose            Enable debug logging
 --fail-on-violation  Exit with a non-zero code (10) when violations are found
@@ -125,7 +125,7 @@ See [.poutine.sample.yml](.poutine.sample.yml) for an example configuration file
 
 #### Configuration
 
-Create a `.poutine.yml` configuration file in your current working directory, or use a custom path with the `--config` flag:
+Create a `.poutine.yml` configuration file in your current working directory, or keep it alongside your other GitHub metadata at `.github/poutine.yml` — both are auto-discovered. When both exist, `.poutine.yml` at the repo root wins. To use a custom path, pass the `--config` flag (which takes precedence over both):
 
 ```bash
 poutine analyze_local . --config my-config.yml

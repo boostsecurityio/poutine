@@ -138,7 +138,7 @@ func init() {
 		}
 	}
 
-	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .poutine.yml in the current directory)")
+	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .poutine.yml in the current directory or .github/poutine.yml)")
 	RootCmd.PersistentFlags().StringVarP(&Format, "format", "f", "pretty", "Output format (pretty, json, sarif)")
 	RootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "Enable verbose logging")
 	RootCmd.PersistentFlags().StringVarP(&ScmProvider, "scm", "s", "github", "SCM platform (github, gitlab)")
@@ -153,26 +153,51 @@ func init() {
 
 func initConfig() {
 	viper.AutomaticEnv()
-	if cfgFile != "" {
-		viper.SetConfigFile(cfgFile)
-	} else {
-		viper.AddConfigPath(".")
-		viper.SetConfigName(".poutine")
+
+	configPath := cfgFile
+	if configPath == "" {
+		configPath = findDefaultConfigFile(".")
 	}
 
+	if configPath == "" {
+		return
+	}
+
+	viper.SetConfigFile(configPath)
 	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			return
-		} else {
-			log.Error().Err(err).Msg("Can't read config")
-			os.Exit(1)
-		}
+		log.Error().Err(err).Msg("Can't read config")
+		os.Exit(1)
 	}
 
 	if err := viper.Unmarshal(&config); err != nil {
 		log.Error().Err(err).Msg("Unable to unmarshal config")
 		os.Exit(1)
 	}
+}
+
+// findDefaultConfigFile returns the path of the first default config file
+// found under baseDir, in order of precedence:
+//  1. <baseDir>/.poutine.<ext>        (working directory)
+//  2. <baseDir>/.github/poutine.<ext> (GitHub convention — no leading dot)
+//
+// Extensions are those supported by viper (yml, yaml, json, toml, ...).
+// Returns "" if no default config file is found.
+func findDefaultConfigFile(baseDir string) string {
+	candidates := []struct {
+		dir, name string
+	}{
+		{baseDir, ".poutine"},
+		{filepath.Join(baseDir, ".github"), "poutine"},
+	}
+	for _, c := range candidates {
+		for _, ext := range viper.SupportedExts {
+			path := filepath.Join(c.dir, c.name+"."+ext)
+			if info, err := os.Stat(path); err == nil && !info.IsDir() {
+				return path
+			}
+		}
+	}
+	return ""
 }
 
 func cleanup() {
