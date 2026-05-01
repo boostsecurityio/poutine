@@ -157,6 +157,34 @@ func TestClassifyFetchError(t *testing.T) {
 	assert.Error(t, err)
 }
 
+// TestDiscoverDefaultBranchPrefersRemoteHEAD is the regression for #436:
+// when a repo has both `main` and another branch, and HEAD points to the
+// other branch, discoverDefaultBranch must report the HEAD-pointed branch
+// rather than fast-pathing to "main". Clone() consults this helper before
+// falling back to "main"/"master", so getting this right ensures HEAD
+// analysis follows the actual default branch.
+func TestDiscoverDefaultBranchPrefersRemoteHEAD(t *testing.T) {
+	dir := t.TempDir()
+	remote, err := gogit.PlainInit(dir, false)
+	require.NoError(t, err)
+
+	writeRepoFile(t, dir, "action.yml", "name: initial\n")
+	initialCommit := commitAll(t, remote, "initial commit")
+
+	require.NoError(t, remote.Storer.SetReference(
+		plumbing.NewHashReference(plumbing.ReferenceName("refs/heads/main"), initialCommit),
+	))
+	require.NoError(t, remote.Storer.SetReference(
+		plumbing.NewHashReference(plumbing.ReferenceName("refs/heads/zip-zip"), initialCommit),
+	))
+	require.NoError(t, remote.Storer.SetReference(
+		plumbing.NewSymbolicReference(plumbing.HEAD, plumbing.ReferenceName("refs/heads/zip-zip")),
+	))
+
+	client := createTestClientRepo(t, dir)
+	assert.Equal(t, "zip-zip", discoverDefaultBranch(client, ""))
+}
+
 func TestResolveRemoteRefBareTagPrefersTag(t *testing.T) {
 	remotePath, _ := createTestRemoteRepo(t)
 	repo := createTestClientRepo(t, remotePath)

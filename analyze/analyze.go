@@ -175,7 +175,7 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 				defer reposWg.Done()
 				repoNameWithOwner := repo.GetRepoIdentifier()
 				obs.OnRepoStarted(repoNameWithOwner)
-				repoKey, err := a.cloneRepo(ctx, repo.BuildGitURL(a.ScmClient.GetProviderBaseURL()), a.ScmClient.GetToken(), "HEAD")
+				repoKey, err := a.cloneRepo(ctx, repo.BuildGitURL(a.ScmClient.GetProviderBaseURL()), a.ScmClient.GetToken(), defaultBranchCloneRef(repo))
 				if err != nil {
 					log.Error().Err(err).Str("repo", repoNameWithOwner).Msg("failed to clone repo")
 					obs.OnRepoError(repoNameWithOwner, err)
@@ -450,7 +450,11 @@ func (a *Analyzer) AnalyzeRepo(ctx context.Context, repoString string, ref strin
 	log.Debug().Msgf("Starting repository analysis for: %s/%s on %s", org, repoName, provider)
 
 	obs.OnRepoStarted(repoString)
-	repoKey, err := a.cloneRepo(ctx, repo.BuildGitURL(a.ScmClient.GetProviderBaseURL()), a.ScmClient.GetToken(), ref)
+	cloneRef := ref
+	if ref == "" || ref == "HEAD" {
+		cloneRef = defaultBranchCloneRef(repo)
+	}
+	repoKey, err := a.cloneRepo(ctx, repo.BuildGitURL(a.ScmClient.GetProviderBaseURL()), a.ScmClient.GetToken(), cloneRef)
 	if err != nil {
 		obs.OnRepoError(repoString, err)
 		return nil, err
@@ -748,4 +752,16 @@ func (a *Analyzer) cloneRepo(ctx context.Context, gitURL string, token string, r
 		return "", fmt.Errorf("failed to clone repo: %w", err)
 	}
 	return key, nil
+}
+
+// defaultBranchCloneRef returns an explicit refs/heads/<branch> ref derived
+// from the SCM-provided default branch. Passing this to Clone avoids both
+// the ls-remote in the HEAD discovery path and the ls-remote in the bare-ref
+// resolver. Falls back to "HEAD" when the SCM didn't provide a default,
+// which routes through Clone's discovery path for correctness.
+func defaultBranchCloneRef(repo Repository) string {
+	if db := repo.GetDefaultBranch(); db != "" {
+		return "refs/heads/" + db
+	}
+	return "HEAD"
 }

@@ -138,37 +138,47 @@ func (g *GitClient) Clone(ctx context.Context, clonePath string, url string, tok
 
 	switch {
 	case ref == "HEAD":
-		// Try "main" first (most common), then "master", then ls-remote as fallback
-		for _, branch := range []string{"main", "master"} {
+		// Discover the actual default branch via ls-remote HEAD symref.
+		// Doing this first (rather than fast-pathing to main/master) avoids
+		// analyzing the wrong branch on repositories whose default is not main.
+		discovered := discoverDefaultBranch(repo, token)
+		if discovered != "" {
 			fetchOpts.RefSpecs = []config.RefSpec{
-				config.RefSpec(fmt.Sprintf("+refs/heads/%s:refs/remotes/origin/%s", branch, branch)),
+				config.RefSpec(fmt.Sprintf("+refs/heads/%s:refs/remotes/origin/%s", discovered, discovered)),
 			}
 			err = repo.FetchContext(ctx, fetchOpts)
 			if err == nil {
-				defaultBranch = branch
-				resolved.localRef = plumbing.ReferenceName("refs/remotes/origin/" + branch)
-				break
-			}
-			if classifyFetchError(err) != nil && !strings.Contains(err.Error(), "couldn't find remote ref") {
-				return classifyFetchError(err)
+				defaultBranch = discovered
+				resolved.localRef = plumbing.ReferenceName("refs/remotes/origin/" + discovered)
+			} else if cerr := classifyFetchError(err); cerr != nil && !strings.Contains(err.Error(), "couldn't find remote ref") {
+				return cerr
 			}
 		}
 		if defaultBranch == "" {
-			// Neither main nor master — ls-remote to find actual default
-			discovered := discoverDefaultBranchFromURL(url, token)
-			if discovered != "" {
+			// Discovery failed (e.g. server didn't advertise HEAD, or fetch of
+			// discovered branch failed). Try common defaults before falling
+			// back to fetching all branches.
+			for _, branch := range []string{"main", "master"} {
 				fetchOpts.RefSpecs = []config.RefSpec{
-					config.RefSpec(fmt.Sprintf("+refs/heads/%s:refs/remotes/origin/%s", discovered, discovered)),
+					config.RefSpec(fmt.Sprintf("+refs/heads/%s:refs/remotes/origin/%s", branch, branch)),
 				}
-				resolved.localRef = plumbing.ReferenceName("refs/remotes/origin/" + discovered)
-			} else {
-				fetchOpts.RefSpecs = []config.RefSpec{config.RefSpec("+refs/heads/*:refs/remotes/origin/*")}
+				err = repo.FetchContext(ctx, fetchOpts)
+				if err == nil {
+					defaultBranch = branch
+					resolved.localRef = plumbing.ReferenceName("refs/remotes/origin/" + branch)
+					break
+				}
+				if cerr := classifyFetchError(err); cerr != nil && !strings.Contains(err.Error(), "couldn't find remote ref") {
+					return cerr
+				}
 			}
+		}
+		if defaultBranch == "" {
+			fetchOpts.RefSpecs = []config.RefSpec{config.RefSpec("+refs/heads/*:refs/remotes/origin/*")}
 			err = repo.FetchContext(ctx, fetchOpts)
 			if err := classifyFetchError(err); err != nil {
 				return err
 			}
-			defaultBranch = discovered
 		}
 	default:
 		resolved, err = resolveRemoteRef(repo, url, token, ref)
@@ -772,20 +782,10 @@ func peelToCommit(store storer.EncodedObjectStorer, hash plumbing.Hash) (plumbin
 	}
 }
 
-// looksLikeSHA returns true if s looks like a full-length git commit SHA.
-// discoverDefaultBranch uses remote.List to find the HEAD symref target.
-// Returns empty string if it can't be determined.
-// discoverDefaultBranchFromURL does a lightweight ls-remote to find the HEAD symref.
-func discoverDefaultBranchFromURL(url string, token string) string {
-	store := memory.NewStorage()
-	repo, err := gogit.Init(store, nil)
-	if err != nil {
-		return ""
-	}
-	_, err = repo.CreateRemote(&config.RemoteConfig{Name: "origin", URLs: []string{url}})
-	if err != nil {
-		return ""
-	}
+// discoverDefaultBranch performs a lightweight ls-remote on the repo's origin
+// remote and returns the branch name that HEAD points to. Returns "" when the
+// server doesn't advertise a HEAD symref or the listing fails.
+func discoverDefaultBranch(repo *gogit.Repository, token string) string {
 	remote, err := repo.Remote("origin")
 	if err != nil {
 		return ""
