@@ -10,6 +10,10 @@
 # default: false
 ignoreForks: true
 
+# Disable the once-per-day check for newer poutine releases
+# default: false
+# disableVersionCheck: true
+
 # Set rule configuration options
 rulesConfig:
   pr_runs_on_self_hosted:

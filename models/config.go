@@ -23,12 +23,13 @@ type ConfigInclude struct {
 }
 
 type Config struct {
-	Skip         []ConfigSkip                      `json:"skip"`
-	AllowedRules []string                          `json:"allowed_rules"`
-	Include      []ConfigInclude                   `json:"include"`
-	IgnoreForks  bool                              `json:"ignore_forks"`
-	Quiet        bool                              `json:"quiet,omitempty"`
-	RulesConfig  map[string]map[string]interface{} `json:"rules_config"`
+	Skip                []ConfigSkip                      `json:"skip"`
+	AllowedRules        []string                          `json:"allowed_rules"`
+	Include             []ConfigInclude                   `json:"include"`
+	IgnoreForks         bool                              `json:"ignore_forks"`
+	Quiet               bool                              `json:"quiet,omitempty"`
+	RulesConfig         map[string]map[string]interface{} `json:"rules_config"`
+	DisableVersionCheck bool                              `json:"disable_version_check,omitempty"`
 }
 
 func DefaultConfig() *Config {

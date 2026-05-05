@@ -115,9 +115,18 @@ poutine analyze_org my-org/project --token "$GL_TOKEN" --scm gitlab --scm-base-u
 --skip               Add rules to the skip list for the current run (can be specified multiple times)
 --verbose            Enable debug logging
 --fail-on-violation  Exit with a non-zero code (10) when violations are found
+--disable-version-check  Disable the once-per-day check for newer poutine releases (env: POUTINE_DISABLE_VERSION_CHECK, config: disableVersionCheck)
 ```
 
 See [.poutine.sample.yml](.poutine.sample.yml) for an example configuration file.
+
+#### Version check telemetry
+
+By default, `poutine` reaches out at most once every 24 hours to check whether a newer release is available. The request reports the current poutine version, an anonymous instance identifier persisted in `~/.poutine/config.yaml`, and a count of CLI invocations since the last check. No source, repository, or finding data is sent. To disable, use any of:
+
+- `--disable-version-check` flag
+- `POUTINE_DISABLE_VERSION_CHECK=1` environment variable
+- `disableVersionCheck: true` in `.poutine.yml`
 
 ### Custom Rules
 
