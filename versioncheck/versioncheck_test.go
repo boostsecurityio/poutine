@@ -5,6 +5,8 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -304,6 +306,27 @@ func TestLoadConfig_RoundTrip(t *testing.T) {
 	assert.Equal(t, cfg.StartCount, loaded.StartCount)
 	assert.Equal(t, cfg.LastReportedStartCount, loaded.LastReportedStartCount)
 	assert.True(t, cfg.LastVersionCheckAt.Equal(loaded.LastVersionCheckAt))
+}
+
+func TestRun_DisabledShortCircuitsBeforeAnyDiskWrite(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("POUTINE_CONFIG_DIR", dir)
+	t.Setenv(DisableEnv, "")
+
+	// Disabled via the option (CLI flag / config path).
+	result := Run(context.Background(), "v0.18.0", true)
+	assert.Nil(t, result)
+
+	_, err := os.Stat(filepath.Join(dir, "config.yaml"))
+	assert.True(t, os.IsNotExist(err), "no state file should be written when disabled")
+
+	// Disabled via env var, even if the option is false.
+	t.Setenv(DisableEnv, "1")
+	result = Run(context.Background(), "v0.18.0", false)
+	assert.Nil(t, result)
+
+	_, err = os.Stat(filepath.Join(dir, "config.yaml"))
+	assert.True(t, os.IsNotExist(err), "no state file should be written when disabled by env")
 }
 
 func TestIsDisabledByEnv(t *testing.T) {

@@ -95,15 +95,28 @@ By BoostSecurity.io - https://github.com/boostsecurityio/poutine `,
 	},
 }
 
+// versionCheckSkipCommands lists subcommands that must not trigger the
+// version check: "mcp-server" speaks JSON-RPC over stdio (no point delaying
+// its handshake), and "completion" is invoked by shells for tab-completion
+// lookups. Other subcommands (including "version" and "help") still pay the
+// once-per-day check, since the 24h cache means at most one network call.
+var versionCheckSkipCommands = map[string]struct{}{
+	"mcp-server": {},
+	"completion": {},
+}
+
 // runVersionCheck performs the once-per-day update check unless disabled by
-// flag, env var, or config. The "version" subcommand is excluded so users can
-// inspect the binary without triggering a network call.
+// flag, env var, or config. Commands listed in versionCheckSkipCommands and
+// any subcommand under them are excluded so users can inspect the binary or
+// run the MCP server without triggering a network call.
 func runVersionCheck(cmd *cobra.Command) {
-	if cmd != nil && cmd.Name() == "version" {
-		return
+	for c := cmd; c != nil; c = c.Parent() {
+		if _, skip := versionCheckSkipCommands[c.Name()]; skip {
+			return
+		}
 	}
 	disabled := disableVersionCheck || (config != nil && config.DisableVersionCheck)
-	result := versioncheck.Run(Version, disabled)
+	result := versioncheck.Run(cmd.Context(), Version, disabled)
 	if result == nil || !result.UpdateAvailable {
 		return
 	}

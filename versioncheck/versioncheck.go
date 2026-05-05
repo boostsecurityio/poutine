@@ -53,9 +53,9 @@ type options struct {
 
 // Run records a CLI start and, at most once every 24 hours, reports anonymous
 // telemetry to the configured endpoint and returns the latest release info.
-// The whole operation is bounded by checkTimeout so it never noticeably
-// slows down poutine startup.
-func Run(version string, disabled bool) *Result {
+// The HTTP call is bounded by checkTimeout (derived from ctx) so it never
+// noticeably slows down poutine startup.
+func Run(ctx context.Context, version string, disabled bool) *Result {
 	if disabled || isDisabledByEnv(os.Getenv(DisableEnv)) {
 		return nil
 	}
@@ -67,10 +67,10 @@ func Run(version string, disabled bool) *Result {
 	recordStart(cfg, uuid.NewString)
 	_ = SaveConfig(cfg)
 
-	ctx, cancel := context.WithTimeout(context.Background(), checkTimeout)
+	timeoutCtx, cancel := context.WithTimeout(ctx, checkTimeout)
 	defer cancel()
 
-	result, _ := run(ctx, options{
+	result, _ := run(timeoutCtx, options{
 		Config:     cfg,
 		Version:    version,
 		URL:        VersionCheckURL,
