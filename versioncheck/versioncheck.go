@@ -20,6 +20,10 @@ const (
 	DisableEnv = "POUTINE_DISABLE_VERSION_CHECK"
 	// URLEnv overrides the compiled-in endpoint, primarily for staging.
 	URLEnv = "POUTINE_VERSION_CHECK_URL"
+	// CIEnv signals an ephemeral CI run. When truthy, the check skips
+	// reading and writing the user-level state file and tags the report
+	// with ci=true.
+	CIEnv = "CI"
 )
 
 const (
@@ -44,6 +48,7 @@ type options struct {
 	Version    string
 	URL        string
 	Disabled   bool
+	CI         bool
 	Client     *http.Client
 	Now        func() time.Time
 	SaveConfig func(*Config) error
@@ -60,12 +65,23 @@ func Run(ctx context.Context, version string, disabled bool) *Result {
 		return nil
 	}
 
-	cfg, _ := LoadConfig()
-	if cfg == nil {
-		cfg = &Config{}
+	ci := isCIEnv(os.Getenv(CIEnv))
+	var cfg *Config
+	saveConfig := SaveConfig
+	if ci {
+		cfg = &Config{
+			InstanceID: uuid.NewString(),
+			StartCount: 1,
+		}
+		saveConfig = func(*Config) error { return nil }
+	} else {
+		cfg, _ = LoadConfig()
+		if cfg == nil {
+			cfg = &Config{}
+		}
+		recordStart(cfg, uuid.NewString)
+		_ = SaveConfig(cfg)
 	}
-	recordStart(cfg, uuid.NewString)
-	_ = SaveConfig(cfg)
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, checkTimeout)
 	defer cancel()
@@ -74,9 +90,10 @@ func Run(ctx context.Context, version string, disabled bool) *Result {
 		Config:     cfg,
 		Version:    version,
 		URL:        VersionCheckURL,
+		CI:         ci,
 		Client:     &http.Client{Timeout: checkTimeout},
 		Now:        time.Now,
-		SaveConfig: SaveConfig,
+		SaveConfig: saveConfig,
 		Env:        os.Getenv,
 		NewID:      uuid.NewString,
 	})
@@ -121,7 +138,7 @@ func run(ctx context.Context, opts options) (*Result, error) {
 	}
 	instanceID := ensureInstanceID(opts.Config, opts.NewID)
 	startsSinceLastCheck := startsSinceLastReport(opts.Config)
-	requestURL := buildRequestURL(u, version, instanceID, opts.Config.StartCount, startsSinceLastCheck)
+	requestURL := buildRequestURL(u, version, instanceID, opts.Config.StartCount, startsSinceLastCheck, opts.CI)
 
 	client := opts.Client
 	if client == nil {
@@ -165,6 +182,15 @@ func run(ctx context.Context, opts options) (*Result, error) {
 }
 
 func isDisabledByEnv(value string) bool {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "1", "true", "yes", "on":
+		return true
+	default:
+		return false
+	}
+}
+
+func isCIEnv(value string) bool {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case "1", "true", "yes", "on":
 		return true
@@ -230,7 +256,7 @@ func readResult(resp *http.Response) (*Result, error) {
 	return &result, nil
 }
 
-func buildRequestURL(u *url.URL, version, instanceID string, startCount, startsSinceLastCheck int) string {
+func buildRequestURL(u *url.URL, version, instanceID string, startCount, startsSinceLastCheck int, ci bool) string {
 	q := u.Query()
 	q.Set("project", "poutine")
 	q.Set("component", "cli")
@@ -239,6 +265,9 @@ func buildRequestURL(u *url.URL, version, instanceID string, startCount, startsS
 	if startCount > 0 {
 		q.Set("start_count", strconv.Itoa(startCount))
 		q.Set("starts_since_last_check", strconv.Itoa(startsSinceLastCheck))
+	}
+	if ci {
+		q.Set("ci", "true")
 	}
 	u.RawQuery = q.Encode()
 	return u.String()

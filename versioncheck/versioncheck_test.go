@@ -308,6 +308,87 @@ func TestLoadConfig_RoundTrip(t *testing.T) {
 	assert.True(t, cfg.LastVersionCheckAt.Equal(loaded.LastVersionCheckAt))
 }
 
+func TestRun_CIFlagSetInRequest(t *testing.T) {
+	now := time.Date(2026, 5, 4, 12, 0, 0, 0, time.UTC)
+	cfg := &Config{
+		InstanceID: "2ed05245-10d7-4d21-a8e8-7c4e8a9851b4",
+		StartCount: 1,
+	}
+	var gotReq *http.Request
+
+	result, err := run(context.Background(), options{
+		Config:  cfg,
+		Version: "v0.18.0",
+		URL:     "https://updates.example/check",
+		CI:      true,
+		Client: &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			gotReq = req
+			return &http.Response{
+				StatusCode: http.StatusNoContent,
+				Body:       io.NopCloser(strings.NewReader("")),
+			}, nil
+		})},
+		Now:        func() time.Time { return now },
+		SaveConfig: func(*Config) error { return nil },
+		Env:        func(string) string { return "" },
+	})
+
+	require.NoError(t, err)
+	assert.Nil(t, result)
+	require.NotNil(t, gotReq)
+	assert.Equal(t, "true", gotReq.URL.Query().Get("ci"))
+}
+
+func TestRun_NonCIOmitsCIParam(t *testing.T) {
+	cfg := &Config{InstanceID: "2ed05245-10d7-4d21-a8e8-7c4e8a9851b4", StartCount: 1}
+	var gotReq *http.Request
+
+	_, err := run(context.Background(), options{
+		Config:  cfg,
+		Version: "v0.18.0",
+		URL:     "https://updates.example/check",
+		Client: &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			gotReq = req
+			return &http.Response{
+				StatusCode: http.StatusNoContent,
+				Body:       io.NopCloser(strings.NewReader("")),
+			}, nil
+		})},
+		SaveConfig: func(*Config) error { return nil },
+		Env:        func(string) string { return "" },
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, gotReq)
+	_, hasCI := gotReq.URL.Query()["ci"]
+	assert.False(t, hasCI, "ci param should be absent when not running in CI")
+}
+
+func TestRun_CISkipsPersistentState(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("POUTINE_CONFIG_DIR", dir)
+	t.Setenv(DisableEnv, "")
+	t.Setenv(CIEnv, "true")
+	t.Setenv(URLEnv, "https://override.example/check")
+
+	// Stub the HTTP transport via the default client used by Run. Because Run
+	// constructs its own client, we can't intercept the request here; what we
+	// care about is that no state file is written on disk after the call.
+	_ = Run(context.Background(), "v0.18.0", false)
+
+	_, err := os.Stat(filepath.Join(dir, "config.yaml"))
+	assert.True(t, os.IsNotExist(err), "no state file should be written in CI mode")
+}
+
+func TestIsCIEnv(t *testing.T) {
+	for _, value := range []string{"1", "true", "TRUE", "yes", "on"} {
+		assert.True(t, isCIEnv(value), value)
+	}
+	for _, value := range []string{"", "0", "false", "no", "off", "anything"} {
+		assert.False(t, isCIEnv(value), value)
+	}
+}
+
 func TestRun_DisabledShortCircuitsBeforeAnyDiskWrite(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("POUTINE_CONFIG_DIR", dir)
