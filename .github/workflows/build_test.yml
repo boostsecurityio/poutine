@@ -28,6 +28,8 @@ jobs:
         run: go mod download
       - name: Verify dependencies
         run: go mod verify
+      - name: Tidy dependencies
+        run: go mod tidy -diff
       - name: Build
         run: go build -v ./...
       - name: Test

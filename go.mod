@@ -8,6 +8,7 @@ require (
 	github.com/go-git/go-git/v6 v6.0.0-20260331140939-8126d61b3452
 	github.com/gofri/go-github-ratelimit v1.1.1
 	github.com/google/go-github/v84 v84.0.0
+	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-version v1.9.0
 	github.com/mark3labs/mcp-go v0.46.0
 	github.com/olekukonko/tablewriter v1.1.4
@@ -52,7 +53,6 @@ require (
 	github.com/google/flatbuffers v25.12.19+incompatible // indirect
 	github.com/google/go-querystring v1.2.0 // indirect
 	github.com/google/jsonschema-go v0.4.2 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.8 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
