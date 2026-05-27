@@ -1,5 +1,5 @@
 ---
-title: "Github Action from Unverified Creator used"
+title: "GitHub Action from Unverified Creator used"
 slug: github_action_from_unverified_creator_used
 url: /rules/github_action_from_unverified_creator_used/
 rule: github_action_from_unverified_creator_used

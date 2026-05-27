@@ -51,7 +51,7 @@ func (p *GithubActionsMetadataParser) ParseFromMemory(data []byte, filePath stri
 		meta.Path = filePath
 		pkgInsights.GithubActionsMetadata = append(pkgInsights.GithubActionsMetadata, meta)
 	} else {
-		log.Debug().Str("file", filePath).Msg("invalid Github Actions metadata")
+		log.Debug().Str("file", filePath).Msg("invalid GitHub Actions metadata")
 	}
 
 	return nil

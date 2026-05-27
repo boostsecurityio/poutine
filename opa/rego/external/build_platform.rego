@@ -258,7 +258,7 @@ advisories = {
 			"osv_id": "CVE-2022-23733",
 			"published": "2022-08-02T16:05:14",
 			"aliases": [],
-			"summary": "A stored XSS vulnerability was identified in GitHub Enterprise Server that allowed the injection of arbitrary attributes. This injection was blocked by Github's Content Security Policy (CSP). This vulnerability affected all versions of GitHub Enterprise Server prior to 3.6 and was fixed in versions 3.3.11, 3.4.6 and 3.5.3. This vulnerability was reported via the GitHub Bug Bounty program.",
+			"summary": "A stored XSS vulnerability was identified in GitHub Enterprise Server that allowed the injection of arbitrary attributes. This injection was blocked by GitHub's Content Security Policy (CSP). This vulnerability affected all versions of GitHub Enterprise Server prior to 3.6 and was fixed in versions 3.3.11, 3.4.6 and 3.5.3. This vulnerability was reported via the GitHub Bug Bounty program.",
 			"severity": [],
 			"cwe_ids": ["CWE-79"],
 			"vulnerable_versions": [],
@@ -1818,7 +1818,7 @@ advisories = {
 			"osv_id": "CVE-2020-13326",
 			"published": "2020-09-29T18:45:49",
 			"aliases": [],
-			"summary": "A vulnerability was discovered in GitLab versions prior to 13.1. Under certain conditions the restriction for Github project import could be bypassed.",
+			"summary": "A vulnerability was discovered in GitLab versions prior to 13.1. Under certain conditions the restriction for GitHub project import could be bypassed.",
 			"severity": [{
 				"type": "CVSS_V3",
 				"score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:N",

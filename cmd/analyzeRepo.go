@@ -14,7 +14,7 @@ var analyzeRepoCmd = &cobra.Command{
 	Use:   "analyze_repo",
 	Short: "Analyzes a remote repository for supply chain vulnerabilities",
 	Long: `Analyzes a remote repository for supply chain vulnerabilities
-Example Scanning a remote Github Repository: poutine analyze_repo org/repo --token "$GH_TOKEN"`,
+Example Scanning a remote GitHub Repository: poutine analyze_repo org/repo --token "$GH_TOKEN"`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		Token = viper.GetString("token")

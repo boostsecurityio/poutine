@@ -35,4 +35,4 @@ Having a GitHub Organization **Runners** configuration set to **All repositories
 - [Hardening for self-hosted runners](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#hardening-for-self-hosted-runners)
 - [Playing with fire - How we executed a critical supply chain attack on pytorch](https://johnstawinski.com/2024/01/11/playing-with-fire-how-we-executed-a-critical-supply-chain-attack-on-pytorch/)
 - [TensorFlow Supply Chain Compromise via Self-Hosted Runner Attack](https://www.praetorian.com/blog/tensorflow-supply-chain-compromise-via-self-hosted-runner-attack/)
-- [Gato - Github Attack TOOlkit](https://github.com/praetorian-inc/gato)
+- [Gato - GitHub Attack TOOlkit](https://github.com/praetorian-inc/gato)

@@ -44,7 +44,7 @@ func TestSarifFormatBuildDependencyFindings(t *testing.T) {
 			Rules: map[string]results.Rule{
 				"github_action_from_unverified_creator_used": {
 					Id:          "github_action_from_unverified_creator_used",
-					Title:       "Github Action from Unverified Creator used",
+					Title:       "GitHub Action from Unverified Creator used",
 					Description: "Usage of GitHub Actions from unverified creators was detected.",
 					Level:       "note",
 				},

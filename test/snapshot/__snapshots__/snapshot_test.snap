@@ -522,7 +522,7 @@
    "description": "Usage of the following GitHub Actions repositories was detected in workflows\nor composite actions, but their owner is not a verified creator.",
    "id": "github_action_from_unverified_creator_used",
    "level": "note",
-   "title": "Github Action from Unverified Creator used"
+   "title": "GitHub Action from Unverified Creator used"
   },
   "if_always_true": {
    "description": "GitHub Actions expressions used in if condition of jobs or steps\nmust not contain extra characters or spaces.\nOtherwise, the condition is always true.",
@@ -982,7 +982,7 @@
    "description": "Usage of the following GitHub Actions repositories was detected in workflows\nor composite actions, but their owner is not a verified creator.",
    "id": "github_action_from_unverified_creator_used",
    "level": "note",
-   "title": "Github Action from Unverified Creator used"
+   "title": "GitHub Action from Unverified Creator used"
   },
   "if_always_true": {
    "description": "GitHub Actions expressions used in if condition of jobs or steps\nmust not contain extra characters or spaces.\nOtherwise, the condition is always true.",

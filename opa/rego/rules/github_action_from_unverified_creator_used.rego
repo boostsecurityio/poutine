@@ -1,5 +1,5 @@
 # METADATA
-# title: Github Action from Unverified Creator used
+# title: GitHub Action from Unverified Creator used
 # description: |-
 #   Usage of the following GitHub Actions repositories was detected in workflows
 #   or composite actions, but their owner is not a verified creator.

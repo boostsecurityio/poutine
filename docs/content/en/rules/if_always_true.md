@@ -56,6 +56,6 @@ jobs:
 
 
 ## See Also
-- [Expression Always True Github Issue](https://github.com/actions/runner/issues/1173)
+- [Expression Always True GitHub Issue](https://github.com/actions/runner/issues/1173)
 - [About expressions](https://docs.github.com/en/actions/learn-github-actions/expressions#about-expressions)
 - [jobs<job_id>.if](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idif)
