@@ -1,0 +1,11 @@
+name: git-benign
+on: pull_request_target
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # benign git usage with no untrusted PR ref must NOT be detected as a checkout
+      - run: |
+          git fetch --tags origin main
+          git checkout main
+          make build

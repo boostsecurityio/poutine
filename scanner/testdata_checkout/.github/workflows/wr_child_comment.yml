@@ -1,0 +1,13 @@
+name: WR after Comment Handler
+on:
+  workflow_run:
+    workflows: ["Comment Handler"]
+    types: [completed]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - run: npm install

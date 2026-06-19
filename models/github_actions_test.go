@@ -498,6 +498,7 @@ jobs:
       with:
         ref: ${{ github.head_ref }}
         script: "console.log(1)"
+        allow-unsafe-pr-checkout: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   noperms:
@@ -580,6 +581,10 @@ jobs:
 	assert.Equal(t, 51, workflow.Jobs[0].Steps[0].Lines["with_script"])
 	assert.Equal(t, "console.log(1)", workflow.Jobs[0].Steps[0].With[1].Value)
 	assert.Equal(t, "console.log(1)", workflow.Jobs[0].Steps[0].WithScript)
+	assert.Equal(t, "allow-unsafe-pr-checkout", workflow.Jobs[0].Steps[0].With[2].Name)
+	assert.Equal(t, 52, workflow.Jobs[0].Steps[0].Lines["with_allow_unsafe_pr_checkout"])
+	assert.Equal(t, "false", workflow.Jobs[0].Steps[0].With[2].Value)
+	assert.Equal(t, "false", workflow.Jobs[0].Steps[0].WithAllowUnsafePrCheckout)
 	assert.Equal(t, "GITHUB_TOKEN", workflow.Jobs[0].Steps[0].Env[0].Name)
 	assert.Equal(t, "${{ secrets.GITHUB_TOKEN }}", workflow.Jobs[0].Steps[0].Env[0].Value)
 	assert.Equal(t, "noperms", workflow.Jobs[1].ID)

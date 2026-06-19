@@ -1,0 +1,8 @@
+name: gh-pr-checkout
+on: pull_request_target
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh pr checkout ${{ github.event.pull_request.number }}
+      - run: make build

@@ -34,6 +34,11 @@ update-vulndb:
 	go test -tags build_platform_vuln_database -run TestPopulateBuildPlatformVulnDatabase -timeout 10m ./opa/
 	opa fmt -w opa/rego/external/build_platform.rego
 
+.PHONY: update-checkout-shas
+update-checkout-shas:
+	go test -tags checkout_unsafe_shas -run TestPopulateCheckoutUnsafeShas -timeout 10m ./opa/
+	opa fmt -w opa/rego/external/checkout_unsafe.rego
+
 .PHONY: bench-org
 bench-org:
 	go test -bench=BenchmarkAnalyzeOrg -benchtime=1x -count=3 -timeout=30m ./bench/analyze/

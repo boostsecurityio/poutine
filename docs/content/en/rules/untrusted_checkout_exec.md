@@ -14,6 +14,24 @@ Using workflows with `pull_request_target` has the added benefit (as opposed to 
 
 So-called "Living Off The Pipeline" tools are common development tools (typically CLIs), commonly used in CI/CD pipelines that have lesser-known RCE-By-Design features ("foot guns") that can be abused to execute arbitrary code. These tools are often used to automate tasks such as compiling, testing, packaging, linting or scanning. The gotcha comes from the fact that many of those tools will consume unutrusted input from files on disk and when you checkout untrusted code from a fork, you are effectively allowing the attacker to control the input to those tools.
 
+## `actions/checkout` safe default (`allow-unsafe-pr-checkout`)
+
+As of `actions/checkout@v7.0.0` (and backported to `v4`/`v5`/`v6` on 2026-07-16), `actions/checkout` **refuses to fetch untrusted fork pull request code** unless the step explicitly sets `allow-unsafe-pr-checkout: true`. When that protection is in effect, the untrusted code never lands on disk, so the code-execution premise of this rule no longer holds.
+
+poutine accounts for this and **suppresses this finding** for an `actions/checkout@<ref>` step only when **all** of the following hold:
+
+- the pinned version enforces the safe default — `v7`+ tags, `main`, a commit SHA that is not in the frozen pre-fix set, or `v4`/`v5`/`v6` (floating tag / `releases/v4..6` branch) once the backport date has passed; **and**
+- `allow-unsafe-pr-checkout` is not enabled (absent, or any value other than the literal `true`; a `${{ … }}` expression is treated as possibly-`true` and does **not** suppress); **and**
+- the triggering event is one the guard actually covers — `pull_request_target`, or a `workflow_run` whose triggering event is `pull_request`/`pull_request_target`.
+
+The finding still fires when any of those is not met, in particular:
+
+- old or SHA-pinned vulnerable versions (`v1`/`v2`/`v3`, pre-backport `v4`/`v5`/`v6`, or a SHA in the frozen pre-fix set), or `allow-unsafe-pr-checkout: true`;
+- events the guard does **not** cover — `issues`, `issue_comment`, `workflow_call`, and `workflow_run` triggered by those;
+- untrusted checkout performed via `gh pr checkout` or raw `git` (e.g. `git fetch … pull/<n>/head` then `git checkout`) in a `run:` block — these are explicitly out of scope of GitHub's change and remain exploitable.
+
+The version/SHA resolution is fully offline (it works with `analyze_local`), using an embedded, frozen set of pre-fix `actions/checkout` commit SHAs. The scan instant used for the date gate can be pinned via the `POUTINE_SCAN_TIME` environment variable (RFC3339) for reproducible scans.
+
 ## Remediation
 
 ### GitHub Actions
