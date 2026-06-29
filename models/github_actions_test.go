@@ -711,6 +711,54 @@ jobs:
 	assert.Equal(t, "make build", good.Steps[1].Run)
 }
 
+// TestGithubActionsParallelStepsFlattened verifies that `parallel:` step blocks
+// are flattened inline so their nested run/uses sinks remain visible to rules.
+func TestGithubActionsParallelStepsFlattened(t *testing.T) {
+	input := `build:
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v6
+    - parallel:
+        - name: Build frontend
+          run: npm run build:frontend
+        - name: Build backend
+          run: npm run build:backend
+    - name: Run tests
+      run: npm test
+`
+	var jobs GithubActionsJobs
+	require.NoError(t, yaml.Unmarshal([]byte(input), &jobs))
+	require.Len(t, jobs, 1)
+
+	steps := jobs[0].Steps
+	require.Len(t, steps, 4)
+	assert.Equal(t, "actions/checkout@v6", steps[0].Uses)
+	assert.Equal(t, "npm run build:frontend", steps[1].Run)
+	assert.Equal(t, "npm run build:backend", steps[2].Run)
+	assert.Equal(t, "npm test", steps[3].Run)
+	// Each flattened child keeps its own line number.
+	assert.Equal(t, 6, steps[1].Line)
+	assert.Equal(t, 8, steps[2].Line)
+
+	t.Run("nested parallel", func(t *testing.T) {
+		nested := `build:
+  steps:
+    - parallel:
+        - parallel:
+            - run: a
+            - run: b
+        - run: c
+`
+		var jobs GithubActionsJobs
+		require.NoError(t, yaml.Unmarshal([]byte(nested), &jobs))
+		runs := make([]string, 0, len(jobs[0].Steps))
+		for _, s := range jobs[0].Steps {
+			runs = append(runs, s.Run)
+		}
+		assert.Equal(t, []string{"a", "b", "c"}, runs)
+	})
+}
+
 func TestGithubActionMetadata(t *testing.T) {
 	var actionMetadata GithubActionsMetadata
 	subject := `name: "My GitHub Action"

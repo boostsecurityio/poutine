@@ -428,6 +428,14 @@ func (o *GithubActionsSteps) UnmarshalYAML(node *yaml.Node) error {
 	}
 
 	for _, item := range node.Content {
+		// flatten parallel steps
+		if p := mappingValue(item, "parallel"); p != nil {
+			var nested GithubActionsSteps
+			_ = p.Decode(&nested) // recurses; lenient, handles nested parallel
+			*o = append(*o, nested...)
+			continue
+		}
+
 		var step GithubActionsStep
 		if err := item.Decode(&step); err != nil {
 			continue
@@ -435,6 +443,19 @@ func (o *GithubActionsSteps) UnmarshalYAML(node *yaml.Node) error {
 		*o = append(*o, step)
 	}
 
+	return nil
+}
+
+// mappingValue returns the value node for key in a mapping node, or nil.
+func mappingValue(node *yaml.Node, key string) *yaml.Node {
+	if node.Kind != yaml.MappingNode {
+		return nil
+	}
+	for i := 0; i+1 < len(node.Content); i += 2 {
+		if node.Content[i].Value == key {
+			return node.Content[i+1]
+		}
+	}
 	return nil
 }
 
