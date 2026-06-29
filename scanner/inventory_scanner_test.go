@@ -49,6 +49,37 @@ func TestGithubWorkflowsNotFound(t *testing.T) {
 	assert.Equal(t, 0, len(workflows))
 }
 
+// TestGithubWorkflowMalformedNotDropped verifies that a workflow containing a
+// locally-malformed sub-node is still retained by the parser instead of being
+// silently dropped from the scan.
+func TestGithubWorkflowMalformedNotDropped(t *testing.T) {
+	data := []byte(`
+name: CI
+on:
+  push:
+    branches: {}
+permissions: not-a-real-value
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: make build
+`)
+	p := NewGithubActionWorkflowParser()
+	pkgInsights := &models.PackageInsights{}
+
+	err := p.ParseFromMemory(data, ".github/workflows/ci.yml", pkgInsights)
+	require.NoError(t, err)
+
+	require.Len(t, pkgInsights.GithubActionsWorkflows, 1)
+	wf := pkgInsights.GithubActionsWorkflows[0]
+	assert.Equal(t, ".github/workflows/ci.yml", wf.Path)
+	require.Len(t, wf.Jobs, 1)
+	assert.Equal(t, "build", wf.Jobs[0].ID)
+	require.Len(t, wf.Jobs[0].Steps, 2)
+}
+
 func TestGithubActionsMetadata(t *testing.T) {
 	s := NewInventoryScanner("testdata")
 	pkgInsights := &models.PackageInsights{}

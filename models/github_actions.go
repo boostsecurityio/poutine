@@ -216,7 +216,7 @@ func (o GithubActionsMetadata) IsValid() bool {
 
 func (o *GithubActionsJobs) UnmarshalYAML(node *yaml.Node) error {
 	if node.Kind != yaml.MappingNode {
-		return fmt.Errorf("invalid yaml node type for jobs")
+		return nil
 	}
 
 	*o = make(GithubActionsJobs, 0, len(node.Content)/2)
@@ -233,7 +233,8 @@ func (o *GithubActionsJobs) UnmarshalYAML(node *yaml.Node) error {
 		}
 		err := value.Decode(&job)
 		if err != nil {
-			return err
+			// Skip the offending job, keep the rest of the workflow.
+			continue
 		}
 
 		for j := 0; j < len(value.Content); j += 2 {
@@ -261,7 +262,7 @@ func (o *GithubActionsJobSecrets) UnmarshalYAML(node *yaml.Node) error {
 	}
 
 	if node.Kind != yaml.MappingNode {
-		return fmt.Errorf("invalid yaml node type for secrets")
+		return nil
 	}
 
 	for i := 0; i < len(node.Content); i += 2 {
@@ -280,13 +281,15 @@ func (o *StringList) UnmarshalYAML(node *yaml.Node) error {
 	}
 
 	if node.Kind != yaml.SequenceNode {
-		return fmt.Errorf("invalid yaml node type %v for string list", node.Kind)
+		// Lenient: unexpected shapes leave an empty list rather than failing
+		// the entire workflow parse.
+		return nil
 	}
 
-	var l []string = make([]string, len(node.Content))
+	l := make([]string, len(node.Content))
 	err := node.Decode(&l)
 	if err != nil {
-		return err
+		return nil
 	}
 
 	*o = l
@@ -319,12 +322,14 @@ func (o *GithubActionsEvents) UnmarshalYAML(node *yaml.Node) error {
 
 				err := value.Decode(&crons)
 				if err != nil {
-					return err
+					// Skip a malformed schedule block, keep other events.
+					continue
 				}
 
 				for _, c := range crons {
 					if c.Cron == "" {
-						return fmt.Errorf("invalid cron object")
+						// Skip empty/invalid cron entries individually.
+						continue
 					}
 
 					event.Cron = append(event.Cron, c.Cron)
@@ -332,7 +337,8 @@ func (o *GithubActionsEvents) UnmarshalYAML(node *yaml.Node) error {
 			} else {
 				err := value.Decode(&event)
 				if err != nil {
-					return err
+					// Skip the offending event, keep the rest.
+					continue
 				}
 			}
 
@@ -345,7 +351,7 @@ func (o *GithubActionsEvents) UnmarshalYAML(node *yaml.Node) error {
 
 func (o *GithubActionsOutputs) UnmarshalYAML(node *yaml.Node) error {
 	if node.Kind != yaml.MappingNode {
-		return fmt.Errorf("invalid yaml node type for outputs")
+		return nil
 	}
 
 	for i := 0; i < len(node.Content); i += 2 {
@@ -360,7 +366,8 @@ func (o *GithubActionsOutputs) UnmarshalYAML(node *yaml.Node) error {
 			output = GithubActionsOutput{Name: name}
 			err := value.Decode(&output)
 			if err != nil {
-				return err
+				// Skip the offending output, keep the rest.
+				continue
 			}
 			*o = append(*o, output)
 		}
@@ -372,7 +379,7 @@ func (o *GithubActionsOutputs) UnmarshalYAML(node *yaml.Node) error {
 
 func (o *GithubActionsInputs) UnmarshalYAML(node *yaml.Node) error {
 	if node.Kind != yaml.MappingNode {
-		return fmt.Errorf("invalid yaml node type for inputs")
+		return nil
 	}
 
 	for i := 0; i < len(node.Content); i += 2 {
@@ -382,7 +389,8 @@ func (o *GithubActionsInputs) UnmarshalYAML(node *yaml.Node) error {
 		err := value.Decode(&input)
 
 		if err != nil {
-			return err
+			// Skip the offending input, keep the rest.
+			continue
 		}
 
 		*o = append(*o, input)
@@ -400,13 +408,31 @@ func (o *GithubActionsEnvs) UnmarshalYAML(node *yaml.Node) error {
 	}
 
 	if node.Kind != yaml.MappingNode {
-		return fmt.Errorf("invalid yaml node type for env")
+		return nil
 	}
 
 	for i := 0; i < len(node.Content); i += 2 {
 		name := node.Content[i].Value
 		value := node.Content[i+1].Value
 		*o = append(*o, GithubActionsEnv{name, value})
+	}
+
+	return nil
+}
+
+func (o *GithubActionsSteps) UnmarshalYAML(node *yaml.Node) error {
+	// Be lenient: a single malformed step should only drop that step, not the
+	// whole job (and therefore not the whole workflow file).
+	if node.Kind != yaml.SequenceNode {
+		return nil
+	}
+
+	for _, item := range node.Content {
+		var step GithubActionsStep
+		if err := item.Decode(&step); err != nil {
+			continue
+		}
+		*o = append(*o, step)
 	}
 
 	return nil
@@ -467,7 +493,9 @@ func (o *GithubActionsPermissions) UnmarshalYAML(node *yaml.Node) error {
 		case "read-all":
 			permission = PermissionRead
 		default:
-			return fmt.Errorf("invalid permission %s", node.Value)
+			// Unknown scalar (e.g. a typo): leave permissions empty rather
+			// than failing the whole workflow parse.
+			return nil
 		}
 
 		*o = make(GithubActionsPermissions, 0, len(AllScopes))
@@ -478,7 +506,7 @@ func (o *GithubActionsPermissions) UnmarshalYAML(node *yaml.Node) error {
 	}
 
 	if node.Kind != yaml.MappingNode {
-		return fmt.Errorf("invalid yaml node type for permissions")
+		return nil
 	}
 
 	*o = make(GithubActionsPermissions, 0, len(node.Content)/2)
@@ -497,7 +525,7 @@ func (o *GithubActionsJobRunsOn) UnmarshalYAML(node *yaml.Node) error {
 		var runsOn StringList
 		err := node.Decode(&runsOn)
 		if err != nil {
-			return err
+			return nil
 		}
 		*o = GithubActionsJobRunsOn(runsOn)
 	}
@@ -510,18 +538,19 @@ func (o *GithubActionsJobRunsOn) UnmarshalYAML(node *yaml.Node) error {
 		var runsOn RunsOn
 		err := node.Decode(&runsOn)
 		if err != nil {
-			return err
+			return nil
 		}
 		for _, group := range runsOn.Group {
 			if group == "" {
-				return fmt.Errorf("unexpected empty group")
+				// Skip empty entries individually instead of failing.
+				continue
 			}
 			*o = append(*o, fmt.Sprintf("group:%s", group))
 		}
 
 		for _, label := range runsOn.Labels {
 			if label == "" {
-				return fmt.Errorf("unexpected empty label")
+				continue
 			}
 			*o = append(*o, fmt.Sprintf("label:%s", label))
 		}
@@ -540,7 +569,8 @@ func (o *GithubActionsJobContainer) UnmarshalYAML(node *yaml.Node) error {
 	var c container
 	err := node.Decode(&c)
 	if err != nil {
-		return err
+		// Lenient: leave the container empty rather than failing the parse.
+		return nil
 	}
 	*o = GithubActionsJobContainer(c)
 	return nil
@@ -553,13 +583,13 @@ func (o *GithubActionsJobEnvironments) UnmarshalYAML(node *yaml.Node) error {
 	}
 
 	if node.Kind != yaml.MappingNode {
-		return fmt.Errorf("invalid yaml node type for environment")
+		return nil
 	}
 
 	var env GithubActionsJobEnvironment
 	err := node.Decode(&env)
 	if err != nil {
-		return err
+		return nil
 	}
 
 	*o = GithubActionsJobEnvironments{env}
