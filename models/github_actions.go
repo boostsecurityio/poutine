@@ -114,6 +114,10 @@ type GithubActionsStep struct {
 	Line             int               `json:"line" yaml:"-"`
 	Action           string            `json:"action,omitempty" yaml:"-"`
 
+	// Set when the step comes from a flattened `parallel:` block (steps that
+	// run concurrently). No order index: parallel steps have no defined order.
+	Parallel bool `json:"parallel,omitempty" yaml:"-"`
+
 	Lines map[string]int `json:"lines" yaml:"-"`
 }
 
@@ -431,7 +435,10 @@ func (o *GithubActionsSteps) UnmarshalYAML(node *yaml.Node) error {
 		// flatten parallel steps
 		if p := mappingValue(item, "parallel"); p != nil {
 			var nested GithubActionsSteps
-			_ = p.Decode(&nested) // recurses; lenient, handles nested parallel
+			_ = p.Decode(&nested) // recurses; handles nested parallel
+			for k := range nested {
+				nested[k].Parallel = true
+			}
 			*o = append(*o, nested...)
 			continue
 		}

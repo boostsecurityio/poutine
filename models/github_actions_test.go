@@ -1,10 +1,12 @@
 package models
 
 import (
+	"encoding/json"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
-	"testing"
 )
 
 func TestGithubActionsWorkflowJobs(t *testing.T) {
@@ -740,7 +742,23 @@ func TestGithubActionsParallelStepsFlattened(t *testing.T) {
 	assert.Equal(t, 6, steps[1].Line)
 	assert.Equal(t, 8, steps[2].Line)
 
-	t.Run("nested parallel", func(t *testing.T) {
+	// Steps outside the parallel block are not tagged.
+	assert.False(t, steps[0].Parallel)
+	assert.False(t, steps[3].Parallel)
+	// Parallel children carry the flag.
+	assert.True(t, steps[1].Parallel)
+	assert.True(t, steps[2].Parallel)
+
+	// The flag is present in the JSON handed to rego.
+	blob, err := json.Marshal(steps[1])
+	require.NoError(t, err)
+	assert.Contains(t, string(blob), `"parallel":true`)
+	// Non-parallel steps omit it entirely.
+	blob, err = json.Marshal(steps[0])
+	require.NoError(t, err)
+	assert.NotContains(t, string(blob), "parallel")
+
+	t.Run("nested parallel all tagged", func(t *testing.T) {
 		nested := `build:
   steps:
     - parallel:
@@ -751,11 +769,12 @@ func TestGithubActionsParallelStepsFlattened(t *testing.T) {
 `
 		var jobs GithubActionsJobs
 		require.NoError(t, yaml.Unmarshal([]byte(nested), &jobs))
-		runs := make([]string, 0, len(jobs[0].Steps))
-		for _, s := range jobs[0].Steps {
-			runs = append(runs, s.Run)
+		steps := jobs[0].Steps
+		require.Len(t, steps, 3)
+		assert.Equal(t, []string{"a", "b", "c"}, []string{steps[0].Run, steps[1].Run, steps[2].Run})
+		for _, s := range steps {
+			assert.True(t, s.Parallel)
 		}
-		assert.Equal(t, []string{"a", "b", "c"}, runs)
 	})
 }
 
