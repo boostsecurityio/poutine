@@ -11,13 +11,24 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Parser path patterns are stateless and safe for concurrent use, so they are
+// compiled once at package init rather than per-parser-construction (which used
+// to recompile all five on every repo scan).
+var (
+	githubActionsMetadataPattern = regexp.MustCompile(`(^|/)action\.ya?ml$`)
+	githubWorkflowPattern        = regexp.MustCompile(`^\.github/workflows/[^/]+\.ya?ml$`)
+	azurePipelinesPattern        = regexp.MustCompile(`\.?azure-pipelines(-.+)?\.ya?ml$`)
+	gitlabCiPattern              = regexp.MustCompile(`\.?gitlab-ci(-.+)?\.ya?ml$`)
+	tektonPattern                = regexp.MustCompile(`^\.tekton/[^/]+\.ya?ml$`)
+)
+
 type GithubActionsMetadataParser struct {
 	pattern *regexp.Regexp
 }
 
 func NewGithubActionsMetadataParser() *GithubActionsMetadataParser {
 	return &GithubActionsMetadataParser{
-		pattern: regexp.MustCompile(`(^|/)action\.ya?ml$`),
+		pattern: githubActionsMetadataPattern,
 	}
 }
 
@@ -63,7 +74,7 @@ type GithubActionWorkflowParser struct {
 
 func NewGithubActionWorkflowParser() *GithubActionWorkflowParser {
 	return &GithubActionWorkflowParser{
-		pattern: regexp.MustCompile(`^\.github/workflows/[^/]+\.ya?ml$`),
+		pattern: githubWorkflowPattern,
 	}
 }
 
@@ -108,7 +119,7 @@ type AzurePipelinesParser struct {
 
 func NewAzurePipelinesParser() *AzurePipelinesParser {
 	return &AzurePipelinesParser{
-		pattern: regexp.MustCompile(`\.?azure-pipelines(-.+)?\.ya?ml$`),
+		pattern: azurePipelinesPattern,
 	}
 }
 
@@ -154,7 +165,7 @@ type GitlabCiParser struct {
 
 func NewGitlabCiParser() *GitlabCiParser {
 	return &GitlabCiParser{
-		pattern: regexp.MustCompile(`\.?gitlab-ci(-.+)?\.ya?ml$`),
+		pattern: gitlabCiPattern,
 	}
 }
 
@@ -228,7 +239,7 @@ type PipelineAsCodeTektonParser struct {
 
 func NewPipelineAsCodeTektonParser() *PipelineAsCodeTektonParser {
 	return &PipelineAsCodeTektonParser{
-		pattern: regexp.MustCompile(`^\.tekton/[^/]+\.ya?ml$`),
+		pattern: tektonPattern,
 	}
 }
 
