@@ -111,8 +111,11 @@ type GithubActionsStep struct {
 	With             GithubActionsWith `json:"with,omitempty"`
 	WithRef          string            `json:"with_ref,omitempty" yaml:"-"`
 	WithScript       string            `json:"with_script,omitempty" yaml:"-"`
-	Line             int               `json:"line" yaml:"-"`
-	Action           string            `json:"action,omitempty" yaml:"-"`
+	// WithAllowUnsafePrCheckout is the raw `with: allow-unsafe-pr-checkout` value, kept as a
+	// string so callers can distinguish absent ("") from "true"/"false"/"${{ expr }}".
+	WithAllowUnsafePrCheckout string `json:"with_allow_unsafe_pr_checkout,omitempty" yaml:"-"`
+	Line                      int    `json:"line" yaml:"-"`
+	Action                    string `json:"action,omitempty" yaml:"-"`
 
 	// Set when the step comes from a flattened `parallel:` block (steps that
 	// run concurrently). No order index: parallel steps have no defined order.
@@ -502,6 +505,9 @@ func (o *GithubActionsStep) UnmarshalYAML(node *yaml.Node) error {
 				case "script":
 					o.Lines["with_script"] = arg.Line
 					o.WithScript = arg.Value
+				case "allow-unsafe-pr-checkout":
+					o.Lines["with_allow_unsafe_pr_checkout"] = arg.Line
+					o.WithAllowUnsafePrCheckout = arg.Value
 				}
 			}
 		}

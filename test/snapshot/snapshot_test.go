@@ -23,6 +23,12 @@ import (
 func setupAnalyzer(t *testing.T, command string, buf *bytes.Buffer) *analyze.Analyzer {
 	t.Helper()
 
+	// Pin the scan clock so the actions/checkout v4/v5/v6 backport date-gate in
+	// untrusted_checkout_exec is deterministic and the snapshot does not flip on 2026-07-16.
+	if os.Getenv("POUTINE_SCAN_TIME") == "" {
+		t.Setenv("POUTINE_SCAN_TIME", "2026-06-19T00:00:00Z")
+	}
+
 	token := os.Getenv("GH_TOKEN")
 	if token == "" {
 		t.Skip("GH_TOKEN not set, skipping snapshot test")

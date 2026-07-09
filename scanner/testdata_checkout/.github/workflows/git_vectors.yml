@@ -1,0 +1,15 @@
+name: git-vectors
+on: pull_request_target
+jobs:
+  samestep:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          git fetch origin pull/${{ github.event.number }}/head
+          git checkout FETCH_HEAD
+          make build
+  headsha:
+    runs-on: ubuntu-latest
+    steps:
+      - run: git checkout ${{ github.event.pull_request.head.sha }}
+      - run: npm install

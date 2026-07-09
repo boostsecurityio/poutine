@@ -27,37 +27,36 @@ github.workflow_run.parent.events contains event if some event in {
 	"issue_comment",
 }
 
-build_github_actions[action] = {
-	"bundler":{"ruby/setup-ruby"},
-	"cargo":{"actions-rs/cargo"},
-	"checkov":{"bridgecrewio/checkov-action"},
-	"docker":{"docker/build-push-action", "docker/setup-buildx-action"},
-	"eslint":{"reviewdog/action-eslint", "stefanoeb/eslint-action", "tj-actions/eslint-changed-files", "sibiraj-s/action-eslint", "tinovyatkin/action-eslint", "bradennapier/eslint-plus-action", "CatChen/eslint-suggestion-action", "iCrawl/action-eslint", "ninosaurus/eslint-check"},
-	"golangci-lint":{"golangci/golangci-lint-action"},
+build_github_actions[action] := {
+	"bundler": {"ruby/setup-ruby"},
+	"cargo": {"actions-rs/cargo"},
+	"checkov": {"bridgecrewio/checkov-action"},
+	"docker": {"docker/build-push-action", "docker/setup-buildx-action"},
+	"eslint": {"reviewdog/action-eslint", "stefanoeb/eslint-action", "tj-actions/eslint-changed-files", "sibiraj-s/action-eslint", "tinovyatkin/action-eslint", "bradennapier/eslint-plus-action", "CatChen/eslint-suggestion-action", "iCrawl/action-eslint", "ninosaurus/eslint-check"},
+	"golangci-lint": {"golangci/golangci-lint-action"},
 	"goreleaser": {"goreleaser/goreleaser-action"},
 	"gradle": {"gradle/gradle-build-action"},
 	"maven": {"qcastel/github-actions-maven-release", "samuelmeuli/action-maven-publish", "LucaFeger/action-maven-cli"},
-	"megalinter":{"oxsecurity/megalinter"},
+	"megalinter": {"oxsecurity/megalinter"},
 	"mkdocs": {"mhausenblas/mkdocs-deploy-gh-pages", "athackst/mkdocs-simple-plugin"},
 	"msbuild": {"MVS-Telecom/publish-nuget"},
 	"mypy": {"ricardochaves/python-lint", "jpetrucciani/mypy-check", "sunnysid3up/python-linter", "tsuyoshicho/action-mypy"},
-	"npm": {"actions/setup-node","JS-DevTools/npm-publish"},
-	"phpstan":{"php-actions/phpstan"},
+	"npm": {"actions/setup-node", "JS-DevTools/npm-publish"},
+	"phpstan": {"php-actions/phpstan"},
 	"pip": {"brettcannon/pip-secure-install", "BSFishy/pip-action"},
-	"pre-commit": {"dbt-checkpoint/dbt-checkpoint", "pre-commit/action", "pre-commit-ci/lite-action", "browniebroke/pre-commit-autoupdate-action", "cloudposse/github-action-pre-commit"},
-	"pre-commit":{"pre-commit/action"},
+	"pre-commit": {"pre-commit/action"},
 	"python": {"hynek/build-and-inspect-python-package"},
 	"rake": {"magefile/mage-action"},
 	"rubocop": {"reviewdog/action-rubocop", "andrewmcodes-archive/rubocop-linter-action", "gimenete/rubocop-action", "r7kamura/rubocop-todo-corrector"},
 	"sonar-scanner": {"sonarsource/sonarqube-scan-action"},
-	"stylelint":{"actions-hub/stylelint"},
+	"stylelint": {"actions-hub/stylelint"},
 	"terraform": {"OP5dev/TF-via-PR", "dflook/terraform-plan", "dflook/terraform-apply"},
 	"tflint": {"reviewdog/action-tflint", "devops-infra/action-tflint"},
 	"tofu": {"dflook/tofu-plan", "dflook/tofu-apply"},
 	"vale": {"gaurav-nelson/github-action-vale-lint", "errata-ai/vale-action"},
 }[action]
 
-build_commands[cmd] = {
+build_commands[cmd] := {
 	"ant": {"^ant "},
 	"bash": {"\\S+\\.sh\\b"},
 	"bundler": {"bundle install", "bundle exec "},
@@ -69,13 +68,13 @@ build_commands[cmd] = {
 	"go generate": {"go generate"},
 	"gomplate": {"gomplate "},
 	"goreleaser": {"goreleaser build", "goreleaser release"},
-	"gradle": {"gradle ", "./gradlew ", "./gradlew.bat "}, 	# https://docs.gradle.org/current/userguide/gradle_wrapper_basics.html
+	"gradle": {"gradle ", "./gradlew ", "./gradlew.bat "}, # https://docs.gradle.org/current/userguide/gradle_wrapper_basics.html
 	"make": {"make "},
 	"maven": {"mvn ", "./mvnw ", "./mvnw.bat", "./mvnw.cmd", "./mvnw.sh "}, # https://maven.apache.org/wrapper/
 	"mkdocs": {"mkdocs build"},
 	"msbuild": {"msbuild "},
 	"mypy": {"mypy "},
-	"npm": {"npm diff", "npm restart", "npm (rum|urn|run(-script)?)", "npm start", "npm stop", "npm t(e?st)?", "npm ver(si|is)on","npm (install|add|i|in|ins|inst|insta|instal|inst|isnta|isntal|isntall)", "npm ci(\\b|$)"},
+	"npm": {"npm diff", "npm restart", "npm (rum|urn|run(-script)?)", "npm start", "npm stop", "npm t(e?st)?", "npm ver(si|is)on", "npm (install|add|i|in|ins|inst|insta|instal|inst|isnta|isntal|isntall)", "npm ci(\\b|$)"},
 	"phpstan": {"phpstan "},
 	"pip": {"pip install", "pipenv install", "pipenv run "},
 	"powershell": {"\\S+\\.ps1\\b"},
@@ -131,7 +130,6 @@ results contains poutine.finding(rule, pkg_purl, {
 	)
 }
 
-
 results contains poutine.finding(rule, pkg_purl, {
 	"path": workflow_path,
 	"line": step.lines.uses,
@@ -152,6 +150,43 @@ _lotp_targets_meta(cmd, content) := {"lotp_targets": targets} if {
 	targets := utils.resolve_lotp_targets(cmd, content)
 } else := {}
 
+# Scan time (RFC3339 UTC), injected by the scanner; absent => far past => fail-safe (fires).
+scan_date := object.get(input, "scan_time", "0001-01-01T00:00:00Z")
+
+# Events for which actions/checkout's safe default actually refuses the unsafe fork-PR
+# checkout. The guard does nothing for issue_comment / issues / workflow_call / plain
+# pull_request, so a finding under those keeps firing even on a fixed checkout version.
+_direct_guarded_events := {"pull_request_target"}
+
+_parent_guarded_events := {"pull_request_target", "pull_request"}
+
+# A direct-event finding is neutralized when the checkout is guard-protected AND every flagged
+# trigger event is one the guard covers.
+_neutralized_direct(workflow, checkout) if {
+	utils.checkout_guard_protects(workflow.jobs[checkout.job_idx].steps[checkout.step_idx], scan_date)
+	flagged := {e | some i; e := workflow.events[i].name; e in github.events}
+	count(flagged) > 0
+	every e in flagged { e in _direct_guarded_events }
+}
+
+# A workflow_run finding is neutralized when the checkout is guard-protected AND every matched
+# parent (triggering) event is a pull_request* event the guard covers.
+_neutralized_parent(checkout, parent_events) if {
+	utils.checkout_guard_protects(checkout.workflow.jobs[checkout.job_idx].steps[checkout.step_idx], scan_date)
+	count(parent_events) > 0
+	every e in parent_events { e in _parent_guarded_events }
+}
+
+# Steps to scan for dangerous build commands after a checkout. actions/checkout puts the build
+# in a later step; gh/git run-block checkouts usually fetch+build in one script, so include the
+# checkout step itself for those.
+_steps_to_scan(checkout) := utils.workflow_steps_after(checkout) | _run_block_self_step(checkout)
+
+_run_block_self_step(checkout) := {{"step": step, "job_idx": checkout.job_idx, "step_idx": checkout.step_idx}} if {
+	not utils.checkout_is_action(checkout)
+	step := checkout.workflow.jobs[checkout.job_idx].steps[checkout.step_idx]
+} else := set()
+
 _steps_after_untrusted_checkout contains [pkg.purl, workflow.path, events, s.step, workflow.jobs[s.job_idx].id, workflow.jobs[s.job_idx]] if {
 	pkg := input.packages[_]
 	workflow := pkg.github_actions_workflows[_]
@@ -160,23 +195,26 @@ _steps_after_untrusted_checkout contains [pkg.purl, workflow.path, events, s.ste
 
 	events := [event | event := workflow.events[i].name]
 	pr_checkout := utils.find_pr_checkouts(workflow)[_]
-	s := utils.workflow_steps_after(pr_checkout)[_]
+	not _neutralized_direct(workflow, pr_checkout)
+	s := _steps_to_scan(pr_checkout)[_]
 }
 
 _steps_after_untrusted_checkout contains [pkg_purl, workflow.path, events, s.step, workflow.jobs[s.job_idx].id, workflow.jobs[s.job_idx]] if {
-	[pkg_purl, workflow] := _workflows_runs_from_pr[_]
+	[pkg_purl, workflow, parent_events] := _workflows_runs_from_pr[_]
 
 	events := [event | event := workflow.events[i].name]
 	pr_checkout := utils.find_pr_checkouts(workflow)[_]
-	s := utils.workflow_steps_after(pr_checkout)[_]
+	not _neutralized_parent(pr_checkout, parent_events)
+	s := _steps_to_scan(pr_checkout)[_]
 }
 
-_workflows_runs_from_pr contains [pkg.purl, workflow] if {
+_workflows_runs_from_pr contains [pkg.purl, workflow, parent_events] if {
 	pkg := input.packages[_]
 	workflow := pkg.github_actions_workflows[_]
 	parent := utils.workflow_run_parents(pkg, workflow)[_]
 
 	utils.filter_workflow_events(parent, github.workflow_run.parent.events)
+	parent_events := {e | some i; e := parent.events[i].name; e in github.workflow_run.parent.events}
 }
 
 # Azure Devops

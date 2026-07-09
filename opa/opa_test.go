@@ -29,6 +29,53 @@ func noOpaErrors(t *testing.T, err error) {
 	panic(err)
 }
 
+func TestCheckoutGuardResolution(t *testing.T) {
+	const before = "2026-06-19T00:00:00Z" // before the v4/v5/v6 backport
+	const after = "2026-08-01T00:00:00Z"  // after the backport
+	const v7sha = "9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"
+	const vulnsha = "34e114876b0b11c390a56381ad16ebd13914f8d5" // v4.3.1, in the frozen set
+
+	cases := []struct {
+		name      string
+		step      string // rego object literal
+		date      string
+		protected bool // true => safe default neutralizes the checkout
+	}{
+		{"v7 tag", `{"uses": "actions/checkout@v7"}`, before, true},
+		{"v7 patch", `{"uses": "actions/checkout@v7.0.0"}`, before, true},
+		{"v8 future major", `{"uses": "actions/checkout@v8"}`, before, true},
+		{"main branch", `{"uses": "actions/checkout@main"}`, before, true},
+		{"v2 old tag", `{"uses": "actions/checkout@v2"}`, after, false},
+		{"v3 old tag", `{"uses": "actions/checkout@v3.5.0"}`, after, false},
+		{"v4 before backport", `{"uses": "actions/checkout@v4"}`, before, false},
+		{"v4 after backport", `{"uses": "actions/checkout@v4"}`, after, true},
+		{"v5 before backport", `{"uses": "actions/checkout@v5"}`, before, false},
+		{"v6 after backport", `{"uses": "actions/checkout@v6"}`, after, true},
+		{"releases/v4 before", `{"uses": "actions/checkout@releases/v4"}`, before, false},
+		{"releases/v4 after", `{"uses": "actions/checkout@releases/v4"}`, after, true},
+		{"safe sha (v7.0.0)", `{"uses": "actions/checkout@` + v7sha + `"}`, before, true},
+		{"vulnerable sha (v4.3.1)", `{"uses": "actions/checkout@` + vulnsha + `"}`, after, false},
+		{"unknown sha (default-allow)", `{"uses": "actions/checkout@0000000000000000000000000000000000000000"}`, after, true},
+		{"allow-unsafe false", `{"uses": "actions/checkout@v7", "with_allow_unsafe_pr_checkout": "false"}`, before, true},
+		{"allow-unsafe true", `{"uses": "actions/checkout@v7", "with_allow_unsafe_pr_checkout": "true"}`, before, false},
+		{"allow-unsafe expr", `{"uses": "actions/checkout@v7", "with_allow_unsafe_pr_checkout": "${{ inputs.x }}"}`, before, false},
+		{"gh/git run-block (no uses)", `{"run": "gh pr checkout 1"}`, after, false},
+	}
+
+	opa, err := NewOpa(context.TODO(), &models.Config{Include: []models.ConfigInclude{}})
+	noOpaErrors(t, err)
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			var n int
+			query := fmt.Sprintf(`count([true | data.poutine.utils.checkout_guard_protects(%s, %q)])`, c.step, c.date)
+			err := opa.Eval(context.TODO(), query, nil, &n)
+			noOpaErrors(t, err)
+			assert.Equal(t, c.protected, n == 1)
+		})
+	}
+}
+
 func TestOpaBuiltins(t *testing.T) {
 	cases := []struct {
 		builtin  string

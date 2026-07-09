@@ -3,6 +3,8 @@ package scanner
 import (
 	"context"
 	"fmt"
+	"os"
+	"time"
 
 	"github.com/boostsecurityio/poutine/models"
 	"github.com/boostsecurityio/poutine/opa"
@@ -19,6 +21,9 @@ type Inventory struct {
 	pkgsupplyClient ReputationClient
 	providerVersion string
 	provider        string
+	// now returns the scan time, exposed to rules as input.scan_time. It governs time-dependent
+	// rules such as untrusted_checkout_exec (the actions/checkout v4/v5/v6 backport date-gate).
+	now func() time.Time
 }
 
 func NewInventory(opa *opa.Opa, pkgSupplyClient ReputationClient, provider string, providerVersion string) *Inventory {
@@ -27,7 +32,20 @@ func NewInventory(opa *opa.Opa, pkgSupplyClient ReputationClient, provider strin
 		pkgsupplyClient: pkgSupplyClient,
 		provider:        provider,
 		providerVersion: providerVersion,
+		now:             defaultScanClock(),
 	}
+}
+
+// defaultScanClock returns time.Now, unless POUTINE_SCAN_TIME is set to an RFC3339 timestamp
+// (for reproducible / "as-of" scans and deterministic tests), in which case that fixed time is
+// used. An unparseable value falls back to time.Now.
+func defaultScanClock() func() time.Time {
+	if v := os.Getenv("POUTINE_SCAN_TIME"); v != "" {
+		if t, err := time.Parse(time.RFC3339, v); err == nil {
+			return func() time.Time { return t }
+		}
+	}
+	return time.Now
 }
 
 type InventoryScannerI interface {
@@ -113,6 +131,7 @@ func (i *Inventory) analyzePackageForFindings(ctx context.Context, pkgInsights m
 			"reputation": reputation,
 			"provider":   i.provider,
 			"version":    i.providerVersion,
+			"scan_time":  i.now().UTC().Format(time.RFC3339),
 		},
 		analysisResults,
 	)
