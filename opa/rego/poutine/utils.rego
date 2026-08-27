@@ -194,3 +194,135 @@ job_referenced_secrets(job) := secrets if {
 	job_json := json.marshal(job)
 	secrets := extract_referenced_secrets(job_json)
 }
+
+########################################################################
+# actions/checkout pull_request_target / workflow_run safety default
+#
+# https://github.blog/changelog/2026-06-18-safer-pull_request_target-defaults-for-github-actions-checkout/
+#
+# The guard shipped in v7 and was backported to supported v2-v6 releases. It
+# refuses fork pull request code in `pull_request_target` and selected
+# `workflow_run` workflows unless `allow-unsafe-pr-checkout: true` is set.
+########################################################################
+
+checkout_fork_pr_guard_blocks_step(workflow, step, non_blocked_events) if {
+	_checkout_has_pr_safe_default(step.uses)
+	not _checkout_allows_unsafe_pr_checkout(step)
+	_checkout_targets_fork_pr_head(step)
+	_workflow_has_event_in(workflow, {"pull_request_target", "workflow_run"})
+	not _workflow_has_event_in(workflow, non_blocked_events)
+	not _workflow_run_from_unsafe_upstream(workflow)
+}
+
+_workflow_run_from_unsafe_upstream(workflow) if {
+	some event in workflow.events
+	event.name == "workflow_run"
+	not _workflow_run_event_safe(event)
+}
+
+_workflow_run_event_safe(event) if {
+	count(event.workflows) > 0
+	every upstream in event.workflows {
+		_upstream_is_pull_request_only(upstream)
+	}
+}
+
+_upstream_is_pull_request_only(name) if {
+	some pkg in input.packages
+	some workflow in pkg.github_actions_workflows
+	workflow.name == name
+	count(workflow.events) > 0
+	every event in workflow.events {
+		startswith(event.name, "pull_request")
+	}
+}
+
+# A ref is fixed unless it is a vulnerable commit SHA or a semantic version
+# below the fixed floor for its release line. Moving major tags from v2 onward
+# and branch-like refs are assumed to track guarded code.
+_checkout_has_pr_safe_default(uses) if {
+	ref := _checkout_ref(uses)
+	not regex.match(`^[0-9A-Fa-f]{40}$`, ref)
+	not _checkout_version_ref_is_vulnerable(ref)
+}
+
+_checkout_has_pr_safe_default(uses) if {
+	ref := _checkout_ref(uses)
+	regex.match(`^[0-9A-Fa-f]{40}$`, ref)
+	sha := lower(ref)
+	not sha in data.poutine.checkout_guard_data.vulnerable_commit_shas
+}
+
+_checkout_guard_fixed_version_floors := {
+	"2": "2.8.0",
+	"3": "3.7.0",
+	"4": "4.4.0",
+	"5": "5.1.0",
+	"6": "6.1.0",
+}
+
+_checkout_version_ref_is_vulnerable("v1")
+
+_checkout_version_ref_is_vulnerable(ref) if {
+	version := _checkout_semver(ref)
+	major := split(version, ".")[0]
+	major == "1"
+}
+
+_checkout_version_ref_is_vulnerable(ref) if {
+	version := _checkout_semver(ref)
+	major := split(version, ".")[0]
+	fixed_floor := _checkout_guard_fixed_version_floors[major]
+	semver.compare(version, fixed_floor) < 0
+}
+
+_checkout_semver(ref) := sprintf("%s.0", [trim_prefix(ref, "v")]) if {
+	regex.match(`^v[0-9]+\.[0-9]+$`, ref)
+	semver.is_valid(sprintf("%s.0", [trim_prefix(ref, "v")]))
+}
+
+_checkout_semver(ref) := version if {
+	regex.match(`^v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$`, ref)
+	version := trim_prefix(ref, "v")
+	semver.is_valid(version)
+}
+
+_checkout_ref(uses) := ref if {
+	matches := regex.find_all_string_submatch_n(`(?i)^actions/checkout@(.+)$`, uses, 1)
+	count(matches) == 1
+	ref := matches[0][1]
+}
+
+_checkout_allows_unsafe_pr_checkout(step) if {
+	some w in step["with"]
+	w.name == "allow-unsafe-pr-checkout"
+	lower(trim_space(w.value)) == "true"
+}
+
+_checkout_allows_unsafe_pr_checkout(step) if {
+	some w in step["with"]
+	w.name == "allow-unsafe-pr-checkout"
+	contains(w.value, "${{")
+}
+
+_checkout_targets_fork_pr_head(step) if {
+	some w in step["with"]
+	w.name == "repository"
+	regex.match(`(?i)github\.event\.(pull_request\.head\.repo|workflow_run\.head_repository)`, w.value)
+}
+
+_checkout_targets_fork_pr_head(step) if {
+	regex.match(`(?i)^refs/pull/.+/(head|merge)$`, step.with_ref)
+}
+
+_checkout_targets_fork_pr_head(step) if {
+	regex.match(
+		`(?i)github\.event\.(pull_request\.head\.sha|pull_request\.merge_commit_sha|workflow_run\.head_sha|workflow_run\.head_commit\.id)`,
+		step.with_ref,
+	)
+}
+
+_workflow_has_event_in(workflow, names) if {
+	some event in workflow.events
+	event.name in names
+}

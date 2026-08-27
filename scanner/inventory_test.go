@@ -607,7 +607,7 @@ func TestFindings(t *testing.T) {
 			Purl:   purl,
 			Meta: results.FindingMeta{
 				Path:              ".github/workflows/test_new_fields.yml",
-				Line:              39,
+				Line:              40,
 				Job:               "vulnerable_checkout",
 				Details:           "Detected usage of `bash`",
 				LOTPTool:          "bash",
@@ -621,7 +621,7 @@ func TestFindings(t *testing.T) {
 			Purl:   purl,
 			Meta: results.FindingMeta{
 				Path:              ".github/workflows/test_new_fields.yml",
-				Line:              39,
+				Line:              40,
 				Job:               "vulnerable_checkout",
 				Details:           "Detected usage of `chmod`",
 				LOTPTool:          "chmod",
@@ -649,7 +649,7 @@ func TestFindings(t *testing.T) {
 			Purl:   purl,
 			Meta: results.FindingMeta{
 				Path:          ".github/workflows/test_new_fields.yml",
-				Line:          44,
+				Line:          45,
 				Job:           "vulnerable_checkout",
 				Step:          "3",
 				Details:       "some/action@v1",
@@ -661,7 +661,7 @@ func TestFindings(t *testing.T) {
 			Purl:   purl,
 			Meta: results.FindingMeta{
 				Path:              ".github/workflows/test_new_fields.yml",
-				Line:              29,
+				Line:              30,
 				Job:               "vulnerable_checkout",
 				Details:           "Detected usage of `npm`",
 				LOTPTool:          "npm",
@@ -958,5 +958,12 @@ func TestStructuredFindingFields(t *testing.T) {
 	if bashMultiTargetFinding != nil {
 		assert.Equal(t, []string{"scripts/build.sh", "scripts/verify.sh"}, bashMultiTargetFinding.Meta.LOTPTargets,
 			"LOTPTargets should contain all .sh files from the run block, deduplicated and sorted")
+	}
+
+	for _, finding := range scannedPackage.FindingsResults.Findings {
+		if finding.RuleId == "untrusted_checkout_exec" {
+			assert.NotEqual(t, "guarded_checkout", finding.Meta.Job,
+				"checkout's fork PR guard should suppress execution findings")
+		}
 	}
 }

@@ -2,14 +2,18 @@ package opa
 
 import (
 	"context"
+	"crypto/sha256"
 	"embed"
+	"encoding/hex"
+	"fmt"
+	"strings"
+	"testing"
+
 	"github.com/boostsecurityio/poutine/models"
 	"github.com/boostsecurityio/poutine/results"
 	"github.com/open-policy-agent/opa/v1/ast"
-
-	"fmt"
 	"github.com/stretchr/testify/assert"
-	"testing"
+	"github.com/stretchr/testify/require"
 )
 
 //go:embed testdata/embedded
@@ -156,6 +160,269 @@ func TestJobUsesSelfHostedRunner(t *testing.T) {
 		noOpaErrors(t, err)
 		assert.Equal(t, expected, result, "runner: "+runner)
 	}
+}
+
+func TestCheckoutForkPRGuard(t *testing.T) {
+	o, err := NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
+	require.NoError(t, err)
+
+	tests := []struct {
+		name  string
+		input map[string]interface{}
+		want  bool
+	}{
+		{
+			name: "fixed release on pull request target",
+			input: checkoutGuardInput(
+				[]map[string]interface{}{{"name": "pull_request_target"}},
+				"actions/checkout@v4",
+				nil,
+				nil,
+			),
+			want: true,
+		},
+		{
+			name: "fixed commit on pull request target",
+			input: checkoutGuardInput(
+				[]map[string]interface{}{{"name": "pull_request_target"}},
+				"actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a",
+				nil,
+				nil,
+			),
+			want: true,
+		},
+		{
+			name: "vulnerable commit",
+			input: checkoutGuardInput(
+				[]map[string]interface{}{{"name": "pull_request_target"}},
+				"actions/checkout@1e31de5234b9f8995739874a8ce0492dc87873e2",
+				nil,
+				nil,
+			),
+		},
+		{
+			name: "vulnerable version ref",
+			input: checkoutGuardInput(
+				[]map[string]interface{}{{"name": "pull_request_target"}},
+				"actions/checkout@v4.3.1",
+				nil,
+				nil,
+			),
+		},
+		{
+			name: "unlisted version below fixed floor",
+			input: checkoutGuardInput(
+				[]map[string]interface{}{{"name": "pull_request_target"}},
+				"actions/checkout@v4.3.2",
+				nil,
+				nil,
+			),
+		},
+		{
+			name: "major minor below fixed floor",
+			input: checkoutGuardInput(
+				[]map[string]interface{}{{"name": "pull_request_target"}},
+				"actions/checkout@v4.3",
+				nil,
+				nil,
+			),
+		},
+		{
+			name: "major minor at fixed floor",
+			input: checkoutGuardInput(
+				[]map[string]interface{}{{"name": "pull_request_target"}},
+				"actions/checkout@v4.4",
+				nil,
+				nil,
+			),
+			want: true,
+		},
+		{
+			name: "prerelease below fixed floor",
+			input: checkoutGuardInput(
+				[]map[string]interface{}{{"name": "pull_request_target"}},
+				"actions/checkout@v2.8.0-rc.1",
+				nil,
+				nil,
+			),
+		},
+		{
+			name: "build metadata at fixed floor",
+			input: checkoutGuardInput(
+				[]map[string]interface{}{{"name": "pull_request_target"}},
+				"actions/checkout@v2.8.0+build.1",
+				nil,
+				nil,
+			),
+			want: true,
+		},
+		{
+			name: "v1 prerelease",
+			input: checkoutGuardInput(
+				[]map[string]interface{}{{"name": "pull_request_target"}},
+				"actions/checkout@v1.2.3-alpha.1",
+				nil,
+				nil,
+			),
+		},
+		{
+			name: "numeric prerelease follows Rego semver",
+			input: checkoutGuardInput(
+				[]map[string]interface{}{{"name": "pull_request_target"}},
+				"actions/checkout@v2.8.0-01",
+				nil,
+				nil,
+			),
+		},
+		{
+			name: "invalid empty prerelease identifier",
+			input: checkoutGuardInput(
+				[]map[string]interface{}{{"name": "pull_request_target"}},
+				"actions/checkout@v2.8.0-alpha..1",
+				nil,
+				nil,
+			),
+			want: true,
+		},
+		{
+			name: "vulnerable v1 major ref",
+			input: checkoutGuardInput(
+				[]map[string]interface{}{{"name": "pull_request_target"}},
+				"actions/checkout@v1",
+				nil,
+				nil,
+			),
+		},
+		{
+			name: "unknown version ref",
+			input: checkoutGuardInput(
+				[]map[string]interface{}{{"name": "pull_request_target"}},
+				"actions/checkout@v8",
+				nil,
+				nil,
+			),
+			want: true,
+		},
+		{
+			name: "future semantic version ref",
+			input: checkoutGuardInput(
+				[]map[string]interface{}{{"name": "pull_request_target"}},
+				"actions/checkout@v8.0.0",
+				nil,
+				nil,
+			),
+			want: true,
+		},
+		{
+			name: "branch ref",
+			input: checkoutGuardInput(
+				[]map[string]interface{}{{"name": "pull_request_target"}},
+				"actions/checkout@feature-branch",
+				nil,
+				nil,
+			),
+			want: true,
+		},
+		{
+			name: "unsafe checkout opt out",
+			input: checkoutGuardInput(
+				[]map[string]interface{}{{"name": "pull_request_target"}},
+				"actions/checkout@v4",
+				[]map[string]interface{}{{"name": "allow-unsafe-pr-checkout", "value": "true"}},
+				nil,
+			),
+		},
+		{
+			name: "unguarded event",
+			input: checkoutGuardInput(
+				[]map[string]interface{}{{"name": "pull_request_target"}, {"name": "issue_comment"}},
+				"actions/checkout@v4",
+				nil,
+				nil,
+			),
+		},
+		{
+			name: "pull request workflow run",
+			input: checkoutGuardInput(
+				[]map[string]interface{}{{"name": "workflow_run", "workflows": []string{"PR checks"}}},
+				"actions/checkout@v4",
+				nil,
+				[]map[string]interface{}{{
+					"github_actions_workflows": []map[string]interface{}{{
+						"name":   "PR checks",
+						"events": []map[string]interface{}{{"name": "pull_request"}},
+					}},
+				}},
+			),
+			want: true,
+		},
+		{
+			name: "non pull request workflow run",
+			input: checkoutGuardInput(
+				[]map[string]interface{}{{"name": "workflow_run", "workflows": []string{"Issue checks"}}},
+				"actions/checkout@v4",
+				nil,
+				[]map[string]interface{}{{
+					"github_actions_workflows": []map[string]interface{}{{
+						"name":   "Issue checks",
+						"events": []map[string]interface{}{{"name": "issue_comment"}},
+					}},
+				}},
+			),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got bool
+			err := o.Eval(
+				context.TODO(),
+				`count([true | utils.checkout_fork_pr_guard_blocks_step(input.workflow, input.step, {"issues", "issue_comment", "workflow_call"})]) > 0`,
+				tt.input,
+				&got,
+			)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func checkoutGuardInput(events []map[string]interface{}, uses string, with, packages []map[string]interface{}) map[string]interface{} {
+	return map[string]interface{}{
+		"workflow": map[string]interface{}{"events": events},
+		"step": map[string]interface{}{
+			"uses":     uses,
+			"with_ref": "${{ github.event.pull_request.head.sha }}",
+			"with":     with,
+		},
+		"packages": packages,
+	}
+}
+
+func TestCheckoutGuardData(t *testing.T) {
+	o, err := NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
+	require.NoError(t, err)
+
+	var vulnerableSHAs []string
+	err = o.Eval(
+		context.TODO(),
+		`sort([sha | sha := data.poutine.checkout_guard_data.vulnerable_commit_shas[_]])`,
+		nil,
+		&vulnerableSHAs,
+	)
+	require.NoError(t, err)
+	assert.Len(t, vulnerableSHAs, 223)
+	digest := sha256.Sum256([]byte(strings.Join(vulnerableSHAs, "\n")))
+	assert.Equal(
+		t,
+		"017930673376b24e4bff0fa4bd8fd9c4c196da4b6cd5eb193b421032b43598c1",
+		hex.EncodeToString(digest[:]),
+	)
+
 }
 
 func TestWithConfig(t *testing.T) {

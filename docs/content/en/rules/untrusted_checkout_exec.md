@@ -10,6 +10,8 @@ severity: error
 
 The workflow appears to checkout untrusted code from a fork and uses a command that is known to allow code execution. 
 
+Supported `actions/checkout` releases refuse fork pull request code by default for `pull_request_target` and pull-request-originated `workflow_run` events. Poutine suppresses this finding when that guard applies. The finding remains when the checkout uses `allow-unsafe-pr-checkout: true`, a dynamic value for that input, a known vulnerable commit or a semantic version below its release line's fixed version, or the workflow also uses an event that the guard does not cover. Moving major tags from v2 onward and branch-like refs are assumed to contain the guard.
+
 Using workflows with `pull_request_target` has the added benefit (as opposed to `pull_request`) of allowing access to secrets even in forked repositories. There can be good reasons to do so if you need to use API Keys to talk to some external services or want to interact with the GitHub API with `write` permissions. However, this comes at the cost of paying extra attention to the tools you use in your workflow.
 
 So-called "Living Off The Pipeline" tools are common development tools (typically CLIs), commonly used in CI/CD pipelines that have lesser-known RCE-By-Design features ("foot guns") that can be abused to execute arbitrary code. These tools are often used to automate tasks such as compiling, testing, packaging, linting or scanning. The gotcha comes from the fact that many of those tools will consume unutrusted input from files on disk and when you checkout untrusted code from a fork, you are effectively allowing the attacker to control the input to those tools.
@@ -170,6 +172,7 @@ jobs:
       with:
         repository: ${{ github.event.pull_request.head.repo.full_name }}
         ref: ${{ github.event.pull_request.head.sha }}
+        allow-unsafe-pr-checkout: true # Explicitly disables the fork pull request guard
         # (5) Persisting credentials is not necessary - Though this is not a panacea, credentials can still be dumped from memory
         # (6) Checking untrusted code in default workspace path - In this scenario, it's good to explicitely define the path with untrusted code
     - name: Install dependencies

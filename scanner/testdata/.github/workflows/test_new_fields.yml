@@ -23,6 +23,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          allow-unsafe-pr-checkout: true
 
       # LOTP - should populate lotp_tool and referenced_secrets
       - name: Install dependencies
@@ -46,3 +47,12 @@ jobs:
           # Secret in with block
           token: ${{ secrets.DEPLOY_TOKEN }}
           password: ${{ secrets.DATABASE_PASSWORD }}
+
+  guarded_checkout:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR code with the safe default
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - run: npm install
