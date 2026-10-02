@@ -27,6 +27,9 @@ github.workflow_run.parent.events contains event if some event in {
 	"issue_comment",
 }
 
+# Risky events handled by this rule that actions/checkout does not guard.
+github.checkout_guard_unguarded_events := github.events - {"pull_request_target"}
+
 build_github_actions[action] = {
 	"bundler":{"ruby/setup-ruby"},
 	"cargo":{"actions-rs/cargo"},
@@ -160,6 +163,7 @@ _steps_after_untrusted_checkout contains [pkg.purl, workflow.path, events, s.ste
 
 	events := [event | event := workflow.events[i].name]
 	pr_checkout := utils.find_pr_checkouts(workflow)[_]
+	not utils.checkout_fork_pr_guard_blocks_step(workflow, workflow.jobs[pr_checkout.job_idx].steps[pr_checkout.step_idx], github.checkout_guard_unguarded_events)
 	s := utils.workflow_steps_after(pr_checkout)[_]
 }
 
@@ -168,6 +172,7 @@ _steps_after_untrusted_checkout contains [pkg_purl, workflow.path, events, s.ste
 
 	events := [event | event := workflow.events[i].name]
 	pr_checkout := utils.find_pr_checkouts(workflow)[_]
+	not utils.checkout_fork_pr_guard_blocks_step(workflow, workflow.jobs[pr_checkout.job_idx].steps[pr_checkout.step_idx], github.checkout_guard_unguarded_events)
 	s := utils.workflow_steps_after(pr_checkout)[_]
 }
 
