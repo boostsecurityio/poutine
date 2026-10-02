@@ -114,6 +114,9 @@ func TestJobUsesSelfHostedRunner(t *testing.T) {
 	cases := map[string]bool{
 		"ubuntu-latest":       false,
 		"ubuntu-22.04":        false,
+		"ubuntu-22.04-arm":    false,
+		"ubuntu-24.04-arm":    false,
+		"ubuntu-26.04-arm":    false,
 		"ubuntu-20.04":        false,
 		"ubuntu-slim":         false,
 		"macos-latest-large":  false,
@@ -131,6 +134,8 @@ func TestJobUsesSelfHostedRunner(t *testing.T) {
 		"windows-latest":      false,
 		"windows-2022":        false,
 		"windows-2019":        false,
+		"windows-11-arm":      false,
+		"windows-11-vs2026-arm": false,
 		"self-hosted":         true,
 		"random-name":         true,
 	}
