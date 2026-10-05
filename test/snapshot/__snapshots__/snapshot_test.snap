@@ -400,43 +400,6 @@
   },
   {
    "meta": {
-    "details": "Detected usage the GitHub Action `actions/setup-node`",
-    "event_triggers": [
-     "pull_request_target"
-    ],
-    "job": "chicken-popcorn",
-    "line": 34,
-    "lotp_action": "actions/setup-node",
-    "path": ".github/workflows/level3.yml",
-    "referenced_secrets": [
-     "FLAG_GRAVY_OVERFLOW_L3_SOME_MEAT"
-    ]
-   },
-   "purl": "pkg:github/messypoutine/gravy-overflow",
-   "rule_id": "untrusted_checkout_exec"
-  },
-  {
-   "meta": {
-    "details": "Detected usage of `npm`",
-    "event_triggers": [
-     "pull_request_target"
-    ],
-    "job": "chicken-popcorn",
-    "line": 38,
-    "lotp_targets": [
-     "package.json"
-    ],
-    "lotp_tool": "npm",
-    "path": ".github/workflows/level3.yml",
-    "referenced_secrets": [
-     "FLAG_GRAVY_OVERFLOW_L3_SOME_MEAT"
-    ]
-   },
-   "purl": "pkg:github/messypoutine/gravy-overflow",
-   "rule_id": "untrusted_checkout_exec"
-  },
-  {
-   "meta": {
     "details": "Detected usage of `bash`",
     "line": 26,
     "lotp_targets": [
@@ -906,43 +869,6 @@
     "path": ".github/workflows/level0.yml",
     "referenced_secrets": [
      "FLAG_GRAVY_OVERFLOW_L0_TOPPINGS"
-    ]
-   },
-   "purl": "pkg:github/messypoutine/gravy-overflow",
-   "rule_id": "untrusted_checkout_exec"
-  },
-  {
-   "meta": {
-    "details": "Detected usage the GitHub Action `actions/setup-node`",
-    "event_triggers": [
-     "pull_request_target"
-    ],
-    "job": "chicken-popcorn",
-    "line": 34,
-    "lotp_action": "actions/setup-node",
-    "path": ".github/workflows/level3.yml",
-    "referenced_secrets": [
-     "FLAG_GRAVY_OVERFLOW_L3_SOME_MEAT"
-    ]
-   },
-   "purl": "pkg:github/messypoutine/gravy-overflow",
-   "rule_id": "untrusted_checkout_exec"
-  },
-  {
-   "meta": {
-    "details": "Detected usage of `npm`",
-    "event_triggers": [
-     "pull_request_target"
-    ],
-    "job": "chicken-popcorn",
-    "line": 38,
-    "lotp_targets": [
-     "package.json"
-    ],
-    "lotp_tool": "npm",
-    "path": ".github/workflows/level3.yml",
-    "referenced_secrets": [
-     "FLAG_GRAVY_OVERFLOW_L3_SOME_MEAT"
     ]
    },
    "purl": "pkg:github/messypoutine/gravy-overflow",

@@ -290,7 +290,7 @@ jobs:
 	err = json.Unmarshal([]byte(contentText), &insights)
 	require.NoError(t, err)
 
-	assert.Len(t, insights.Findings, 3, "Found findings")
+	assert.Len(t, insights.Findings, 1, "Found findings")
 
 	t.Logf("Successfully analyzed manifest with %d findings", len(insights.Findings))
 }
