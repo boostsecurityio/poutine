@@ -34,6 +34,19 @@ To contribute to Poutine, you'll need the following:
 - Update the `README.md` if you introduce or modify any commands.
 - If your changes involve adding or altering rules, update the corresponding markdown file in `docs/content/en/rules/[RULE_ID].md`.
 
+## Updating Verified Creators
+
+Run `make update-verified-creators` to refresh the rule's publisher list from GitHub Marketplace. The updater checks every page and action's verification metadata before replacing the list, including removing publishers no longer present. Network errors, incomplete results, or unexpected metadata leave the rule unchanged. Review the generated diff before committing it.
+
+To save the source metadata and regenerate the same list without network access:
+
+```bash
+make update-verified-creators ARGS='-snapshot /tmp/verified-creators.json'
+make update-verified-creators ARGS='-input /tmp/verified-creators.json'
+```
+
+The updater paces requests and respects GitHub's rate-limit retry delays. A full refresh can take around 20 minutes. It uses Marketplace's structured page data, which may change independently of Poutine. If parsing fails, update the parser and its tests before refreshing the list.
+
 ## Community and Questions
 
 Currently, we handle all communications through GitHub issues and pull requests. If you have questions or need help with the setup, please open an issue and tag it as a question.
