@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/boostsecurityio/poutine/models"
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -37,6 +38,15 @@ type Opa struct {
 	Store               storage.Store
 	LoadPaths           []string
 	customEmbeddedRules []embeddedSource
+
+	// preparedMu guards prepared. prepared caches one compiled query plan
+	// (rego.PreparedEvalQuery) per query string so Eval does not re-run
+	// PrepareForEval — the query compile + evaluation-plan build — on every call.
+	// The cache is invalidated in Compile, which is the only thing that changes
+	// the rule set the plans are bound to (config lives in the store and is read
+	// fresh on every eval, so it needs no invalidation).
+	preparedMu sync.RWMutex
+	prepared   map[string]rego.PreparedEvalQuery
 }
 
 func NewOpa(ctx context.Context, config *models.Config) (*Opa, error) {
@@ -232,20 +242,26 @@ func (o *Opa) Compile(ctx context.Context, skip []string, allowed []string) erro
 	}
 
 	o.Compiler = compiler
+
+	// Cached plans are bound to the previous compiler (and thus the previous rule
+	// set); drop them so subsequent Evals re-prepare against the new compiler.
+	o.preparedMu.Lock()
+	o.prepared = nil
+	o.preparedMu.Unlock()
+
 	return nil
 }
 
 func (o *Opa) Eval(ctx context.Context, query string, input map[string]interface{}, result interface{}) error {
-	regoInstance := rego.New(
-		rego.Query(query),
-		rego.Compiler(o.Compiler),
-		rego.PrintHook(o),
-		rego.Input(input),
-		rego.Imports([]string{"data.poutine.utils"}),
-		rego.Store(o.Store),
-	)
+	pq, err := o.preparedQuery(ctx, query)
+	if err != nil {
+		return err
+	}
 
-	rs, err := regoInstance.Eval(ctx)
+	// Input is supplied per call via EvalInput; the cached plan holds no input,
+	// and each Eval opens a fresh store transaction, so config changes written by
+	// WithConfig are observed here without invalidating the cache.
+	rs, err := pq.Eval(ctx, rego.EvalInput(input))
 	if err != nil {
 		return err
 	}
@@ -261,6 +277,43 @@ func (o *Opa) Eval(ctx context.Context, query string, input map[string]interface
 	}
 
 	return json.Unmarshal(data, result)
+}
+
+// preparedQuery returns the cached compiled plan for query, preparing (and
+// caching) it on first use. The compiled plan is bound to the current compiler
+// and is safe for concurrent evaluation; Compile clears the cache when it swaps
+// the compiler out.
+func (o *Opa) preparedQuery(ctx context.Context, query string) (rego.PreparedEvalQuery, error) {
+	o.preparedMu.RLock()
+	pq, ok := o.prepared[query]
+	o.preparedMu.RUnlock()
+	if ok {
+		return pq, nil
+	}
+
+	pq, err := rego.New(
+		rego.Query(query),
+		rego.Compiler(o.Compiler),
+		rego.PrintHook(o),
+		rego.Imports([]string{"data.poutine.utils"}),
+		rego.Store(o.Store),
+	).PrepareForEval(ctx)
+	if err != nil {
+		return rego.PreparedEvalQuery{}, fmt.Errorf("failed to prepare query: %w", err)
+	}
+
+	o.preparedMu.Lock()
+	defer o.preparedMu.Unlock()
+	// Another goroutine may have prepared the same query while we were preparing;
+	// prefer the already-cached one so all callers share a single plan.
+	if existing, ok := o.prepared[query]; ok {
+		return existing, nil
+	}
+	if o.prepared == nil {
+		o.prepared = make(map[string]rego.PreparedEvalQuery)
+	}
+	o.prepared[query] = pq
+	return pq, nil
 }
 
 func Capabilities() (*ast.Capabilities, error) {
