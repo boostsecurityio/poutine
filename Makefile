@@ -34,6 +34,10 @@ update-vulndb:
 	go test -tags build_platform_vuln_database -run TestPopulateBuildPlatformVulnDatabase -timeout 10m ./opa/
 	opa fmt -w opa/rego/external/build_platform.rego
 
+.PHONY: update-verified-creators
+update-verified-creators:
+	go run ./tools/update-verified-creators $(ARGS)
+
 .PHONY: bench-org
 bench-org:
 	go test -bench=BenchmarkAnalyzeOrg -benchtime=1x -count=3 -timeout=30m ./bench/analyze/

@@ -284,6 +284,10 @@ make build
 ```
 
 ## Development
+### Updating Verified Creators
+
+Run `make update-verified-creators` to refresh the Marketplace publisher list. See [Contributing](CONTRIBUTING.md#updating-verified-creators) for snapshot replay and update details.
+
 ### Updating Build Platform CVE Database
 ```bash
 go test -tags build_platform_vuln_database ./...
