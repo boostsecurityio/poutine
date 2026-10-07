@@ -156,6 +156,10 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 		}
 
 		for _, repo := range repoBatch.Repositories {
+			if a.Config.IsRepoExcluded(repo.GetRepoIdentifier()) {
+				obs.OnRepoSkipped(repo.GetRepoIdentifier(), "excluded")
+				continue
+			}
 			if a.Config.IgnoreForks && repo.GetIsFork() {
 				obs.OnRepoSkipped(repo.GetRepoIdentifier(), "fork")
 				continue
