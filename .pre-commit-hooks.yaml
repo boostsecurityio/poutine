@@ -1,0 +1,9 @@
+- id: poutine
+  name: poutine
+  description: Scan CI/CD workflows and pipelines for security vulnerabilities
+  entry: poutine analyze_local . --fail-on-violation
+  language: golang
+  pass_filenames: false
+  always_run: false
+  files: ^(\.github/(workflows|actions)/.*\.ya?ml|\.gitlab-ci\.ya?ml|action\.ya?ml)$
+  types: [yaml]

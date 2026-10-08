@@ -70,6 +70,16 @@ jobs:
       uses: github/codeql-action/upload-sarif@4355270be187e1b672a7a1c7c7bae5afdc1ab94a # v3.24.10
       with:
         sarif_file: results.sarif
+#### Pre-commit
+
+Add `poutine` to your `.pre-commit-config.yaml`:
+
+```yaml
+repos:
+  - repo: https://github.com/boostsecurityio/poutine
+    rev: v1.1.4  # Use the latest version
+    hooks:
+      - id: poutine
 ```
 
 ### Usage
