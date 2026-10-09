@@ -62,6 +62,6 @@ func init() {
 
 	viper.BindPFlag("token", analyzeOrgCmd.Flags().Lookup("token"))
 	viper.BindPFlag("ignoreForks", analyzeOrgCmd.Flags().Lookup("ignore-forks"))
-	viper.BindPFlag("excludeRepos", analyzeOrgCmd.Flags().Lookup("exclude-repo"))
+	_ = viper.BindPFlag("excludeRepos", analyzeOrgCmd.Flags().Lookup("exclude-repo"))
 	viper.BindEnv("token", "GH_TOKEN")
 }
