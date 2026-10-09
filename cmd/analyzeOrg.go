@@ -7,7 +7,10 @@ import (
 	"github.com/spf13/viper"
 )
 
-var threads int
+var (
+	threads      int
+	excludeRepos []string
+)
 
 // analyzeOrgCmd represents the analyzeOrg command
 var analyzeOrgCmd = &cobra.Command{
@@ -24,6 +27,9 @@ Note: This command will scan all repositories in the organization except those t
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		Token = viper.GetString("token")
+		if len(excludeRepos) > 0 {
+			config.ExcludeRepos = append(config.ExcludeRepos, excludeRepos...)
+		}
 		ctx := cmd.Context()
 		analyzer, err := GetAnalyzer(ctx, "analyze_org")
 		if err != nil {
@@ -52,8 +58,10 @@ func init() {
 
 	analyzeOrgCmd.Flags().IntVarP(&threads, "threads", "j", 2, "Parallelization factor for scanning organizations")
 	analyzeOrgCmd.Flags().BoolVarP(&config.IgnoreForks, "ignore-forks", "i", false, "Ignore forked repositories in the organization")
+	analyzeOrgCmd.Flags().StringSliceVarP(&excludeRepos, "exclude-repo", "e", nil, "Exclude specific repositories from organization scan (can be specified multiple times)")
 
 	viper.BindPFlag("token", analyzeOrgCmd.Flags().Lookup("token"))
 	viper.BindPFlag("ignoreForks", analyzeOrgCmd.Flags().Lookup("ignore-forks"))
+	_ = viper.BindPFlag("excludeRepos", analyzeOrgCmd.Flags().Lookup("exclude-repo"))
 	viper.BindEnv("token", "GH_TOKEN")
 }
