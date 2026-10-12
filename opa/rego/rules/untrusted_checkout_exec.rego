@@ -99,6 +99,11 @@ build_commands[cmd] = {
 	"yarn": {"yarn "},
 }[cmd]
 
+# Scripts under RUNNER_TEMP are provisioned by the runner, not the checked-out workspace.
+_run_uses_runner_temp_path(run) if {
+	regex.match(`(?i)(?:\$\{\s*RUNNER_TEMP\s*\}|\$RUNNER_TEMP)/`, run)
+}
+
 results contains poutine.finding(rule, pkg_purl, object.union(
 	{
 		"path": workflow_path,
@@ -116,6 +121,7 @@ results contains poutine.finding(rule, pkg_purl, object.union(
 		sprintf("([^a-z]|^)(%v)", [concat("|", build_commands[cmd])]),
 		step.run,
 	)
+	not _run_uses_runner_temp_path(step.run)
 }
 
 results contains poutine.finding(rule, pkg_purl, {
