@@ -26,7 +26,7 @@ jobs:
       security-events: write
       contents: read
     steps:
-    - uses: step-security/harden-runner@v2.15.1
+    - uses: step-security/harden-runner@v2.16.0
       with:
         disable-sudo: true
         egress-policy: audit
