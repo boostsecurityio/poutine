@@ -113,6 +113,43 @@ func TestSemverConstraintCheck(t *testing.T) {
 	}
 }
 
+// A major or minor ref is a moving tag, so it is checked as the latest release
+// in its line (#443). run-terraform.yml is vulnerable below 2.7.5.
+func TestKnownVulnerabilityInBuildComponentFloatingRefs(t *testing.T) {
+	opa, err := NewOpa(context.TODO(), &models.Config{
+		Include: []models.ConfigInclude{},
+	})
+	noOpaErrors(t, err)
+
+	cases := map[string]bool{
+		"v1":     true,  // every 1.x release is vulnerable
+		"v2":     false, // 2.7.5 has the fix
+		"v2.2":   true,  // every 2.2.x release is vulnerable
+		"v2.7":   false, // 2.7.5 has the fix
+		"v2.7.1": true,
+		"v2.7.5": false,
+		"2.7.1":  true,
+		"v3":     false,
+	}
+
+	for ref, vulnerable := range cases {
+		t.Run(ref, func(t *testing.T) {
+			var result []string
+			err := opa.Eval(context.TODO(),
+				`[a.osv_id | a := data.rules.known_vulnerability_in_build_component.step_advisory({"uses": input.uses})]`,
+				map[string]interface{}{"uses": "kartverket/github-workflows/.github/workflows/run-terraform.yml@" + ref},
+				&result)
+			noOpaErrors(t, err)
+
+			if vulnerable {
+				assert.Equal(t, []string{"GHSA-f9qj-7gh3-mhj4"}, result)
+			} else {
+				assert.Empty(t, result)
+			}
+		})
+	}
+}
+
 func TestJobUsesSelfHostedRunner(t *testing.T) {
 	// based on https://github.com/actions/runner-images/
 	cases := map[string]bool{
