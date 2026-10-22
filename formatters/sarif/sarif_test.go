@@ -331,3 +331,62 @@ func TestSarifFormatIssue384(t *testing.T) {
 	require.True(t, ok, "rules should be an array (issue #384)")
 	require.NotNil(t, rulesArray, "rules array should not be nil")
 }
+
+func TestSarifFormatFindingFingerprint(t *testing.T) {
+	pkgPurl := "pkg:github/test/repo@main"
+	finding := results.Finding{
+		RuleId: "untrusted_checkout_exec",
+		Purl:   pkgPurl,
+		Meta: results.FindingMeta{
+			Path: ".github/workflows/ci.yml",
+			Line: 10,
+			Job:  "test",
+			Step: "1",
+		},
+	}
+	expectedFingerprint := finding.GenerateFindingFingerprint()
+
+	pkg := &models.PackageInsights{
+		Purl:          pkgPurl,
+		SourceGitRepo: "test/repo",
+		SourceGitRef:  "main",
+		SourceScmType: "github",
+		FindingsResults: results.FindingsResult{
+			Findings: []results.Finding{finding},
+			Rules: map[string]results.Rule{
+				"untrusted_checkout_exec": {
+					Id:          "untrusted_checkout_exec",
+					Title:       "Untrusted Checkout Exec",
+					Description: "Untrusted code execution after checkout",
+					Level:       "error",
+				},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	formatter := NewFormat(&buf, "1.0.0")
+	err := formatter.Format(context.Background(), []*models.PackageInsights{pkg})
+	require.NoError(t, err)
+
+	var sarifOutput map[string]interface{}
+	err = json.Unmarshal(buf.Bytes(), &sarifOutput)
+	require.NoError(t, err)
+
+	runs := sarifOutput["runs"].([]interface{})
+	run := runs[0].(map[string]interface{})
+	sarifResults := run["results"].([]interface{})
+	require.Len(t, sarifResults, 1)
+
+	result := sarifResults[0].(map[string]interface{})
+	// Issue #387: finding fingerprint should be in fingerprints, not partialFingerprints.primaryLocationLineHash
+	fingerprints, exists := result["fingerprints"].(map[string]interface{})
+	require.True(t, exists, "fingerprints field should exist")
+	require.Equal(t, expectedFingerprint, fingerprints["findingFingerprint"])
+
+	// partialFingerprints should not have conflicting primaryLocationLineHash
+	if partialFingerprints, exists := result["partialFingerprints"].(map[string]interface{}); exists {
+		_, hasLineHash := partialFingerprints["primaryLocationLineHash"]
+		require.False(t, hasLineHash, "primaryLocationLineHash should not conflict with GitHub Code Scanning line hash")
+	}
+}
