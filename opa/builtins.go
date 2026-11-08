@@ -1,12 +1,44 @@
 package opa
 
 import (
+	"strings"
+
 	"github.com/boostsecurityio/poutine/models"
 	"github.com/hashicorp/go-version"
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/rego"
 	"github.com/open-policy-agent/opa/v1/types"
 )
+
+func isNumeric(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func padVersion(versionStr string) string {
+	cleanVersion := strings.TrimPrefix(versionStr, "v")
+	cleanVersion = strings.TrimPrefix(cleanVersion, "V")
+
+	parts := strings.Split(cleanVersion, ".")
+	switch len(parts) {
+	case 1:
+		if isNumeric(parts[0]) {
+			return cleanVersion + ".999999999.999999999"
+		}
+	case 2:
+		if isNumeric(parts[0]) && isNumeric(parts[1]) {
+			return cleanVersion + ".999999999"
+		}
+	}
+	return versionStr
+}
 
 func registerBuiltinFunctions() {
 	rego.RegisterBuiltin1(
@@ -75,9 +107,8 @@ func registerBuiltinFunctions() {
 				return nil, err
 			}
 
-			semver, err := version.NewVersion(versionStr)
+			semver, err := version.NewVersion(padVersion(versionStr))
 			if err != nil {
-				print(err)
 				return nil, err
 			}
 
