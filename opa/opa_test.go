@@ -88,8 +88,81 @@ func TestSemverConstraintCheck(t *testing.T) {
 			expected:   false,
 		},
 		{
+			// v4 floats to latest 4.x; fixed version 4.4.1 exists, so not vulnerable
 			constraint: ">=4.0.0,<4.4.1",
 			version:    "4",
+			expected:   false,
+		},
+		{
+			// v4 with leading 'v'
+			constraint: ">=4.0.0,<4.4.1",
+			version:    "v4",
+			expected:   false,
+		},
+		{
+			// 4.0 floats only within 4.0.x; fix is in 4.4.1 so 4.0.x is vulnerable
+			constraint: ">=4.0.0,<4.4.1",
+			version:    "4.0",
+			expected:   true,
+		},
+		{
+			// 4.4 floats within 4.4.x; fix 4.4.1 is in 4.4.x, so not vulnerable
+			constraint: ">=4.0.0,<4.4.1",
+			version:    "4.4",
+			expected:   false,
+		},
+		{
+			// exact pinned version 4.0.0 is vulnerable
+			constraint: ">=4.0.0,<4.4.1",
+			version:    "4.0.0",
+			expected:   true,
+		},
+		{
+			// exact pinned version 4.4.0 is vulnerable
+			constraint: ">=4.0.0,<4.4.1",
+			version:    "4.4.0",
+			expected:   true,
+		},
+		{
+			// exact pinned version 4.4.1 is fixed
+			constraint: ">=4.0.0,<4.4.1",
+			version:    "4.4.1",
+			expected:   false,
+		},
+		{
+			// all of 4.x is vulnerable
+			constraint: ">=4.0.0,<5.0.0",
+			version:    "4",
+			expected:   true,
+		},
+		{
+			// all versions < 17 are vulnerable
+			constraint: ">=0,<17",
+			version:    "4",
+			expected:   true,
+		},
+		{
+			// all of 0.x is vulnerable
+			constraint: ">=0,<1",
+			version:    "0",
+			expected:   true,
+		},
+		{
+			// 1.x is not vulnerable to >=0,<1
+			constraint: ">=0,<1",
+			version:    "1",
+			expected:   false,
+		},
+		{
+			// fixed version 4.1.7 exists in 4.1.x, so 4.1 is not vulnerable
+			constraint: ">=4.0.0,<4.1.7",
+			version:    "4.1",
+			expected:   false,
+		},
+		{
+			// fixed version is 4.2.0, so all 4.1.x versions are vulnerable
+			constraint: ">=4.0.0,<4.2.0",
+			version:    "4.1",
 			expected:   true,
 		},
 		{
@@ -109,39 +182,39 @@ func TestSemverConstraintCheck(t *testing.T) {
 		err := opa.Eval(context.TODO(), "semver.constraint_check(\""+c.constraint+"\", \""+c.version+"\")", nil, &result)
 		noOpaErrors(t, err)
 
-		assert.Equal(t, c.expected, result)
+		assert.Equal(t, c.expected, result, "constraint: %s, version: %s", c.constraint, c.version)
 	}
 }
 
 func TestJobUsesSelfHostedRunner(t *testing.T) {
 	// based on https://github.com/actions/runner-images/
 	cases := map[string]bool{
-		"ubuntu-latest":       false,
-		"ubuntu-22.04":        false,
-		"ubuntu-22.04-arm":    false,
-		"ubuntu-24.04-arm":    false,
-		"ubuntu-26.04-arm":    false,
-		"ubuntu-20.04":        false,
-		"ubuntu-slim":         false,
-		"macos-latest-large":  false,
-		"macos-14-large":      false,
-		"macos-latest":        false,
-		"macos-14":            false,
-		"macos-latest-xlarge": false,
-		"macos-14-xlarge":     false,
-		"macos-13":            false,
-		"macos-13-large":      false,
-		"macos-13-xlarge":     false,
-		"macos-12":            false,
-		"macos-12-large":      false,
-		"macos-11":            false,
-		"windows-latest":      false,
-		"windows-2022":        false,
-		"windows-2019":        false,
-		"windows-11-arm":      false,
+		"ubuntu-latest":         false,
+		"ubuntu-22.04":          false,
+		"ubuntu-22.04-arm":      false,
+		"ubuntu-24.04-arm":      false,
+		"ubuntu-26.04-arm":      false,
+		"ubuntu-20.04":          false,
+		"ubuntu-slim":           false,
+		"macos-latest-large":    false,
+		"macos-14-large":        false,
+		"macos-latest":          false,
+		"macos-14":              false,
+		"macos-latest-xlarge":   false,
+		"macos-14-xlarge":       false,
+		"macos-13":              false,
+		"macos-13-large":        false,
+		"macos-13-xlarge":       false,
+		"macos-12":              false,
+		"macos-12-large":        false,
+		"macos-11":              false,
+		"windows-latest":        false,
+		"windows-2022":          false,
+		"windows-2019":          false,
+		"windows-11-arm":        false,
 		"windows-11-vs2026-arm": false,
-		"self-hosted":         true,
-		"random-name":         true,
+		"self-hosted":           true,
+		"random-name":           true,
 	}
 
 	opa, err := NewOpa(context.TODO(), &models.Config{
