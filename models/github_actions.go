@@ -107,7 +107,7 @@ type GithubActionsStep struct {
 	Uses             string            `json:"uses,omitempty"`
 	Shell            string            `json:"shell,omitempty"`
 	Run              string            `json:"run,omitempty" yaml:"run"`
-	WorkingDirectory string            `json:"working_directory,omitempty" yaml:"working-directory"`
+	WorkingDirectory *string           `json:"working_directory,omitempty" yaml:"working-directory"`
 	With             GithubActionsWith `json:"with,omitempty"`
 	WithRef          string            `json:"with_ref,omitempty" yaml:"-"`
 	WithScript       string            `json:"with_script,omitempty" yaml:"-"`
@@ -179,6 +179,14 @@ type GithubActionsJobSecret struct {
 	Value string `json:"value"`
 }
 
+type GithubActionsRunDefaults struct {
+	WorkingDirectory *string `json:"working_directory,omitempty" yaml:"working-directory"`
+}
+
+type GithubActionsDefaults struct {
+	Run *GithubActionsRunDefaults `json:"run,omitempty" yaml:"run"`
+}
+
 type GithubActionsJob struct {
 	ID                string                       `json:"id"`
 	Name              string                       `json:"name,omitempty"`
@@ -186,6 +194,7 @@ type GithubActionsJob struct {
 	Secrets           GithubActionsJobSecrets      `json:"secrets,omitempty"`
 	With              GithubActionsWith            `json:"with,omitempty"`
 	Permissions       GithubActionsPermissions     `json:"permissions"`
+	CacheMode         *string                      `json:"cache_mode,omitempty" yaml:"cache-mode"`
 	Needs             StringList                   `json:"needs,omitempty"`
 	If                string                       `json:"if,omitempty"`
 	RunsOn            GithubActionsJobRunsOn       `json:"runs_on" yaml:"runs-on"`
@@ -193,6 +202,7 @@ type GithubActionsJob struct {
 	Environment       GithubActionsJobEnvironments `json:"environment,omitempty"`
 	Outputs           GithubActionsEnvs            `json:"outputs,omitempty"`
 	Env               GithubActionsEnvs            `json:"env,omitempty"`
+	Defaults          *GithubActionsDefaults       `json:"defaults,omitempty" yaml:"defaults"`
 	Steps             GithubActionsSteps           `json:"steps"`
 	ReferencesSecrets []string                     `json:"references_secrets" yaml:"-"`
 	Strategy          GithubActionsStrategy        `json:"strategy,omitempty" yaml:"strategy"`
@@ -206,7 +216,9 @@ type GithubActionsWorkflow struct {
 	Name        string                   `json:"name"`
 	Events      GithubActionsEvents      `json:"events" yaml:"on"`
 	Permissions GithubActionsPermissions `json:"permissions"`
+	CacheMode   *string                  `json:"cache_mode,omitempty" yaml:"cache-mode"`
 	Env         GithubActionsEnvs        `json:"env,omitempty"`
+	Defaults    *GithubActionsDefaults   `json:"defaults,omitempty" yaml:"defaults"`
 	Jobs        GithubActionsJobs        `json:"jobs"`
 }
 
