@@ -73,7 +73,7 @@ jobs:
 	steps := build.Steps
 	assert.NotContains(t, steps[0], "working_directory")
 	assert.Contains(t, steps[1], "working_directory")
-	assert.Equal(t, "", steps[1]["working_directory"])
+	assert.Empty(t, steps[1]["working_directory"])
 	assert.Nil(t, exposed.Jobs[1].Defaults)
 	assert.NotContains(t, string(data), "effective_working_directory")
 
