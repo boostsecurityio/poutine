@@ -24,6 +24,8 @@ type FindingMeta struct {
 	EventTriggers []string `json:"event_triggers,omitempty"`
 	BlobSHA       string   `json:"blobsha,omitempty"`
 
+	Data json.RawMessage `json:"data,omitempty"` // Rule-defined JSON payload, preserved in JSON exports.
+
 	// Structured fields for programmatic access
 	InjectionSources  []string `json:"injection_sources,omitempty"`  // Sources confirmed as injected into a sink
 	LOTPTool          string   `json:"lotp_tool,omitempty"`          // Living Off The Pipeline tool (e.g., npm, pip)
