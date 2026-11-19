@@ -1,0 +1,19 @@
+name: runner-temp-script
+on:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: true
+permissions:
+  contents: read
+jobs:
+  run:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          sparse-checkout: .github
+          persist-credentials: false
+      - run: bash "${RUNNER_TEMP}/tooling/setup.sh"
