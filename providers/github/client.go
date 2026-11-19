@@ -287,10 +287,10 @@ func (c *Client) GetOrgWorkflowsPermissions(ctx context.Context, org string) (*g
 				log.Debug().Msgf("Workflow permissions for org %s could not be found", org)
 				return nil, nil
 			}
-		}
-		if errorResponse.Response.StatusCode == http.StatusForbidden {
-			log.Debug().Msgf("Forbidden to get workflow permissions for org %s", org)
-			return nil, nil
+			if errorResponse.Response.StatusCode == http.StatusForbidden {
+				log.Debug().Msgf("Forbidden to get workflow permissions for org %s", org)
+				return nil, nil
+			}
 		}
 	}
 	return permissions, err
