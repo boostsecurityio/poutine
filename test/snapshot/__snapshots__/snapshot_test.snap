@@ -282,24 +282,6 @@
   },
   {
    "meta": {
-    "details": "Package: rlespinasse/github-slug-action",
-    "event_triggers": [
-     "issues",
-     "issue_comment",
-     "pull_request_target",
-     "pull_request"
-    ],
-    "job": "fries",
-    "line": 36,
-    "osv_id": "GHSA-6q4m-7476-932w",
-    "path": ".github/workflows/level0.yml",
-    "step": "1"
-   },
-   "purl": "pkg:github/messypoutine/gravy-overflow",
-   "rule_id": "known_vulnerability_in_build_component"
-  },
-  {
-   "meta": {
     "path": ".github/actions/auto-format/action.yml"
    },
    "purl": "pkg:github/messypoutine/actionable",
@@ -769,24 +751,6 @@
    },
    "purl": "pkg:github/messypoutine/gravy-overflow",
    "rule_id": "injection"
-  },
-  {
-   "meta": {
-    "details": "Package: rlespinasse/github-slug-action",
-    "event_triggers": [
-     "issues",
-     "issue_comment",
-     "pull_request_target",
-     "pull_request"
-    ],
-    "job": "fries",
-    "line": 36,
-    "osv_id": "GHSA-6q4m-7476-932w",
-    "path": ".github/workflows/level0.yml",
-    "step": "1"
-   },
-   "purl": "pkg:github/messypoutine/gravy-overflow",
-   "rule_id": "known_vulnerability_in_build_component"
   },
   {
    "meta": {
