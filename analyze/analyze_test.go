@@ -4,9 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/boostsecurityio/poutine/formatters/noop"
 	"github.com/boostsecurityio/poutine/models"
@@ -316,5 +319,177 @@ func TestProgressObserverConcurrency(t *testing.T) {
 
 		obs.OnFinalizeStarted(40)
 		obs.OnFinalizeCompleted()
+	}
+}
+
+type mockRepo struct {
+	name string
+}
+
+func (m mockRepo) GetProviderName() string     { return "github" }
+func (m mockRepo) GetRepoIdentifier() string   { return m.name }
+func (m mockRepo) GetIsFork() bool             { return false }
+func (m mockRepo) BuildGitURL(_ string) string { return "https://example.com/" + m.name }
+func (m mockRepo) GetHasIssues() bool          { return true }
+func (m mockRepo) GetHasWiki() bool            { return false }
+func (m mockRepo) GetHasDiscussion() bool      { return false }
+func (m mockRepo) GetOpenIssuesCount() int     { return 0 }
+func (m mockRepo) GetForksCount() int          { return 0 }
+func (m mockRepo) GetStarsCount() int          { return 1 }
+func (m mockRepo) GetPrimaryLanguage() string  { return "Go" }
+func (m mockRepo) GetSize() int                { return 100 }
+func (m mockRepo) GetDefaultBranch() string    { return "main" }
+func (m mockRepo) GetLicense() string          { return "MIT" }
+func (m mockRepo) GetIsTemplate() bool         { return false }
+func (m mockRepo) GetOrganizationID() int      { return 1 }
+func (m mockRepo) GetRepositoryID() int        { return 1 }
+func (m mockRepo) GetIsEmpty() bool            { return false }
+
+type mockScmClient struct {
+	repos []Repository
+}
+
+func (m *mockScmClient) GetOrgRepos(_ context.Context, _ string) <-chan RepoBatch {
+	ch := make(chan RepoBatch, 1)
+	ch <- RepoBatch{TotalCount: len(m.repos), Repositories: m.repos}
+	close(ch)
+	return ch
+}
+func (m *mockScmClient) GetRepo(_ context.Context, org, name string) (Repository, error) {
+	return mockRepo{name: org + "/" + name}, nil
+}
+func (m *mockScmClient) GetToken() string                                     { return "" }
+func (m *mockScmClient) GetProviderName() string                              { return "github" }
+func (m *mockScmClient) GetProviderVersion(_ context.Context) (string, error) { return "1.0.0", nil }
+func (m *mockScmClient) GetProviderBaseURL() string                           { return "github.com" }
+func (m *mockScmClient) ParseRepoAndOrg(s string) (string, string, error) {
+	parts := strings.SplitN(s, "/", 2)
+	if len(parts) != 2 {
+		return "", "", errors.New("invalid repo")
+	}
+	return parts[0], parts[1], nil
+}
+
+type mockGitClient struct {
+	cloneFn       func(ctx context.Context, clonePath string) error
+	cleanupCount  atomic.Int32
+	workflows     map[string][]models.BranchInfo
+	blobMatchesFn func(blobsha string) (bool, []byte, error)
+}
+
+func (m *mockGitClient) Clone(ctx context.Context, clonePath, _, _, _ string) error {
+	if m.cloneFn != nil {
+		return m.cloneFn(ctx, clonePath)
+	}
+	return nil
+}
+func (m *mockGitClient) FetchCone(_ context.Context, _, _, _, _, _ string) error { return nil }
+func (m *mockGitClient) CommitSHA(_ string) (string, error)                      { return "deadbeef", nil }
+func (m *mockGitClient) LastCommitDate(_ context.Context, _ string) (time.Time, error) {
+	return time.Now(), nil
+}
+func (m *mockGitClient) GetRemoteOriginURL(_ context.Context, _ string) (string, error) {
+	return "https://github.com/org/repo", nil
+}
+func (m *mockGitClient) GetRepoHeadBranchName(_ context.Context, _ string) (string, error) {
+	return "main", nil
+}
+func (m *mockGitClient) GetUniqWorkflowsBranches(_ context.Context, _ string) (map[string][]models.BranchInfo, error) {
+	return m.workflows, nil
+}
+func (m *mockGitClient) BlobMatches(_ context.Context, _ string, blobsha string, _ *regexp.Regexp) (bool, []byte, error) {
+	if m.blobMatchesFn != nil {
+		return m.blobMatchesFn(blobsha)
+	}
+	return false, nil, nil
+}
+func (m *mockGitClient) ListFiles(_ string, _ []string) (map[string][]byte, error) {
+	return map[string][]byte{}, nil
+}
+func (m *mockGitClient) Cleanup(_ string) {
+	m.cleanupCount.Add(1)
+}
+
+func TestAnalyzeOrgCancelDuringAcquireWaitsForWorkers(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	opaClient, err := newTestOpa(ctx)
+	require.NoError(t, err)
+
+	cloneStarted := make(chan struct{})
+	releaseClone := make(chan struct{})
+	gitClient := &mockGitClient{
+		cloneFn: func(_ context.Context, _ string) error {
+			close(cloneStarted)
+			<-releaseClone
+			return nil
+		},
+	}
+	scmClient := &mockScmClient{
+		repos: []Repository{
+			mockRepo{name: "org/repo1"},
+			mockRepo{name: "org/repo2"},
+		},
+	}
+
+	analyzer := NewAnalyzer(scmClient, gitClient, &noop.Format{}, models.DefaultConfig(), opaClient)
+	maxGoroutines := 1
+
+	done := make(chan error, 1)
+	go func() {
+		_, err := analyzer.AnalyzeOrg(ctx, "org", &maxGoroutines)
+		done <- err
+	}()
+
+	<-cloneStarted
+	cancel()
+	// Give the first worker a moment to finish after releaseClone is closed.
+	close(releaseClone)
+
+	select {
+	case err = <-done:
+		require.ErrorIs(t, err, context.Canceled)
+	case <-time.After(5 * time.Second):
+		t.Fatal("AnalyzeOrg did not return after context cancellation")
+	}
+
+	assert.Equal(t, int32(1), gitClient.cleanupCount.Load(), "in-flight worker must finish cleanup before AnalyzeOrg returns")
+}
+
+func TestAnalyzeStaleBranchesMultipleBlobErrorsNoDeadlock(t *testing.T) {
+	ctx := context.Background()
+	opaClient, err := newTestOpa(ctx)
+	require.NoError(t, err)
+
+	gitClient := &mockGitClient{
+		workflows: map[string][]models.BranchInfo{
+			"sha1": {{BranchName: "b1"}},
+			"sha2": {{BranchName: "b2"}},
+			"sha3": {{BranchName: "b3"}},
+		},
+		blobMatchesFn: func(blobsha string) (bool, []byte, error) {
+			return false, nil, fmt.Errorf("blob error for %s", blobsha)
+		},
+	}
+	scmClient := &mockScmClient{}
+	analyzer := NewAnalyzer(scmClient, gitClient, &noop.Format{}, models.DefaultConfig(), opaClient)
+
+	expand := false
+	maxGoroutines := 3
+	re := regexp.MustCompile("test")
+
+	done := make(chan error, 1)
+	go func() {
+		_, err := analyzer.AnalyzeStaleBranches(ctx, "org/repo", &maxGoroutines, &expand, re)
+		done <- err
+	}()
+
+	select {
+	case err = <-done:
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to blob match")
+	case <-time.After(5 * time.Second):
+		t.Fatal("AnalyzeStaleBranches deadlocked when multiple BlobMatches calls failed")
 	}
 }

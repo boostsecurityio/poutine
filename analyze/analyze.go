@@ -144,7 +144,9 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 		}
 	}()
 
+	var acquireErr error
 	discoveryCompleted := false
+repoLoop:
 	for repoBatch := range orgReposBatches {
 		if repoBatch.Err != nil {
 			log.Error().Err(repoBatch.Err).Msg("failed to fetch batch of repos, skipping batch")
@@ -169,8 +171,8 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 				continue
 			}
 			if err := goRoutineLimitSem.Acquire(ctx, 1); err != nil {
-				close(errChan)
-				return scannedPackages, fmt.Errorf("failed to acquire semaphore: %w", err)
+				acquireErr = fmt.Errorf("failed to acquire semaphore: %w", err)
+				break repoLoop
 			}
 
 			reposWg.Add(1)
@@ -238,6 +240,10 @@ func (a *Analyzer) AnalyzeOrg(ctx context.Context, org string, numberOfGoroutine
 
 	pkgWg.Wait()
 
+	if acquireErr != nil {
+		return scannedPackages, acquireErr
+	}
+
 	for err := range errChan {
 		if err != nil {
 			return scannedPackages, err
@@ -299,7 +305,6 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 
 	obs.OnStepCompleted("Checking workflows match regex: " + regex.String())
 
-	errChan := make(chan error, 1)
 	maxGoroutines := 5
 	if numberOfGoroutines != nil {
 		maxGoroutines = *numberOfGoroutines
@@ -327,6 +332,7 @@ func (a *Analyzer) AnalyzeStaleBranches(ctx context.Context, repoString string, 
 	for sha := range workflows {
 		blobShas = append(blobShas, sha)
 	}
+	errChan := make(chan error, len(blobShas)+1)
 	for _, blobSha := range blobShas {
 		if err := sem.Acquire(ctx, 1); err != nil {
 			errChan <- fmt.Errorf("failed to acquire semaphore: %w", err)
